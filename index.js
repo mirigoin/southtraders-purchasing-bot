@@ -13,7 +13,7 @@ const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const OWNER_PHONE = process.env.OWNER_PHONE || '17865591119';
-const DATABASE_URL = process.env.DATABASE_URL;
+const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://southtraders_db_user:INkOK7w8DfOQxB2HNYTJ2fZCrRPds64u@dpg-d76u5iruibrs73a1eugg-a.ohio-postgres.render.com:5432/southtraders_db';
 const SHEETS_ID = process.env.SHEETS_ID; // ID de la planilla Google Sheets
 
 // DB
