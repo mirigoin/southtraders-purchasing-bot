@@ -362,6 +362,40 @@ app.post('/groups', async function(req, res) {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+// DASHBOARD
+app.get('/dashboard', function(req, res) {
+  res.sendFile(require('path').join(__dirname, 'dashboard.html'));
+});
+
+// REQUEST QUOTE - pedir cotizacion a todos los grupos
+app.post('/request-quote', async function(req, res) {
+  const { product } = req.body;
+  if (!product) return res.status(400).json({ error: 'product required' });
+  try {
+    const groups = await pool.query('SELECT * FROM supplier_groups WHERE active=TRUE');
+    if (!groups.rows.length) return res.json({ ok: false, error: 'No hay grupos registrados', sent: 0 });
+    const msg = 'Hola! Buscamos cotizacion de ' + product + '. Por favor indicar precio, disponibilidad y cantidad. Gracias!';
+    let sent = 0;
+    for (const g of groups.rows) {
+      await sendToGroup(g.group_id, msg);
+      sent++;
+      await new Promise(r => setTimeout(r, 500));
+    }
+    await pool.query('INSERT INTO quote_requests (product, groups_sent, message_sent) VALUES ($1,$2,$3)', [product, sent, msg]);
+    res.json({ ok: true, sent, product });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// SEND - enviar mensaje directo
+app.post('/send', async function(req, res) {
+  const { phone, message } = req.body;
+  if (!phone || !message) return res.status(400).json({ error: 'phone y message requeridos' });
+  try {
+    await sendWA(phone, message);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/', function(req, res) {
   res.json({ status: 'ok', service: 'South Traders Purchasing Bot' });
 });
