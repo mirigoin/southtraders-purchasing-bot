@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>South Traders - Comparativa Precios</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f1117;color:#e2e8f0;min-height:100vh}
+header{background:#1a1a2e;padding:16px 24px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #2d3748}
+header h1{font-size:18px;font-weight:700;color:#fff}
+.dot{width:8px;height:8px;border-radius:50%;background:#22c55e;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.ts{font-size:12px;color:#718096;margin-left:auto}
+.wrap{padding:20px 24px;max-width:1200px;margin:0 auto}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+.stat{background:#1a202c;border-radius:10px;padding:16px;border:1px solid #2d3748}
+.stat .n{font-size:28px;font-weight:700;color:#63b3ed}
+.stat .l{font-size:12px;color:#718096;margin-top:4px}
+.section{background:#1a202c;border-radius:10px;border:1px solid #2d3748;margin-bottom:20px;overflow:hidden}
+.section-head{padding:14px 18px;border-bottom:1px solid #2d3748;display:flex;align-items:center;gap:8px;justify-content:space-between}
+.section-head h2{font-size:14px;font-weight:600;color:#e2e8f0}
+.badge{font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500}
+.badge-green{background:#1c4532;color:#68d391}
+.badge-blue{background:#1a365d;color:#63b3ed}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:600;color:#718096;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #2d3748;background:#171923}
+td{padding:10px 16px;font-size:13px;border-bottom:1px solid #1a202c;color:#e2e8f0}
+tr:hover td{background:#2d3748}
+tr:last-child td{border-bottom:none}
+.price{font-weight:700;color:#68d391;font-size:14px}
+.best-price{background:#1c4532!important}
+.best-price td{color:#68d391}
+.model{font-weight:600;color:#fff}
+.supplier{color:#a0aec0}
+.qty{color:#63b3ed;font-weight:500}
+.time{color:#718096;font-size:11px}
+.empty{text-align:center;padding:40px;color:#4a5568}
+.filters{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.filter-btn{padding:5px 12px;border:1px solid #2d3748;border-radius:6px;background:transparent;color:#a0aec0;font-size:12px;cursor:pointer}
+.filter-btn.active{background:#2b6cb0;border-color:#2b6cb0;color:#fff}
+.filter-btn:hover{border-color:#4a5568;color:#e2e8f0}
+.request-box{padding:16px 18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;border-top:1px solid #2d3748}
+.request-box input{flex:1;min-width:200px;background:#171923;border:1px solid #2d3748;border-radius:7px;padding:8px 12px;color:#e2e8f0;font-size:13px}
+.request-box input:focus{outline:none;border-color:#4299e1}
+.btn{padding:8px 16px;border:none;border-radius:7px;font-size:13px;font-weight:500;cursor:pointer}
+.btn-blue{background:#2b6cb0;color:#fff}
+.btn-blue:hover{background:#2c5282}
+.toast{position:fixed;bottom:20px;right:20px;background:#2d3748;color:#e2e8f0;padding:10px 16px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999;border:1px solid #4a5568}
+.toast.show{opacity:1}
+.tag{display:inline-block;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600;margin-left:4px;background:#2b6cb0;color:#bee3f8}
+</style>
+</head>
+<body>
+<header>
+  <div class="dot"></div>
+  <h1>📊 South Traders — Comparativa de Precios</h1>
+  <span class="ts" id="ts">Cargando...</span>
+</header>
+<div class="wrap">
+  <div class="stats">
+    <div class="stat"><div class="n" id="nQuotes">0</div><div class="l">Cotizaciones (48hs)</div></div>
+    <div class="stat"><div class="n" id="nSuppliers">0</div><div class="l">Proveedores activos</div></div>
+    <div class="stat"><div class="n" id="nModels">0</div><div class="l">Modelos cotizados</div></div>
+    <div class="stat"><div class="n" id="nGroups">0</div><div class="l">Grupos registrados</div></div>
+  </div>
+
+  <!-- MEJOR PRECIO POR MODELO -->
+  <div class="section">
+    <div class="section-head">
+      <h2>🏆 Mejor precio por modelo (últimas 48hs)</h2>
+      <span class="badge badge-green" id="bestCount">0 modelos</span>
+    </div>
+    <table>
+      <thead><tr>
+        <th>Modelo</th>
+        <th>Mejor precio</th>
+        <th>Proveedor</th>
+        <th>Última cotización</th>
+      </tr></thead>
+      <tbody id="bestTable"><tr><td colspan="4" class="empty">Sin datos aún</td></tr></tbody>
+    </table>
+  </div>
+
+  <!-- TODAS LAS COTIZACIONES -->
+  <div class="section">
+    <div class="section-head">
+      <h2>📋 Todas las cotizaciones</h2>
+      <div class="filters" id="filterBtns">
+        <button class="filter-btn active" onclick="filterModel('all')">Todos</button>
+      </div>
+    </div>
+    <table>
+      <thead><tr>
+        <th>Fecha</th>
+        <th>Proveedor</th>
+        <th>Modelo</th>
+        <th>Precio</th>
+        <th>Qty</th>
+        <th>Mensaje original</th>
+      </tr></thead>
+      <tbody id="allTable"><tr><td colspan="6" class="empty">Sin cotizaciones aún</td></tr></tbody>
+    </table>
+  </div>
+
+  <!-- PEDIR COTIZACION -->
+  <div class="section">
+    <div class="section-head"><h2>📤 Pedir cotización a todos los grupos</h2></div>
+    <div class="request-box">
+      <input id="reqProduct" placeholder="Ej: iPhone 16 Pro 256GB" />
+      <input id="reqTarget" placeholder="Target price USD (opcional)" style="max-width:200px" />
+      <button class="btn btn-blue" onclick="requestQuote()">Enviar a todos los grupos</button>
+    </div>
+  </div>
+
+  <!-- GRUPOS -->
+  <div class="section">
+    <div class="section-head">
+      <h2>👥 Grupos de proveedores</h2>
+      <span class="badge badge-blue" id="groupCount">0 grupos</span>
+    </div>
+    <table>
+      <thead><tr><th>Alias</th><th>Group ID</th><th>Estado</th></tr></thead>
+      <tbody id="groupsTable"><tr><td colspan="3" class="empty">Sin grupos registrados</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let currentFilter = 'all';
+let allQuotes = [];
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function fmt(ts) {
+  if (!ts) return '-';
+  const d = new Date(ts);
+  return d.toLocaleString('es-AR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+}
+
+function filterModel(model) {
+  currentFilter = model;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  renderAll(allQuotes);
+}
+
+function renderBest(quotes) {
+  const tbody = document.getElementById('bestTable');
+  if (!quotes.length) { tbody.innerHTML = '<tr><td colspan="4" class="empty">Sin cotizaciones en las últimas 48hs</td></tr>'; return; }
+  
+  // Agrupar por modelo y encontrar el mejor precio
+  const byModel = {};
+  quotes.forEach(q => {
+    const key = (q.product + ' ' + (q.model||'') + ' ' + (q.capacity||'')).trim();
+    if (!byModel[key] || parseFloat(q.best_price) < parseFloat(byModel[key].best_price)) {
+      byModel[key] = q;
+    }
+  });
+
+  const rows = Object.values(byModel).sort((a,b) => a.product?.localeCompare(b.product));
+  document.getElementById('bestCount').textContent = rows.length + ' modelos';
+  
+  tbody.innerHTML = rows.map((q, i) => {
+    const model = (q.product + ' ' + (q.model||'') + ' ' + (q.capacity||'')).trim();
+    return `<tr class="${i===0?'best-price':''}">
+      <td><span class="model">${model}</span></td>
+      <td><span class="price">USD ${parseFloat(q.best_price).toLocaleString()}</span></td>
+      <td><span class="supplier">${q.supplier_name||'-'}</span></td>
+      <td><span class="time">${fmt(q.last_seen)}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderAll(quotes) {
+  const tbody = document.getElementById('allTable');
+  const filtered = currentFilter === 'all' ? quotes : quotes.filter(q => {
+    const key = (q.product + ' ' + (q.model||'')).toLowerCase();
+    return key.includes(currentFilter.toLowerCase());
+  });
+  
+  if (!filtered.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Sin cotizaciones</td></tr>'; return; }
+  
+  tbody.innerHTML = filtered.map(q => {
+    const model = (q.product||'') + (q.model ? ' ' + q.model : '') + (q.capacity ? ' ' + q.capacity : '');
+    return `<tr>
+      <td><span class="time">${fmt(q.ts)}</span></td>
+      <td><span class="supplier">${q.supplier_name||'-'}</span></td>
+      <td><span class="model">${model}</span></td>
+      <td><span class="price">USD ${q.price ? parseFloat(q.price).toLocaleString() : '-'}</span></td>
+      <td><span class="qty">${q.qty || '-'}</span></td>
+      <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#718096;font-size:11px">${(q.raw_text||'').slice(0,80)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function updateFilters(quotes) {
+  const models = [...new Set(quotes.map(q => q.product).filter(Boolean))];
+  const container = document.getElementById('filterBtns');
+  const existing = container.querySelector('.filter-btn');
+  container.innerHTML = '<button class="filter-btn ' + (currentFilter==='all'?'active':'') + '" onclick="filterModel(event,'all')">Todos</button>';
+  models.forEach(m => {
+    container.innerHTML += `<button class="filter-btn ${currentFilter===m?'active':''}" onclick="filterModel(event,'${m}')">${m}</button>`;
+  });
+}
+
+async function load() {
+  try {
+    const [bestRes, allRes, groupsRes] = await Promise.all([
+      fetch('/quotes/best').then(r=>r.json()),
+      fetch('/quotes').then(r=>r.json()),
+      fetch('/groups').then(r=>r.json())
+    ]);
+
+    allQuotes = allRes.quotes || [];
+    const bestQuotes = bestRes.quotes || [];
+    const groups = groupsRes.groups || [];
+
+    // Stats
+    const suppliers = [...new Set(allQuotes.map(q=>q.supplier_name).filter(Boolean))];
+    const models = [...new Set(allQuotes.map(q=>q.product).filter(Boolean))];
+    document.getElementById('nQuotes').textContent = allQuotes.length;
+    document.getElementById('nSuppliers').textContent = suppliers.length;
+    document.getElementById('nModels').textContent = models.length;
+    document.getElementById('nGroups').textContent = groups.length;
+    document.getElementById('groupCount').textContent = groups.length + ' grupos';
+    document.getElementById('ts').textContent = 'Actualizado: ' + new Date().toLocaleTimeString('es-AR');
+
+    renderBest(bestQuotes.length ? bestQuotes : allQuotes);
+    updateFilters(allQuotes);
+    renderAll(allQuotes);
+
+    // Grupos
+    const gt = document.getElementById('groupsTable');
+    if (!groups.length) {
+      gt.innerHTML = '<tr><td colspan="3" class="empty">Sin grupos. Agregá grupos con el comando "agregar grupo [nombre] [group_id]" por WhatsApp</td></tr>';
+    } else {
+      gt.innerHTML = groups.map(g => `<tr>
+        <td><span class="model">${g.alias}</span></td>
+        <td style="font-family:monospace;font-size:11px;color:#718096">${g.group_id}</td>
+        <td><span class="badge ${g.active?'badge-green':'badge'}">${g.active?'✅ Activo':'❌ Inactivo'}</span></td>
+      </tr>`).join('');
+    }
+  } catch(e) {
+    console.error(e);
+  }
+}
+
+async function requestQuote() {
+  const product = document.getElementById('reqProduct').value.trim();
+  const target = document.getElementById('reqTarget').value.trim();
+  if (!product) { toast('Ingresá el producto a cotizar'); return; }
+  
+  const fullProduct = product + (target ? ' - target USD ' + target + ' CIF Miami' : '');
+  
+  try {
+    const r = await fetch('/request-quote', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({product: fullProduct})
+    });
+    const d = await r.json();
+    if (d.ok) {
+      toast('✅ Cotización enviada a ' + (d.sent||'los grupos'));
+      document.getElementById('reqProduct').value = '';
+      document.getElementById('reqTarget').value = '';
+    } else {
+      toast('Error: ' + (d.error||'desconocido'));
+    }
+  } catch(e) {
+    toast('Error al enviar cotización');
+  }
+}
+
+load();
+setInterval(load, 30000);
+</script>
+</body>
+</html>
