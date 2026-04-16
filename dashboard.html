@@ -37,14 +37,12 @@ input,select,textarea{background:#2d3748;border:1px solid #4a5568;border-radius:
 input:focus,select:focus,textarea:focus{outline:none;border-color:#63b3ed}
 .form-row{display:grid;gap:10px;margin-bottom:12px}
 .form-row.cols-2{grid-template-columns:1fr 1fr}
-.form-row.cols-3{grid-template-columns:1fr 1fr 1fr}
 label{font-size:12px;color:#718096;margin-bottom:4px;display:block}
 .btn{padding:8px 16px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;border:none}
 .btn-primary{background:#3b82f6;color:#fff}
 .btn-primary:hover{background:#2563eb}
 .btn-sm{padding:4px 10px;font-size:12px}
 .btn-green{background:#166534;color:#86efac}
-.btn-red{background:#7f1d1d;color:#fca5a5}
 .supplier-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;padding:16px 18px}
 .supplier-card{background:#2d3748;border-radius:8px;padding:12px;cursor:pointer;border:2px solid transparent}
 .supplier-card.active{border-color:#22c55e}
@@ -53,7 +51,6 @@ label{font-size:12px;color:#718096;margin-bottom:4px;display:block}
 .supplier-card .name{font-size:14px;font-weight:600;margin:4px 0}
 .supplier-card .meta{font-size:11px;color:#718096}
 .qr-wrap{text-align:center;padding:30px}
-.qr-wrap img{max-width:250px;border:8px solid #fff;border-radius:8px}
 .msg-item{padding:10px 18px;border-bottom:1px solid #2d3748;font-size:13px}
 .msg-item:last-child{border-bottom:none}
 .msg-meta{font-size:11px;color:#718096;margin-bottom:4px}
@@ -73,7 +70,6 @@ label{font-size:12px;color:#718096;margin-bottom:4px;display:block}
   <span class="ts" id="statusText">⏳ Checking...</span>
 </header>
 <div class="wrap">
-  <!-- Stats -->
   <div class="stats">
     <div class="stat"><div class="n" id="statConn">-</div><div class="l">Conexión</div></div>
     <div class="stat"><div class="n" id="statSuppliers">-</div><div class="l">Proveedores activos</div></div>
@@ -81,31 +77,23 @@ label{font-size:12px;color:#718096;margin-bottom:4px;display:block}
     <div class="stat"><div class="n" id="statQuotes7d">-</div><div class="l">Cotizaciones 7d</div></div>
     <div class="stat"><div class="n" id="statRequests">-</div><div class="l">Pedidos enviados</div></div>
   </div>
-
-  <!-- Main tabs -->
   <div class="section">
     <div class="tabs">
-      <button class="tab active" onclick="showTab('tab-best')">🏆 Best Prices</button>
-      <button class="tab" onclick="showTab('tab-suppliers')">🏭 Proveedores</button>
-      <button class="tab" onclick="showTab('tab-quotes')">💰 Cotizaciones</button>
-      <button class="tab" onclick="showTab('tab-request')">📤 Pedir Cotización</button>
-      <button class="tab" onclick="showTab('tab-messages')">💬 Mensajes</button>
-      <button class="tab" onclick="showTab('tab-conn')">📡 Conexión</button>
+      <button class="tab active" onclick="showTab('tab-best',this)">🏆 Best Prices</button>
+      <button class="tab" onclick="showTab('tab-suppliers',this)">🏭 Proveedores</button>
+      <button class="tab" onclick="showTab('tab-quotes',this)">💰 Cotizaciones</button>
+      <button class="tab" onclick="showTab('tab-request',this)">📤 Pedir Cotización</button>
+      <button class="tab" onclick="showTab('tab-messages',this)">💬 Mensajes</button>
+      <button class="tab" onclick="showTab('tab-conn',this)">📡 Conexión</button>
     </div>
-
-    <!-- Best Prices -->
     <div id="tab-best" class="tab-content active">
       <div class="section-head" style="border:none;padding-bottom:0">
         <h2>🏆 Mejores precios (últimos 7 días)</h2>
         <button class="btn btn-primary btn-sm" onclick="loadBest()">↻ Refresh</button>
       </div>
-      <table>
-        <thead><tr><th>Producto</th><th>Modelo</th><th>Capacidad</th><th>Precio</th><th>Proveedor</th><th>Qty</th><th>Incoterm</th><th>Fecha</th></tr></thead>
-        <tbody id="bestTbody"><tr><td colspan="8" style="text-align:center;color:#718096;padding:20px">Cargando...</td></tr></tbody>
-      </table>
+      <table><thead><tr><th>Producto</th><th>Modelo</th><th>Capacidad</th><th>Precio</th><th>Proveedor</th><th>Qty</th><th>Incoterm</th><th>Fecha</th></tr></thead>
+      <tbody id="bestTbody"><tr><td colspan="8" style="text-align:center;color:#718096;padding:20px">Cargando...</td></tr></tbody></table>
     </div>
-
-    <!-- Suppliers -->
     <div id="tab-suppliers" class="tab-content">
       <div class="section-head" style="border:none;padding-bottom:0">
         <h2>🏭 Proveedores (50 slots)</h2>
@@ -113,8 +101,6 @@ label{font-size:12px;color:#718096;margin-bottom:4px;display:block}
       </div>
       <div class="supplier-grid" id="supplierGrid">Cargando...</div>
     </div>
-
-    <!-- Quotes -->
     <div id="tab-quotes" class="tab-content">
       <div class="section-head" style="border:none;padding-bottom:0">
         <h2>💰 Cotizaciones</h2>
@@ -122,126 +108,102 @@ label{font-size:12px;color:#718096;margin-bottom:4px;display:block}
           <input style="width:160px" placeholder="Filtrar producto..." id="filterProduct" oninput="loadQuotes()">
           <select id="filterHours" onchange="loadQuotes()" style="width:130px">
             <option value="">Todas</option>
-            <option value="24">Últimas 24h</option>
-            <option value="48">Últimas 48h</option>
-            <option value="168">Última semana</option>
+            <option value="24">24h</option>
+            <option value="168">7 días</option>
           </select>
           <button class="btn btn-primary btn-sm" onclick="loadQuotes()">↻</button>
         </div>
       </div>
-      <table>
-        <thead><tr><th>Producto</th><th>Modelo</th><th>Cap</th><th>Color</th><th>Cond</th><th>Precio</th><th>Qty</th><th>Incoterm</th><th>Proveedor</th><th>Fuente</th><th>Fecha</th></tr></thead>
-        <tbody id="quotesTbody"><tr><td colspan="11" style="text-align:center;color:#718096;padding:20px">Cargando...</td></tr></tbody>
-      </table>
+      <table><thead><tr><th>Producto</th><th>Modelo</th><th>Cap</th><th>Color</th><th>Precio</th><th>Qty</th><th>Incoterm</th><th>Proveedor</th><th>Fecha</th></tr></thead>
+      <tbody id="quotesTbody"></tbody></table>
     </div>
-
-    <!-- Request quote -->
     <div id="tab-request" class="tab-content">
-      <div class="section-head" style="border:none;padding-bottom:0"><h2>📤 Pedir Cotización a Proveedores</h2></div>
+      <div class="section-head" style="border:none;padding-bottom:0"><h2>📤 Pedir Cotización</h2></div>
       <div style="max-width:500px;padding:16px 0">
-        <div class="form-row">
-          <div><label>Producto (ej: iPhone 16 Pro Max 256GB)</label><input id="rqProduct" placeholder="iPhone 16 Pro Max 256GB Natural Titanium"></div>
-        </div>
+        <div class="form-row"><div><label>Producto</label><input id="rqProduct" placeholder="iPhone 16 Pro Max 256GB"></div></div>
         <div class="form-row cols-2">
-          <div><label>Target Price (USD, opcional)</label><input id="rqPrice" type="number" placeholder="950"></div>
-          <div><label>Proveedores (dejar vacío = todos activos)</label><input id="rqSlots" placeholder="ej: 1,3,5"></div>
+          <div><label>Target Price (USD)</label><input id="rqPrice" type="number" placeholder="950"></div>
+          <div><label>Slots (vacío = todos)</label><input id="rqSlots" placeholder="1,3,5"></div>
         </div>
         <button class="btn btn-primary" onclick="sendRequest()">📤 Enviar Pedido</button>
         <div id="rqResult" style="margin-top:12px;font-size:13px;color:#68d391"></div>
       </div>
-      <div class="section-head" style="margin-top:16px"><h2>📋 Últimos pedidos</h2></div>
-      <table>
-        <thead><tr><th>Producto</th><th>Target</th><th>Enviado a</th><th>Fecha</th></tr></thead>
-        <tbody id="reqTbody"></tbody>
-      </table>
+      <table><thead><tr><th>Producto</th><th>Target</th><th>Enviado a</th><th>Fecha</th></tr></thead>
+      <tbody id="reqTbody"></tbody></table>
     </div>
-
-    <!-- Messages -->
     <div id="tab-messages" class="tab-content">
       <div class="section-head" style="border:none;padding-bottom:0">
         <h2>💬 Mensajes de Grupos</h2>
         <div style="display:flex;gap:8px;align-items:center">
           <select id="msgHours" onchange="loadMessages()" style="width:130px">
-            <option value="24">Últimas 24h</option>
-            <option value="48">Últimas 48h</option>
-            <option value="168">Última semana</option>
+            <option value="24">24h</option>
+            <option value="48">48h</option>
+            <option value="168">7 días</option>
           </select>
           <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:#718096">
-            <input type="checkbox" id="onlyQuotes" onchange="loadMessages()"> Solo con cotización
+            <input type="checkbox" id="onlyQuotes" onchange="loadMessages()"> Solo cotizaciones
           </label>
           <button class="btn btn-primary btn-sm" onclick="loadMessages()">↻</button>
         </div>
       </div>
       <div id="msgList" style="max-height:500px;overflow-y:auto"></div>
     </div>
-
-    <!-- Connection -->
     <div id="tab-conn" class="tab-content">
-      <div class="section-head" style="border:none;padding-bottom:0"><h2>📡 WhatsApp Connection (Baileys)</h2></div>
+      <div class="section-head" style="border:none;padding-bottom:0"><h2>📡 WhatsApp (Baileys)</h2></div>
       <div style="padding:16px 0">
         <div id="baileysStatus" style="font-size:14px;margin-bottom:16px"></div>
         <div id="qrSection" class="qr-wrap" style="display:none"></div>
         <div style="margin-top:16px">
           <h3 style="font-size:14px;font-weight:600;margin-bottom:12px">📱 Grupos disponibles</h3>
           <button class="btn btn-primary btn-sm" onclick="loadGroups()" style="margin-bottom:12px">↻ Cargar grupos</button>
-          <table>
-            <thead><tr><th>Grupo</th><th>ID</th><th>Participantes</th><th>Asignar a slot</th></tr></thead>
-            <tbody id="groupsTbody"></tbody>
-          </table>
+          <table><thead><tr><th>Grupo</th><th>ID</th><th>Participantes</th><th>Asignar a slot</th></tr></thead>
+          <tbody id="groupsTbody"></tbody></table>
         </div>
       </div>
     </div>
   </div>
 </div>
-
-<!-- Supplier Modal -->
 <div class="modal" id="supplierModal">
   <div class="modal-box">
     <button class="close-btn" onclick="closeModal()">×</button>
     <h3 id="modalTitle">Slot #</h3>
     <div class="form-row cols-2">
-      <div><label>Nombre empresa</label><input id="mName"></div>
+      <div><label>Nombre</label><input id="mName"></div>
       <div><label>Alias</label><input id="mAlias"></div>
     </div>
     <div class="form-row cols-2">
-      <div><label>Teléfono contacto</label><input id="mPhone"></div>
-      <div><label>Nombre contacto</label><input id="mContactName"></div>
+      <div><label>Teléfono</label><input id="mPhone"></div>
+      <div><label>Contacto</label><input id="mContactName"></div>
     </div>
     <div class="form-row cols-2">
       <div><label>País</label><input id="mCountry"></div>
       <div><label>Activo</label><select id="mActive"><option value="true">Sí</option><option value="false">No</option></select></div>
     </div>
-    <div class="form-row">
-      <div><label>Grupo WA vinculado</label><input id="mGroupName" readonly placeholder="Usar botón 'Asignar' desde Conexión"></div>
-    </div>
-    <div class="form-row">
-      <div><label>Notas</label><textarea id="mNotes" rows="2"></textarea></div>
-    </div>
+    <div class="form-row"><div><label>Grupo WA</label><input id="mGroupName" readonly></div></div>
+    <div class="form-row"><div><label>Notas</label><textarea id="mNotes" rows="2"></textarea></div></div>
     <div style="display:flex;gap:8px;margin-top:8px">
       <button class="btn btn-primary" onclick="saveSupplier()">💾 Guardar</button>
       <span id="modalMsg" style="font-size:12px;color:#68d391;align-self:center"></span>
     </div>
   </div>
 </div>
-
 <script>
 let currentSlot = null;
 let suppliers = [];
 
-// ============ TAB ============
-function showTab(id) {
+function showTab(id, el) {
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.getElementById(id).classList.add('active');
-  if (typeof event !== 'undefined' && event && event.target) event.target.classList.add('active');
+  if (el) el.classList.add('active');
   if (id === 'tab-best') loadBest();
   if (id === 'tab-suppliers') loadSuppliers();
   if (id === 'tab-quotes') loadQuotes();
-  if (id === 'tab-request') { loadQuoteRequests(); }
+  if (id === 'tab-request') loadQuoteRequests();
   if (id === 'tab-messages') loadMessages();
   if (id === 'tab-conn') { loadBaileysStatus(); loadGroups(); }
 }
-// ============ INIT ============
+
 async function init() {
   await loadStats();
   await loadBest();
@@ -266,51 +228,32 @@ async function loadStats() {
     document.getElementById('statQuotes7d').textContent = q7d.length;
     document.getElementById('statRequests').textContent = reqRes.length;
     suppliers = suppRes;
-  } catch(e) { console.error(e); }
+  } catch(e) { console.error('loadStats error:', e); }
 }
 
-// ============ BEST PRICES ============
 async function loadBest() {
   const tbody = document.getElementById('bestTbody');
   try {
     const data = await fetch('/api/quotes/best').then(r => r.json());
     if (!data.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#718096;padding:20px">Sin cotizaciones</td></tr>'; return; }
-    tbody.innerHTML = data.map(q => `
-      <tr>
-        <td>${q.product||''}</td>
-        <td>${q.model||''}</td>
-        <td>${q.capacity||''}</td>
-        <td><strong style="color:#68d391">$${q.price} ${q.currency}</strong></td>
-        <td>${q.supplier_name||''}</td>
-        <td>${q.qty||'-'}</td>
-        <td>${q.incoterm||''}</td>
-        <td>${new Date(q.ts).toLocaleDateString()}</td>
-      </tr>
-    `).join('');
-  } catch(e) { tbody.innerHTML = '<tr><td colspan="8" style="color:#f87171">Error cargando</td></tr>'; }
+    tbody.innerHTML = data.map(q => '<tr><td>' + (q.product||'') + '</td><td>' + (q.model||'') + '</td><td>' + (q.capacity||'') + '</td><td><strong style="color:#68d391">$' + q.price + ' ' + q.currency + '</strong></td><td>' + (q.supplier_name||'') + '</td><td>' + (q.qty||'-') + '</td><td>' + (q.incoterm||'') + '</td><td>' + new Date(q.ts).toLocaleDateString() + '</td></tr>').join('');
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="8" style="color:#f87171">Error</td></tr>'; }
 }
 
-// ============ SUPPLIERS ============
 async function loadSuppliers() {
   const grid = document.getElementById('supplierGrid');
   try {
     const data = await fetch('/api/suppliers').then(r => r.json());
     suppliers = data;
-    grid.innerHTML = data.map(s => `
-      <div class="supplier-card ${s.active ? 'active' : 'empty'}" onclick="openSupplier(${s.slot})">
-        <div class="slot">Slot #${s.slot}</div>
-        <div class="name">${s.name || s.alias || '— vacío —'}</div>
-        <div class="meta">${s.country || ''} ${s.whatsapp_group_name ? '📱 '+s.whatsapp_group_name : ''}</div>
-      </div>
-    `).join('');
-  } catch(e) { grid.innerHTML = 'Error cargando'; }
+    grid.innerHTML = data.map(s => '<div class="supplier-card ' + (s.active ? 'active' : 'empty') + '" onclick="openSupplier(' + s.slot + ')"><div class="slot">Slot #' + s.slot + '</div><div class="name">' + (s.name || s.alias || '— vacío —') + '</div><div class="meta">' + (s.whatsapp_group_name ? '📱 ' + s.whatsapp_group_name : '') + '</div></div>').join('');
+  } catch(e) { grid.innerHTML = 'Error'; }
 }
 
 function openSupplier(slot) {
   const s = suppliers.find(x => x.slot == slot);
   if (!s) return;
   currentSlot = slot;
-  document.getElementById('modalTitle').textContent = `Slot #${slot}`;
+  document.getElementById('modalTitle').textContent = 'Slot #' + slot;
   document.getElementById('mName').value = s.name || '';
   document.getElementById('mAlias').value = s.alias || '';
   document.getElementById('mPhone').value = s.contact_phone || '';
@@ -336,13 +279,12 @@ async function saveSupplier() {
     active: document.getElementById('mActive').value === 'true',
   };
   try {
-    await fetch(`/api/suppliers/${currentSlot}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    await fetch('/api/suppliers/' + currentSlot, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
     document.getElementById('modalMsg').textContent = '✅ Guardado';
     loadSuppliers();
   } catch(e) { document.getElementById('modalMsg').textContent = '❌ Error'; }
 }
 
-// ============ QUOTES ============
 async function loadQuotes() {
   const tbody = document.getElementById('quotesTbody');
   const product = document.getElementById('filterProduct').value;
@@ -352,38 +294,16 @@ async function loadQuotes() {
   if (hours) url += '&hours=' + hours;
   try {
     const data = await fetch(url).then(r => r.json());
-    if (!data.length) { tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#718096;padding:20px">Sin cotizaciones</td></tr>'; return; }
-    tbody.innerHTML = data.map(q => `
-      <tr>
-        <td>${q.product||''}</td>
-        <td>${q.model||''}</td>
-        <td>${q.capacity||''}</td>
-        <td>${q.color||''}</td>
-        <td>${q.condition||''}</td>
-        <td><strong style="color:#68d391">$${q.price} ${q.currency}</strong></td>
-        <td>${q.qty||'-'}</td>
-        <td>${q.incoterm||''}</td>
-        <td>${q.supplier_name||''}</td>
-        <td><span class="badge ${q.source==='group'?'badge-green':'badge-blue'}">${q.source}</span></td>
-        <td>${new Date(q.ts).toLocaleDateString()}</td>
-      </tr>
-    `).join('');
-  } catch(e) { tbody.innerHTML = '<tr><td colspan="11" style="color:#f87171">Error</td></tr>'; }
+    if (!data.length) { tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#718096;padding:20px">Sin cotizaciones</td></tr>'; return; }
+    tbody.innerHTML = data.map(q => '<tr><td>' + (q.product||'') + '</td><td>' + (q.model||'') + '</td><td>' + (q.capacity||'') + '</td><td>' + (q.color||'') + '</td><td><strong style="color:#68d391">$' + q.price + '</strong></td><td>' + (q.qty||'-') + '</td><td>' + (q.incoterm||'') + '</td><td>' + (q.supplier_name||'') + '</td><td>' + new Date(q.ts).toLocaleDateString() + '</td></tr>').join('');
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="9" style="color:#f87171">Error</td></tr>'; }
 }
 
-// ============ QUOTE REQUESTS ============
 async function loadQuoteRequests() {
   const tbody = document.getElementById('reqTbody');
   try {
     const data = await fetch('/api/quote-requests').then(r => r.json());
-    tbody.innerHTML = data.map(r => `
-      <tr>
-        <td>${r.product}</td>
-        <td>${r.target_price ? '$'+r.target_price : '-'}</td>
-        <td>${r.suppliers_sent||'-'}</td>
-        <td>${new Date(r.ts).toLocaleString()}</td>
-      </tr>
-    `).join('') || '<tr><td colspan="4" style="text-align:center;color:#718096">Sin pedidos</td></tr>';
+    tbody.innerHTML = data.map(r => '<tr><td>' + r.product + '</td><td>' + (r.target_price ? '$'+r.target_price : '-') + '</td><td>' + (r.suppliers_sent||'-') + '</td><td>' + new Date(r.ts).toLocaleString() + '</td></tr>').join('') || '<tr><td colspan="4" style="text-align:center;color:#718096">Sin pedidos</td></tr>';
   } catch(e) {}
 }
 
@@ -394,17 +314,12 @@ async function sendRequest() {
   const slotsRaw = document.getElementById('rqSlots').value;
   const supplier_slots = slotsRaw ? slotsRaw.split(',').map(Number) : [];
   try {
-    const res = await fetch('/api/request-quote', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ product, target_price, supplier_slots })
-    }).then(r => r.json());
-    document.getElementById('rqResult').textContent = `✅ Enviado a ${res.sent} proveedores: ${res.suppliers?.join(', ')}`;
+    const res = await fetch('/api/request-quote', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ product, target_price, supplier_slots }) }).then(r => r.json());
+    document.getElementById('rqResult').textContent = '✅ Enviado a ' + res.sent + ' proveedores: ' + (res.suppliers||[]).join(', ');
     loadQuoteRequests();
   } catch(e) { document.getElementById('rqResult').textContent = '❌ Error: ' + e.message; }
 }
 
-// ============ MESSAGES ============
 async function loadMessages() {
   const container = document.getElementById('msgList');
   const hours = document.getElementById('msgHours').value;
@@ -414,16 +329,10 @@ async function loadMessages() {
   try {
     const data = await fetch(url).then(r => r.json());
     if (!data.length) { container.innerHTML = '<div style="text-align:center;color:#718096;padding:20px">Sin mensajes</div>'; return; }
-    container.innerHTML = data.map(m => `
-      <div class="msg-item ${m.has_quote ? 'has-quote' : ''}">
-        <div class="msg-meta">📱 ${m.group_name||m.group_id} | ${m.sender_name||m.sender_phone} | ${new Date(m.ts).toLocaleString()} ${m.has_quote ? '<span class="badge badge-green">cotización</span>' : ''}</div>
-        <div class="msg-text">${m.message_text}</div>
-      </div>
-    `).join('');
+    container.innerHTML = data.map(m => '<div class="msg-item ' + (m.has_quote ? 'has-quote' : '') + '"><div class="msg-meta">📱 ' + (m.group_name||m.group_id) + ' | ' + (m.sender_name||m.sender_phone) + ' | ' + new Date(m.ts).toLocaleString() + (m.has_quote ? ' <span class="badge badge-green">cotización</span>' : '') + '</div><div class="msg-text">' + m.message_text + '</div></div>').join('');
   } catch(e) { container.innerHTML = '<div style="color:#f87171">Error</div>'; }
 }
 
-// ============ BAILEYS / CONNECTION ============
 async function loadBaileysStatus() {
   try {
     const data = await fetch('/api/baileys/status').then(r => r.json());
@@ -434,48 +343,24 @@ async function loadBaileysStatus() {
       qr.style.display = 'none';
     } else if (data.status === 'waiting_qr') {
       el.innerHTML = '<span style="color:#f59e0b">⏳ Esperando escaneo de QR...</span>';
-      loadQR();
-    } else if (data.status === 'not_installed') {
-      el.innerHTML = '<span style="color:#f87171">❌ Baileys no instalado. Ejecuta: npm install @whiskeysockets/baileys @hapi/boom</span>';
-      qr.style.display = 'none';
+      qr.style.display = 'block';
+      qr.innerHTML = '<p style="color:#f59e0b;margin-bottom:12px">Escaneá con WhatsApp → 3 puntitos → Dispositivos vinculados</p><img src="/api/baileys/qr-image?t=' + Date.now() + '" style="border:8px solid #fff;border-radius:8px;max-width:280px;display:block;margin:0 auto" onerror="this.style.display='none'"><br><button class="btn btn-primary btn-sm" style="margin-top:12px" onclick="loadBaileysStatus()">↻ Actualizar QR</button>';
     } else {
-      el.innerHTML = `<span style="color:#f87171">❌ Estado: ${data.status}</span>`;
-      qr.style.display = 'none';
+      el.innerHTML = '<span style="color:#f87171">❌ Estado: ' + data.status + '</span>';
     }
   } catch(e) {}
 }
 
-async function loadQR() {
-  try {
-    const data = await fetch('/api/baileys/qr').then(r => r.json());
-    const qr = document.getElementById('qrSection');
-    if (data.qr) {
-      qr.style.display = 'block';
-      qr.innerHTML = `
-        <p style="color:#f59e0b;margin-bottom:12px">Escaneá con WhatsApp → 3 puntitos → Dispositivos vinculados</p>
-        <img src="/api/baileys/qr-image?t=${Date.now()}" style="border:8px solid #fff;border-radius:8px;max-width:280px;display:block;margin:0 auto" onerror="this.style.display='none'">
-        <br><button class="btn btn-primary btn-sm" style="margin-top:12px" onclick="loadQR()">&#8635; Actualizar QR</button>`;
-    }
-  } catch(e) {}
-}
 async function loadGroups() {
   const tbody = document.getElementById('groupsTbody');
   try {
     const data = await fetch('/api/baileys/groups').then(r => r.json());
-    if (data.error) { tbody.innerHTML = `<tr><td colspan="4" style="color:#718096">${data.error}</td></tr>`; return; }
-    tbody.innerHTML = data.groups.map(g => `
-      <tr>
-        <td>${g.name}</td>
-        <td style="font-size:11px;color:#718096">${g.id}</td>
-        <td>${g.participants}</td>
-        <td>
-          <select id="gslot_${g.id.replace(/[^a-z0-9]/gi,'_')}" style="width:80px">
-            ${suppliers.map(s => `<option value="${s.slot}">#${s.slot} ${s.name||''}</option>`).join('')}
-          </select>
-          <button class="btn btn-green btn-sm" onclick="linkGroup('${g.id}','${g.name.replace(/'/g,\"\\\'\")}')" style="margin-left:4px">Asignar</button>
-        </td>
-      </tr>
-    `).join('') || '<tr><td colspan="4" style="text-align:center;color:#718096">Sin grupos</td></tr>';
+    if (data.error) { tbody.innerHTML = '<tr><td colspan="4" style="color:#718096">' + data.error + '</td></tr>'; return; }
+    tbody.innerHTML = data.groups.map(g => {
+      const safeId = g.id.replace(/[^a-z0-9]/gi, '_');
+      const opts = suppliers.map(s => '<option value="' + s.slot + '">#' + s.slot + ' ' + (s.name||'') + '</option>').join('');
+      return '<tr><td>' + g.name + '</td><td style="font-size:11px;color:#718096">' + g.id + '</td><td>' + g.participants + '</td><td><select id="gslot_' + safeId + '" style="width:80px">' + opts + '</select> <button class="btn btn-green btn-sm" onclick="linkGroup('' + g.id.replace(/'/g,"\'") + '','' + g.name.replace(/'/g,"\'") + '')" style="margin-left:4px">Asignar</button></td></tr>';
+    }).join('') || '<tr><td colspan="4" style="text-align:center;color:#718096">Sin grupos</td></tr>';
   } catch(e) { tbody.innerHTML = '<tr><td colspan="4" style="color:#f87171">Error</td></tr>'; }
 }
 
@@ -484,11 +369,7 @@ async function linkGroup(groupId, groupName) {
   const slot = document.getElementById('gslot_' + safeId)?.value;
   if (!slot) return;
   try {
-    await fetch('/api/suppliers/' + slot + '/link-group', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ group_id: groupId, group_name: groupName })
-    });
+    await fetch('/api/suppliers/' + slot + '/link-group', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ group_id: groupId, group_name: groupName }) });
     alert('Grupo "' + groupName + '" asignado al slot #' + slot);
     loadSuppliers();
   } catch(e) { alert('Error: ' + e.message); }
