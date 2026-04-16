@@ -211,7 +211,14 @@ async function initBaileys() {
       auth: state,
       printQRInTerminal: true,
       browser: ['Marco Bot', 'Chrome', '22.0'],
-    });
+        getMessage: async (key) => {
+      try {
+        const r = await pool.query('SELECT message_text FROM group_messages WHERE id = $1 LIMIT 1', [key.id]);
+        if (r.rows.length > 0) return { conversation: r.rows[0].message_text };
+      } catch(e) {}
+      return { conversation: 'placeholder' };
+    },
+});
 
     sock.ev.on('creds.update', saveCreds);
 
