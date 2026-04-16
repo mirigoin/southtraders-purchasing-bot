@@ -267,7 +267,7 @@ async function loadBest(){
   var tb=document.getElementById('bestTbody');
   try {
     var d=await fetch('/api/quotes/best').then(function(x){return x.json();});
-    if(!d.length){ tb.innerHTML='<tr><td colspan="8" style="text-align:center;color:#718096;padding:20px">Sin cotizaciones aun</td></tr>'; return; }
+    if(!d.length){ tb.innerHTML='<tr><td colspan="8" style="text-align:center;color:#718096;padding:20px">Sin cotizaciones aun<\/td><\/tr>'; return; }
     tb.innerHTML=d.map(function(q){
       return '<tr><td>'+(q.product||'')+'<\/td><td>'+(q.model||'')+'<\/td><td>'+(q.capacity||'')+'<\/td><td><strong style="color:#68d391">$'+q.price+' '+q.currency+'<\/strong><\/td><td>'+(q.supplier_name||'')+'<\/td><td>'+(q.qty||'-')+'<\/td><td>'+(q.incoterm||'')+'<\/td><td>'+new Date(q.ts).toLocaleDateString()+'<\/td><\/tr>';
     }).join('');
@@ -425,27 +425,27 @@ async function linkGroup(btn){
 async function loadCompras() {
   var tb = document.getElementById('minimosTbody');
   var alerts = document.getElementById('comprasAlerts');
-  tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#718096;padding:20px">Cargando stock de Northtraders...</td></tr>';
+  tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#718096;padding:20px">Cargando stock de Northtraders...<\/td><\/tr>';
   alerts.innerHTML = '';
   try {
     var data = await fetch('/api/compras').then(function(r){return r.json();});
-    if (data.error) { tb.innerHTML = '<tr><td colspan="8" style="color:#f87171">' + data.error + '</td></tr>'; return; }
+    if (data.error) { tb.innerHTML = '<tr><td colspan="8" style="color:#f87171">' + data.error + '<\/td><\/tr>'; return; }
     // Alertas de compra
     var needBuy = data.filter(function(x){return x.alerta;});
     if (needBuy.length > 0) {
       alerts.innerHTML = needBuy.map(function(x){
         var priceStr = x.mejor_precio ? '$' + x.mejor_precio.price + ' ' + x.mejor_precio.currency + ' - ' + x.mejor_precio.supplier_name : 'Sin cotizacion reciente';
-        return '<div style="background:#7f1d1d;border-left:4px solid #ef4444;border-radius:6px;padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center"><div><strong style="color:#fca5a5">COMPRAR: ' + x.descripcion + '</strong><div style="font-size:12px;color:#fca5a5;margin-top:4px">Falta ' + x.falta + ' u. | Stock: ' + x.stock_total + ' | Min: ' + x.minimo + ' | ' + priceStr + '</div></div></div>';
+        return '<div style="background:#7f1d1d;border-left:4px solid #ef4444;border-radius:6px;padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center"><div><strong style="color:#fca5a5">COMPRAR: ' + x.descripcion + '<\/strong><div style="font-size:12px;color:#fca5a5;margin-top:4px">Falta ' + x.falta + ' u. | Stock: ' + x.stock_total + ' | Min: ' + x.minimo + ' | ' + priceStr + '<\/div><\/div><\/div>';
       }).join('');
     } else if (data.length > 0) {
-      alerts.innerHTML = '<div style="background:#14532d;border-left:4px solid #22c55e;border-radius:6px;padding:10px 14px;color:#86efac">&#10003; Todo el stock esta por encima de los minimos definidos</div>';
+      alerts.innerHTML = '<div style="background:#14532d;border-left:4px solid #22c55e;border-radius:6px;padding:10px 14px;color:#86efac">&#10003; Todo el stock esta por encima de los minimos definidos<\/div>';
     }
     // Tabla de minimos
-    if (!data.length) { tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#718096;padding:20px">No hay minimos configurados. Haz click en + Agregar para empezar.</td></tr>'; return; }
+    if (!data.length) { tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#718096;padding:20px">No hay minimos configurados. Haz click en + Agregar para empezar.<\/td><\/tr>'; return; }
     tb.innerHTML = data.map(function(x){
       var stockColor = x.alerta ? 'color:#f87171;font-weight:600' : 'color:#68d391';
-      var priceCell = x.mejor_precio ? '$' + x.mejor_precio.price + ' ' + x.mejor_precio.currency + '<br><span style="font-size:11px;color:#718096">' + x.mejor_precio.supplier_name + '</span>' : '<span style="color:#718096">-</span>';
-      return '<tr><td style="font-size:12px;color:#718096">' + x.codigo + '</td><td>' + x.descripcion + '</td><td style="' + stockColor + '">' + x.stock + '</td><td style="color:#718096">' + x.transito + '</td><td>' + x.minimo + '</td><td style="' + (x.falta > 0 ? 'color:#f87171;font-weight:600' : 'color:#718096') + '">' + (x.falta > 0 ? x.falta : '-') + '</td><td>' + priceCell + '</td><td><button class="btn btn-sm" onclick="deleteMinimo(' + x.id + ')" style="background:#7f1d1d;color:#fca5a5;font-size:11px">&#10005;</button></td></tr>';
+      var priceCell = x.mejor_precio ? '$' + x.mejor_precio.price + ' ' + x.mejor_precio.currency + '<br><span style="font-size:11px;color:#718096">' + x.mejor_precio.supplier_name + '<\/span>' : '<span style="color:#718096">-<\/span>';
+      return '<tr><td style="font-size:12px;color:#718096">' + x.codigo + '<\/td><td>' + x.descripcion + '<\/td><td style="' + stockColor + '">' + x.stock + '<\/td><td style="color:#718096">' + x.transito + '<\/td><td>' + x.minimo + '<\/td><td style="' + (x.falta > 0 ? 'color:#f87171;font-weight:600' : 'color:#718096') + '">' + (x.falta > 0 ? x.falta : '-') + '<\/td><td>' + priceCell + '<\/td><td><button class="btn btn-sm" onclick="deleteMinimo(' + x.id + ')" style="background:#7f1d1d;color:#fca5a5;font-size:11px">&#10005;<\/button><\/td><\/tr>';
     }).join('');
     // Cargar datalist para autocompletar
     var stockData = await fetch('/api/stock').then(function(r){return r.json();}).catch(function(){return {items:[]};});
@@ -453,7 +453,7 @@ async function loadCompras() {
       var dl = document.getElementById('stockList');
       if (dl) dl.innerHTML = stockData.items.map(function(s){return '<option value="' + s.codigo + '" label="' + s.desc + '">';}).join('');
     }
-  } catch(e) { tb.innerHTML = '<tr><td colspan="8" style="color:#f87171">Error: ' + e.message + '</td></tr>'; }
+  } catch(e) { tb.innerHTML = '<tr><td colspan="8" style="color:#f87171">Error: ' + e.message + '<\/td><\/tr>'; }
 }
 
 function openAddMinimo() {
