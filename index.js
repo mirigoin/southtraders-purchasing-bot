@@ -267,7 +267,7 @@ async function initBaileys() {
           if (result.quotes && result.quotes.length > 0) {
             // Mark message as having a quote
             await pool.query(
-              `UPDATE group_messages SET has_quote = TRUE, processed = TRUE WHERE group_id = $1 AND message_text = $2 ORDER BY ts DESC LIMIT 1`,
+              `UPDATE group_messages SET has_quote = TRUE, processed = TRUE WHERE id = (SELECT id FROM group_messages WHERE group_id = $1 AND message_text = $2 ORDER BY ts DESC LIMIT 1)`,
               [groupId, text]
             );
 
