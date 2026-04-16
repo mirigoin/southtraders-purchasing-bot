@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>South Traders - Comparativa Precios</title>
+<title>🤖 Marco — Purchasing Bot</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f1117;color:#e2e8f0;min-height:100vh}
@@ -24,263 +24,478 @@ header h1{font-size:18px;font-weight:700;color:#fff}
 .badge-green{background:#1c4532;color:#68d391}
 .badge-blue{background:#1a365d;color:#63b3ed}
 table{width:100%;border-collapse:collapse}
-th{padding:10px 16px;text-align:left;font-size:11px;font-weight:600;color:#718096;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #2d3748;background:#171923}
-td{padding:10px 16px;font-size:13px;border-bottom:1px solid #1a202c;color:#e2e8f0}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:600;color:#718096;text-transform:uppercase;letter-spacing:.05em}
+td{padding:10px 16px;font-size:13px;border-bottom:1px solid #1a202c}
 tr:hover td{background:#2d3748}
 tr:last-child td{border-bottom:none}
-.price{font-weight:700;color:#68d391;font-size:14px}
-.best-price{background:#1c4532!important}
-.best-price td{color:#68d391}
-.model{font-weight:600;color:#fff}
-.supplier{color:#a0aec0}
-.qty{color:#63b3ed;font-weight:500}
-.time{color:#718096;font-size:11px}
-.empty{text-align:center;padding:40px;color:#4a5568}
-.filters{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.filter-btn{padding:5px 12px;border:1px solid #2d3748;border-radius:6px;background:transparent;color:#a0aec0;font-size:12px;cursor:pointer}
-.filter-btn.active{background:#2b6cb0;border-color:#2b6cb0;color:#fff}
-.filter-btn:hover{border-color:#4a5568;color:#e2e8f0}
-.request-box{padding:16px 18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;border-top:1px solid #2d3748}
-.request-box input{flex:1;min-width:200px;background:#171923;border:1px solid #2d3748;border-radius:7px;padding:8px 12px;color:#e2e8f0;font-size:13px}
-.request-box input:focus{outline:none;border-color:#4299e1}
-.btn{padding:8px 16px;border:none;border-radius:7px;font-size:13px;font-weight:500;cursor:pointer}
-.btn-blue{background:#2b6cb0;color:#fff}
-.btn-blue:hover{background:#2c5282}
-.toast{position:fixed;bottom:20px;right:20px;background:#2d3748;color:#e2e8f0;padding:10px 16px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999;border:1px solid #4a5568}
-.toast.show{opacity:1}
-.tag{display:inline-block;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600;margin-left:4px;background:#2b6cb0;color:#bee3f8}
+.tabs{display:flex;gap:4px;padding:12px 18px;border-bottom:1px solid #2d3748}
+.tab{padding:6px 14px;border-radius:6px;font-size:13px;cursor:pointer;border:none;background:none;color:#718096}
+.tab.active{background:#2d3748;color:#e2e8f0}
+.tab-content{display:none;padding:16px 18px}
+.tab-content.active{display:block}
+input,select,textarea{background:#2d3748;border:1px solid #4a5568;border-radius:6px;color:#e2e8f0;padding:8px 12px;font-size:13px;width:100%}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#63b3ed}
+.form-row{display:grid;gap:10px;margin-bottom:12px}
+.form-row.cols-2{grid-template-columns:1fr 1fr}
+.form-row.cols-3{grid-template-columns:1fr 1fr 1fr}
+label{font-size:12px;color:#718096;margin-bottom:4px;display:block}
+.btn{padding:8px 16px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;border:none}
+.btn-primary{background:#3b82f6;color:#fff}
+.btn-primary:hover{background:#2563eb}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn-green{background:#166534;color:#86efac}
+.btn-red{background:#7f1d1d;color:#fca5a5}
+.supplier-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;padding:16px 18px}
+.supplier-card{background:#2d3748;border-radius:8px;padding:12px;cursor:pointer;border:2px solid transparent}
+.supplier-card.active{border-color:#22c55e}
+.supplier-card.empty{border-color:#4a5568;opacity:.6}
+.supplier-card .slot{font-size:10px;color:#718096}
+.supplier-card .name{font-size:14px;font-weight:600;margin:4px 0}
+.supplier-card .meta{font-size:11px;color:#718096}
+.qr-wrap{text-align:center;padding:30px}
+.qr-wrap img{max-width:250px;border:8px solid #fff;border-radius:8px}
+.msg-item{padding:10px 18px;border-bottom:1px solid #2d3748;font-size:13px}
+.msg-item:last-child{border-bottom:none}
+.msg-meta{font-size:11px;color:#718096;margin-bottom:4px}
+.msg-text{color:#e2e8f0}
+.has-quote{border-left:3px solid #22c55e}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center}
+.modal.open{display:flex}
+.modal-box{background:#1a202c;border-radius:10px;padding:24px;width:90%;max-width:520px;border:1px solid #2d3748}
+.modal-box h3{font-size:16px;font-weight:600;margin-bottom:16px}
+.close-btn{float:right;background:none;border:none;color:#718096;font-size:20px;cursor:pointer}
 </style>
 </head>
 <body>
 <header>
-  <div class="dot"></div>
-  <h1>📊 South Traders — Comparativa de Precios</h1>
-  <span class="ts" id="ts">Cargando...</span>
+  <div class="dot" id="statusDot"></div>
+  <h1>🤖 Marco — Purchasing Bot</h1>
+  <span class="ts" id="statusText">⏳ Checking...</span>
 </header>
 <div class="wrap">
+  <!-- Stats -->
   <div class="stats">
-    <div class="stat"><div class="n" id="nQuotes">0</div><div class="l">Cotizaciones (48hs)</div></div>
-    <div class="stat"><div class="n" id="nSuppliers">0</div><div class="l">Proveedores activos</div></div>
-    <div class="stat"><div class="n" id="nModels">0</div><div class="l">Modelos cotizados</div></div>
-    <div class="stat"><div class="n" id="nGroups">0</div><div class="l">Grupos registrados</div></div>
+    <div class="stat"><div class="n" id="statConn">-</div><div class="l">Conexión</div></div>
+    <div class="stat"><div class="n" id="statSuppliers">-</div><div class="l">Proveedores activos</div></div>
+    <div class="stat"><div class="n" id="statQuotes24">-</div><div class="l">Cotizaciones 24h</div></div>
+    <div class="stat"><div class="n" id="statQuotes7d">-</div><div class="l">Cotizaciones 7d</div></div>
+    <div class="stat"><div class="n" id="statRequests">-</div><div class="l">Pedidos enviados</div></div>
   </div>
 
-  <!-- MEJOR PRECIO POR MODELO -->
+  <!-- Main tabs -->
   <div class="section">
-    <div class="section-head">
-      <h2>🏆 Mejor precio por modelo (últimas 48hs)</h2>
-      <span class="badge badge-green" id="bestCount">0 modelos</span>
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('tab-best')">🏆 Best Prices</button>
+      <button class="tab" onclick="showTab('tab-suppliers')">🏭 Proveedores</button>
+      <button class="tab" onclick="showTab('tab-quotes')">💰 Cotizaciones</button>
+      <button class="tab" onclick="showTab('tab-request')">📤 Pedir Cotización</button>
+      <button class="tab" onclick="showTab('tab-messages')">💬 Mensajes</button>
+      <button class="tab" onclick="showTab('tab-conn')">📡 Conexión</button>
     </div>
-    <table>
-      <thead><tr>
-        <th>Modelo</th>
-        <th>Mejor precio</th>
-        <th>Proveedor</th>
-        <th>Última cotización</th>
-      </tr></thead>
-      <tbody id="bestTable"><tr><td colspan="4" class="empty">Sin datos aún</td></tr></tbody>
-    </table>
-  </div>
 
-  <!-- TODAS LAS COTIZACIONES -->
-  <div class="section">
-    <div class="section-head">
-      <h2>📋 Todas las cotizaciones</h2>
-      <div class="filters" id="filterBtns">
-        <button class="filter-btn active" onclick="filterModel('all')">Todos</button>
+    <!-- Best Prices -->
+    <div id="tab-best" class="tab-content active">
+      <div class="section-head" style="border:none;padding-bottom:0">
+        <h2>🏆 Mejores precios (últimos 7 días)</h2>
+        <button class="btn btn-primary btn-sm" onclick="loadBest()">↻ Refresh</button>
+      </div>
+      <table>
+        <thead><tr><th>Producto</th><th>Modelo</th><th>Capacidad</th><th>Precio</th><th>Proveedor</th><th>Qty</th><th>Incoterm</th><th>Fecha</th></tr></thead>
+        <tbody id="bestTbody"><tr><td colspan="8" style="text-align:center;color:#718096;padding:20px">Cargando...</td></tr></tbody>
+      </table>
+    </div>
+
+    <!-- Suppliers -->
+    <div id="tab-suppliers" class="tab-content">
+      <div class="section-head" style="border:none;padding-bottom:0">
+        <h2>🏭 Proveedores (50 slots)</h2>
+        <button class="btn btn-primary btn-sm" onclick="loadSuppliers()">↻ Refresh</button>
+      </div>
+      <div class="supplier-grid" id="supplierGrid">Cargando...</div>
+    </div>
+
+    <!-- Quotes -->
+    <div id="tab-quotes" class="tab-content">
+      <div class="section-head" style="border:none;padding-bottom:0">
+        <h2>💰 Cotizaciones</h2>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input style="width:160px" placeholder="Filtrar producto..." id="filterProduct" oninput="loadQuotes()">
+          <select id="filterHours" onchange="loadQuotes()" style="width:130px">
+            <option value="">Todas</option>
+            <option value="24">Últimas 24h</option>
+            <option value="48">Últimas 48h</option>
+            <option value="168">Última semana</option>
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="loadQuotes()">↻</button>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>Producto</th><th>Modelo</th><th>Cap</th><th>Color</th><th>Cond</th><th>Precio</th><th>Qty</th><th>Incoterm</th><th>Proveedor</th><th>Fuente</th><th>Fecha</th></tr></thead>
+        <tbody id="quotesTbody"><tr><td colspan="11" style="text-align:center;color:#718096;padding:20px">Cargando...</td></tr></tbody>
+      </table>
+    </div>
+
+    <!-- Request quote -->
+    <div id="tab-request" class="tab-content">
+      <div class="section-head" style="border:none;padding-bottom:0"><h2>📤 Pedir Cotización a Proveedores</h2></div>
+      <div style="max-width:500px;padding:16px 0">
+        <div class="form-row">
+          <div><label>Producto (ej: iPhone 16 Pro Max 256GB)</label><input id="rqProduct" placeholder="iPhone 16 Pro Max 256GB Natural Titanium"></div>
+        </div>
+        <div class="form-row cols-2">
+          <div><label>Target Price (USD, opcional)</label><input id="rqPrice" type="number" placeholder="950"></div>
+          <div><label>Proveedores (dejar vacío = todos activos)</label><input id="rqSlots" placeholder="ej: 1,3,5"></div>
+        </div>
+        <button class="btn btn-primary" onclick="sendRequest()">📤 Enviar Pedido</button>
+        <div id="rqResult" style="margin-top:12px;font-size:13px;color:#68d391"></div>
+      </div>
+      <div class="section-head" style="margin-top:16px"><h2>📋 Últimos pedidos</h2></div>
+      <table>
+        <thead><tr><th>Producto</th><th>Target</th><th>Enviado a</th><th>Fecha</th></tr></thead>
+        <tbody id="reqTbody"></tbody>
+      </table>
+    </div>
+
+    <!-- Messages -->
+    <div id="tab-messages" class="tab-content">
+      <div class="section-head" style="border:none;padding-bottom:0">
+        <h2>💬 Mensajes de Grupos</h2>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select id="msgHours" onchange="loadMessages()" style="width:130px">
+            <option value="24">Últimas 24h</option>
+            <option value="48">Últimas 48h</option>
+            <option value="168">Última semana</option>
+          </select>
+          <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:#718096">
+            <input type="checkbox" id="onlyQuotes" onchange="loadMessages()"> Solo con cotización
+          </label>
+          <button class="btn btn-primary btn-sm" onclick="loadMessages()">↻</button>
+        </div>
+      </div>
+      <div id="msgList" style="max-height:500px;overflow-y:auto"></div>
+    </div>
+
+    <!-- Connection -->
+    <div id="tab-conn" class="tab-content">
+      <div class="section-head" style="border:none;padding-bottom:0"><h2>📡 WhatsApp Connection (Baileys)</h2></div>
+      <div style="padding:16px 0">
+        <div id="baileysStatus" style="font-size:14px;margin-bottom:16px"></div>
+        <div id="qrSection" class="qr-wrap" style="display:none"></div>
+        <div style="margin-top:16px">
+          <h3 style="font-size:14px;font-weight:600;margin-bottom:12px">📱 Grupos disponibles</h3>
+          <button class="btn btn-primary btn-sm" onclick="loadGroups()" style="margin-bottom:12px">↻ Cargar grupos</button>
+          <table>
+            <thead><tr><th>Grupo</th><th>ID</th><th>Participantes</th><th>Asignar a slot</th></tr></thead>
+            <tbody id="groupsTbody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
-    <table>
-      <thead><tr>
-        <th>Fecha</th>
-        <th>Proveedor</th>
-        <th>Modelo</th>
-        <th>Precio</th>
-        <th>Qty</th>
-        <th>Mensaje original</th>
-      </tr></thead>
-      <tbody id="allTable"><tr><td colspan="6" class="empty">Sin cotizaciones aún</td></tr></tbody>
-    </table>
-  </div>
-
-  <!-- PEDIR COTIZACION -->
-  <div class="section">
-    <div class="section-head"><h2>📤 Pedir cotización a todos los grupos</h2></div>
-    <div class="request-box">
-      <input id="reqProduct" placeholder="Ej: iPhone 16 Pro 256GB" />
-      <input id="reqTarget" placeholder="Target price USD (opcional)" style="max-width:200px" />
-      <button class="btn btn-blue" onclick="requestQuote()">Enviar a todos los grupos</button>
-    </div>
-  </div>
-
-  <!-- GRUPOS -->
-  <div class="section">
-    <div class="section-head">
-      <h2>👥 Grupos de proveedores</h2>
-      <span class="badge badge-blue" id="groupCount">0 grupos</span>
-    </div>
-    <table>
-      <thead><tr><th>Alias</th><th>Group ID</th><th>Estado</th></tr></thead>
-      <tbody id="groupsTable"><tr><td colspan="3" class="empty">Sin grupos registrados</td></tr></tbody>
-    </table>
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<!-- Supplier Modal -->
+<div class="modal" id="supplierModal">
+  <div class="modal-box">
+    <button class="close-btn" onclick="closeModal()">×</button>
+    <h3 id="modalTitle">Slot #</h3>
+    <div class="form-row cols-2">
+      <div><label>Nombre empresa</label><input id="mName"></div>
+      <div><label>Alias</label><input id="mAlias"></div>
+    </div>
+    <div class="form-row cols-2">
+      <div><label>Teléfono contacto</label><input id="mPhone"></div>
+      <div><label>Nombre contacto</label><input id="mContactName"></div>
+    </div>
+    <div class="form-row cols-2">
+      <div><label>País</label><input id="mCountry"></div>
+      <div><label>Activo</label><select id="mActive"><option value="true">Sí</option><option value="false">No</option></select></div>
+    </div>
+    <div class="form-row">
+      <div><label>Grupo WA vinculado</label><input id="mGroupName" readonly placeholder="Usar botón 'Asignar' desde Conexión"></div>
+    </div>
+    <div class="form-row">
+      <div><label>Notas</label><textarea id="mNotes" rows="2"></textarea></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn btn-primary" onclick="saveSupplier()">💾 Guardar</button>
+      <span id="modalMsg" style="font-size:12px;color:#68d391;align-self:center"></span>
+    </div>
+  </div>
+</div>
 
 <script>
-let currentFilter = 'all';
-let allQuotes = [];
+let currentSlot = null;
+let suppliers = [];
 
-function toast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2500);
-}
-
-function fmt(ts) {
-  if (!ts) return '-';
-  const d = new Date(ts);
-  return d.toLocaleString('es-AR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
-}
-
-function filterModel(model) {
-  currentFilter = model;
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+// ============ TAB ============
+function showTab(id) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
   event.target.classList.add('active');
-  renderAll(allQuotes);
+  if (id === 'tab-best') loadBest();
+  if (id === 'tab-suppliers') loadSuppliers();
+  if (id === 'tab-quotes') loadQuotes();
+  if (id === 'tab-request') { loadQuoteRequests(); }
+  if (id === 'tab-messages') loadMessages();
+  if (id === 'tab-conn') { loadBaileysStatus(); loadGroups(); }
 }
 
-function renderBest(quotes) {
-  const tbody = document.getElementById('bestTable');
-  if (!quotes.length) { tbody.innerHTML = '<tr><td colspan="4" class="empty">Sin cotizaciones en las últimas 48hs</td></tr>'; return; }
-  
-  // Agrupar por modelo y encontrar el mejor precio
-  const byModel = {};
-  quotes.forEach(q => {
-    const key = (q.product + ' ' + (q.model||'') + ' ' + (q.capacity||'')).trim();
-    if (!byModel[key] || parseFloat(q.best_price) < parseFloat(byModel[key].best_price)) {
-      byModel[key] = q;
-    }
-  });
-
-  const rows = Object.values(byModel).sort((a,b) => a.product?.localeCompare(b.product));
-  document.getElementById('bestCount').textContent = rows.length + ' modelos';
-  
-  tbody.innerHTML = rows.map((q, i) => {
-    const model = (q.product + ' ' + (q.model||'') + ' ' + (q.capacity||'')).trim();
-    return `<tr class="${i===0?'best-price':''}">
-      <td><span class="model">${model}</span></td>
-      <td><span class="price">USD ${parseFloat(q.best_price).toLocaleString()}</span></td>
-      <td><span class="supplier">${q.supplier_name||'-'}</span></td>
-      <td><span class="time">${fmt(q.last_seen)}</span></td>
-    </tr>`;
-  }).join('');
+// ============ INIT ============
+async function init() {
+  await loadStats();
+  await loadBest();
+  setInterval(loadStats, 30000);
 }
 
-function renderAll(quotes) {
-  const tbody = document.getElementById('allTable');
-  const filtered = currentFilter === 'all' ? quotes : quotes.filter(q => {
-    const key = (q.product + ' ' + (q.model||'')).toLowerCase();
-    return key.includes(currentFilter.toLowerCase());
-  });
-  
-  if (!filtered.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Sin cotizaciones</td></tr>'; return; }
-  
-  tbody.innerHTML = filtered.map(q => {
-    const model = (q.product||'') + (q.model ? ' ' + q.model : '') + (q.capacity ? ' ' + q.capacity : '');
-    return `<tr>
-      <td><span class="time">${fmt(q.ts)}</span></td>
-      <td><span class="supplier">${q.supplier_name||'-'}</span></td>
-      <td><span class="model">${model}</span></td>
-      <td><span class="price">USD ${q.price ? parseFloat(q.price).toLocaleString() : '-'}</span></td>
-      <td><span class="qty">${q.qty || '-'}</span></td>
-      <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#718096;font-size:11px">${(q.raw_text||'').slice(0,80)}</td>
-    </tr>`;
-  }).join('');
-}
-
-function updateFilters(quotes) {
-  const models = [...new Set(quotes.map(q => q.product).filter(Boolean))];
-  const container = document.getElementById('filterBtns');
-  const existing = container.querySelector('.filter-btn');
-  container.innerHTML = '<button class="filter-btn ' + (currentFilter==='all'?'active':'') + '" onclick="filterModel(event,'all')">Todos</button>';
-  models.forEach(m => {
-    container.innerHTML += `<button class="filter-btn ${currentFilter===m?'active':''}" onclick="filterModel(event,'${m}')">${m}</button>`;
-  });
-}
-
-async function load() {
+async function loadStats() {
   try {
-    const [bestRes, allRes, groupsRes] = await Promise.all([
-      fetch('/quotes/best').then(r=>r.json()),
-      fetch('/quotes').then(r=>r.json()),
-      fetch('/groups').then(r=>r.json())
+    const [bStatus, suppRes, q24, q7d, reqRes] = await Promise.all([
+      fetch('/api/baileys/status').then(r => r.json()),
+      fetch('/api/suppliers').then(r => r.json()),
+      fetch('/api/quotes?hours=24').then(r => r.json()),
+      fetch('/api/quotes?hours=168').then(r => r.json()),
+      fetch('/api/quote-requests').then(r => r.json()),
     ]);
-
-    allQuotes = allRes.quotes || [];
-    const bestQuotes = bestRes.quotes || [];
-    const groups = groupsRes.groups || [];
-
-    // Stats
-    const suppliers = [...new Set(allQuotes.map(q=>q.supplier_name).filter(Boolean))];
-    const models = [...new Set(allQuotes.map(q=>q.product).filter(Boolean))];
-    document.getElementById('nQuotes').textContent = allQuotes.length;
-    document.getElementById('nSuppliers').textContent = suppliers.length;
-    document.getElementById('nModels').textContent = models.length;
-    document.getElementById('nGroups').textContent = groups.length;
-    document.getElementById('groupCount').textContent = groups.length + ' grupos';
-    document.getElementById('ts').textContent = 'Actualizado: ' + new Date().toLocaleTimeString('es-AR');
-
-    renderBest(bestQuotes.length ? bestQuotes : allQuotes);
-    updateFilters(allQuotes);
-    renderAll(allQuotes);
-
-    // Grupos
-    const gt = document.getElementById('groupsTable');
-    if (!groups.length) {
-      gt.innerHTML = '<tr><td colspan="3" class="empty">Sin grupos. Agregá grupos con el comando "agregar grupo [nombre] [group_id]" por WhatsApp</td></tr>';
-    } else {
-      gt.innerHTML = groups.map(g => `<tr>
-        <td><span class="model">${g.alias}</span></td>
-        <td style="font-family:monospace;font-size:11px;color:#718096">${g.group_id}</td>
-        <td><span class="badge ${g.active?'badge-green':'badge'}">${g.active?'✅ Activo':'❌ Inactivo'}</span></td>
-      </tr>`).join('');
-    }
-  } catch(e) {
-    console.error(e);
-  }
+    const connected = bStatus.connected;
+    document.getElementById('statusDot').style.background = connected ? '#22c55e' : '#ef4444';
+    document.getElementById('statusText').textContent = connected ? '✅ WhatsApp conectado' : '❌ WhatsApp desconectado';
+    document.getElementById('statConn').textContent = connected ? '✅' : '❌';
+    document.getElementById('statSuppliers').textContent = suppRes.filter(s => s.active).length;
+    document.getElementById('statQuotes24').textContent = q24.length;
+    document.getElementById('statQuotes7d').textContent = q7d.length;
+    document.getElementById('statRequests').textContent = reqRes.length;
+    suppliers = suppRes;
+  } catch(e) { console.error(e); }
 }
 
-async function requestQuote() {
-  const product = document.getElementById('reqProduct').value.trim();
-  const target = document.getElementById('reqTarget').value.trim();
-  if (!product) { toast('Ingresá el producto a cotizar'); return; }
-  
-  const fullProduct = product + (target ? ' - target USD ' + target + ' CIF Miami' : '');
-  
+// ============ BEST PRICES ============
+async function loadBest() {
+  const tbody = document.getElementById('bestTbody');
   try {
-    const r = await fetch('/request-quote', {
+    const data = await fetch('/api/quotes/best').then(r => r.json());
+    if (!data.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#718096;padding:20px">Sin cotizaciones</td></tr>'; return; }
+    tbody.innerHTML = data.map(q => `
+      <tr>
+        <td>${q.product||''}</td>
+        <td>${q.model||''}</td>
+        <td>${q.capacity||''}</td>
+        <td><strong style="color:#68d391">$${q.price} ${q.currency}</strong></td>
+        <td>${q.supplier_name||''}</td>
+        <td>${q.qty||'-'}</td>
+        <td>${q.incoterm||''}</td>
+        <td>${new Date(q.ts).toLocaleDateString()}</td>
+      </tr>
+    `).join('');
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="8" style="color:#f87171">Error cargando</td></tr>'; }
+}
+
+// ============ SUPPLIERS ============
+async function loadSuppliers() {
+  const grid = document.getElementById('supplierGrid');
+  try {
+    const data = await fetch('/api/suppliers').then(r => r.json());
+    suppliers = data;
+    grid.innerHTML = data.map(s => `
+      <div class="supplier-card ${s.active ? 'active' : 'empty'}" onclick="openSupplier(${s.slot})">
+        <div class="slot">Slot #${s.slot}</div>
+        <div class="name">${s.name || s.alias || '— vacío —'}</div>
+        <div class="meta">${s.country || ''} ${s.whatsapp_group_name ? '📱 '+s.whatsapp_group_name : ''}</div>
+      </div>
+    `).join('');
+  } catch(e) { grid.innerHTML = 'Error cargando'; }
+}
+
+function openSupplier(slot) {
+  const s = suppliers.find(x => x.slot == slot);
+  if (!s) return;
+  currentSlot = slot;
+  document.getElementById('modalTitle').textContent = `Slot #${slot}`;
+  document.getElementById('mName').value = s.name || '';
+  document.getElementById('mAlias').value = s.alias || '';
+  document.getElementById('mPhone').value = s.contact_phone || '';
+  document.getElementById('mContactName').value = s.contact_name || '';
+  document.getElementById('mCountry').value = s.country || '';
+  document.getElementById('mActive').value = s.active ? 'true' : 'false';
+  document.getElementById('mGroupName').value = s.whatsapp_group_name || '';
+  document.getElementById('mNotes').value = s.notes || '';
+  document.getElementById('modalMsg').textContent = '';
+  document.getElementById('supplierModal').classList.add('open');
+}
+
+function closeModal() { document.getElementById('supplierModal').classList.remove('open'); }
+
+async function saveSupplier() {
+  const body = {
+    name: document.getElementById('mName').value || null,
+    alias: document.getElementById('mAlias').value || null,
+    contact_phone: document.getElementById('mPhone').value || null,
+    contact_name: document.getElementById('mContactName').value || null,
+    country: document.getElementById('mCountry').value || null,
+    notes: document.getElementById('mNotes').value || null,
+    active: document.getElementById('mActive').value === 'true',
+  };
+  try {
+    await fetch(`/api/suppliers/${currentSlot}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    document.getElementById('modalMsg').textContent = '✅ Guardado';
+    loadSuppliers();
+  } catch(e) { document.getElementById('modalMsg').textContent = '❌ Error'; }
+}
+
+// ============ QUOTES ============
+async function loadQuotes() {
+  const tbody = document.getElementById('quotesTbody');
+  const product = document.getElementById('filterProduct').value;
+  const hours = document.getElementById('filterHours').value;
+  let url = '/api/quotes?limit=100';
+  if (product) url += '&product=' + encodeURIComponent(product);
+  if (hours) url += '&hours=' + hours;
+  try {
+    const data = await fetch(url).then(r => r.json());
+    if (!data.length) { tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#718096;padding:20px">Sin cotizaciones</td></tr>'; return; }
+    tbody.innerHTML = data.map(q => `
+      <tr>
+        <td>${q.product||''}</td>
+        <td>${q.model||''}</td>
+        <td>${q.capacity||''}</td>
+        <td>${q.color||''}</td>
+        <td>${q.condition||''}</td>
+        <td><strong style="color:#68d391">$${q.price} ${q.currency}</strong></td>
+        <td>${q.qty||'-'}</td>
+        <td>${q.incoterm||''}</td>
+        <td>${q.supplier_name||''}</td>
+        <td><span class="badge ${q.source==='group'?'badge-green':'badge-blue'}">${q.source}</span></td>
+        <td>${new Date(q.ts).toLocaleDateString()}</td>
+      </tr>
+    `).join('');
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="11" style="color:#f87171">Error</td></tr>'; }
+}
+
+// ============ QUOTE REQUESTS ============
+async function loadQuoteRequests() {
+  const tbody = document.getElementById('reqTbody');
+  try {
+    const data = await fetch('/api/quote-requests').then(r => r.json());
+    tbody.innerHTML = data.map(r => `
+      <tr>
+        <td>${r.product}</td>
+        <td>${r.target_price ? '$'+r.target_price : '-'}</td>
+        <td>${r.suppliers_sent||'-'}</td>
+        <td>${new Date(r.ts).toLocaleString()}</td>
+      </tr>
+    `).join('') || '<tr><td colspan="4" style="text-align:center;color:#718096">Sin pedidos</td></tr>';
+  } catch(e) {}
+}
+
+async function sendRequest() {
+  const product = document.getElementById('rqProduct').value;
+  if (!product) return;
+  const target_price = document.getElementById('rqPrice').value || null;
+  const slotsRaw = document.getElementById('rqSlots').value;
+  const supplier_slots = slotsRaw ? slotsRaw.split(',').map(Number) : [];
+  try {
+    const res = await fetch('/api/request-quote', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({product: fullProduct})
-    });
-    const d = await r.json();
-    if (d.ok) {
-      toast('✅ Cotización enviada a ' + (d.sent||'los grupos'));
-      document.getElementById('reqProduct').value = '';
-      document.getElementById('reqTarget').value = '';
-    } else {
-      toast('Error: ' + (d.error||'desconocido'));
-    }
-  } catch(e) {
-    toast('Error al enviar cotización');
-  }
+      body: JSON.stringify({ product, target_price, supplier_slots })
+    }).then(r => r.json());
+    document.getElementById('rqResult').textContent = `✅ Enviado a ${res.sent} proveedores: ${res.suppliers?.join(', ')}`;
+    loadQuoteRequests();
+  } catch(e) { document.getElementById('rqResult').textContent = '❌ Error: ' + e.message; }
 }
 
-load();
-setInterval(load, 30000);
+// ============ MESSAGES ============
+async function loadMessages() {
+  const container = document.getElementById('msgList');
+  const hours = document.getElementById('msgHours').value;
+  const onlyQuotes = document.getElementById('onlyQuotes').checked;
+  let url = '/api/group-messages?hours=' + hours;
+  if (onlyQuotes) url += '&has_quote=true';
+  try {
+    const data = await fetch(url).then(r => r.json());
+    if (!data.length) { container.innerHTML = '<div style="text-align:center;color:#718096;padding:20px">Sin mensajes</div>'; return; }
+    container.innerHTML = data.map(m => `
+      <div class="msg-item ${m.has_quote ? 'has-quote' : ''}">
+        <div class="msg-meta">📱 ${m.group_name||m.group_id} | ${m.sender_name||m.sender_phone} | ${new Date(m.ts).toLocaleString()} ${m.has_quote ? '<span class="badge badge-green">cotización</span>' : ''}</div>
+        <div class="msg-text">${m.message_text}</div>
+      </div>
+    `).join('');
+  } catch(e) { container.innerHTML = '<div style="color:#f87171">Error</div>'; }
+}
+
+// ============ BAILEYS / CONNECTION ============
+async function loadBaileysStatus() {
+  try {
+    const data = await fetch('/api/baileys/status').then(r => r.json());
+    const el = document.getElementById('baileysStatus');
+    const qr = document.getElementById('qrSection');
+    if (data.connected) {
+      el.innerHTML = '<span style="color:#22c55e">✅ WhatsApp conectado via Baileys</span>';
+      qr.style.display = 'none';
+    } else if (data.status === 'waiting_qr') {
+      el.innerHTML = '<span style="color:#f59e0b">⏳ Esperando escaneo de QR...</span>';
+      loadQR();
+    } else if (data.status === 'not_installed') {
+      el.innerHTML = '<span style="color:#f87171">❌ Baileys no instalado. Ejecuta: npm install @whiskeysockets/baileys @hapi/boom</span>';
+      qr.style.display = 'none';
+    } else {
+      el.innerHTML = `<span style="color:#f87171">❌ Estado: ${data.status}</span>`;
+      qr.style.display = 'none';
+    }
+  } catch(e) {}
+}
+
+async function loadQR() {
+  try {
+    const data = await fetch('/api/baileys/qr').then(r => r.json());
+    const qr = document.getElementById('qrSection');
+    if (data.qr) {
+      qr.style.display = 'block';
+      // Use qrcode lib or just show instructions
+      qr.innerHTML = `<p style="color:#f59e0b;margin-bottom:12px">Escanea este QR con WhatsApp (3 puntitos → Dispositivos vinculados → Vincular dispositivo)</p>
+      <p style="font-size:11px;color:#718096">QR disponible en los logs del servidor (printQRInTerminal:true)</p>`;
+    }
+  } catch(e) {}
+}
+
+async function loadGroups() {
+  const tbody = document.getElementById('groupsTbody');
+  try {
+    const data = await fetch('/api/baileys/groups').then(r => r.json());
+    if (data.error) { tbody.innerHTML = `<tr><td colspan="4" style="color:#718096">${data.error}</td></tr>`; return; }
+    tbody.innerHTML = data.groups.map(g => `
+      <tr>
+        <td>${g.name}</td>
+        <td style="font-size:11px;color:#718096">${g.id}</td>
+        <td>${g.participants}</td>
+        <td>
+          <select id="gslot_${g.id.replace(/[^a-z0-9]/gi,'_')}" style="width:80px">
+            ${suppliers.map(s => `<option value="${s.slot}">#${s.slot} ${s.name||''}</option>`).join('')}
+          </select>
+          <button class="btn btn-green btn-sm" onclick="linkGroup('${g.id}','${g.name.replace(/'/g,\"\\\'\")}')" style="margin-left:4px">Asignar</button>
+        </td>
+      </tr>
+    `).join('') || '<tr><td colspan="4" style="text-align:center;color:#718096">Sin grupos</td></tr>';
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="4" style="color:#f87171">Error</td></tr>'; }
+}
+
+async function linkGroup(groupId, groupName) {
+  const safeId = groupId.replace(/[^a-z0-9]/gi, '_');
+  const slot = document.getElementById('gslot_' + safeId)?.value;
+  if (!slot) return;
+  try {
+    await fetch(`/api/suppliers/${slot}/link-group`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ group_id: groupId, group_name: groupName })
+    });
+    alert(`✅ Grupo "${groupName}" asignado al slot #${slot}`);
+    loadSuppliers();
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+init();
 </script>
 </body>
 </html>
