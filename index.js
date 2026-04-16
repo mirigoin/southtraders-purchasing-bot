@@ -98,6 +98,14 @@ async function initDB() {
     updated_at TIMESTAMPTZ DEFAULT NOW()
   )`);
 
+  // Migrations - agregar columnas si no existen
+  await pool.query(`ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS target_price NUMERIC`);
+  await pool.query(`ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS suppliers_sent TEXT`);
+  await pool.query(`ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS message_sent TEXT`);
+  await pool.query(`ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS responses INTEGER DEFAULT 0`);
+  await pool.query(`ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'open'`);
+  await pool.query(`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS group_id TEXT`);
+
   console.log('DB OK');
 }
 
