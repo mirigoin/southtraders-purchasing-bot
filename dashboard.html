@@ -85,6 +85,7 @@ label{font-size:12px;color:#718096;margin-bottom:4px;display:block}
       <button class="tab" onclick="showTab('tab-request',this)">📤 Pedir Cotización</button>
       <button class="tab" onclick="showTab('tab-messages',this)">💬 Mensajes</button>
       <button class="tab" onclick="showTab('tab-conn',this)">📡 Conexión</button>
+      <button class="tab" onclick="showTab('tab-compras',this)">&#128722; Compras</button>
     </div>
     <div id="tab-best" class="tab-content active">
       <div class="section-head" style="border:none;padding-bottom:0">
@@ -163,6 +164,34 @@ label{font-size:12px;color:#718096;margin-bottom:4px;display:block}
     </div>
   </div>
 </div>
+    <div id="tab-compras" class="tab-content">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <h2 style="font-size:14px;font-weight:600">&#128722; Compras</h2>
+        <button class="btn btn-primary btn-sm" onclick="loadCompras()">&#8635; Actualizar stock</button>
+      </div>
+      <div id="comprasAlerts" style="margin-bottom:16px"></div>
+      <div style="border-top:1px solid #2d3748;padding-top:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <h3 style="font-size:13px;color:#718096">M&#237;nimos configurados</h3>
+          <button class="btn btn-green btn-sm" onclick="openAddMinimo()">+ Agregar</button>
+        </div>
+        <div id="addMinimoForm" style="display:none;background:#2d3748;border-radius:8px;padding:14px;margin-bottom:12px">
+          <div style="display:grid;grid-template-columns:160px 1fr 80px;gap:8px;align-items:end">
+            <div><label>C&#243;digo</label><input id="newCodigo" placeholder="IPH16256BLK-IND" list="stockList"></div>
+            <div><label>Descripci&#243;n</label><input id="newDesc" placeholder="APPLE IPHONE 16 256GB BLACK"></div>
+            <div><label>M&#237;nimo</label><input id="newMinimo" type="number" min="0" placeholder="10"></div>
+          </div>
+          <datalist id="stockList"></datalist>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <button class="btn btn-primary btn-sm" onclick="saveMinimo()">Guardar</button>
+            <button class="btn btn-sm" onclick="document.getElementById('addMinimoForm').style.display='none'" style="background:#4a5568;color:#e2e8f0">Cancelar</button>
+          </div>
+        </div>
+        <table><thead><tr><th>C&#243;digo</th><th>Descripci&#243;n</th><th>Stock</th><th>Tr&#225;nsito</th><th>M&#237;nimo</th><th>Falta</th><th>Mejor precio</th><th></th></tr></thead>
+        <tbody id="minimosTbody"><tr><td colspan="8" style="text-align:center;color:#718096;padding:20px">Haz click en "Actualizar stock" para cargar datos</td></tr></tbody></table>
+      </div>
+    </div>
+
 <div class="modal" id="supplierModal">
   <div class="modal-box">
     <button class="close-btn" onclick="closeModal()">×</button>
@@ -393,7 +422,67 @@ async function linkGroup(btn){
   } catch(e){ alert('Error: '+e.message); }
 }
 
+async function loadCompras() {
+  var tb = document.getElementById('minimosTbody');
+  var alerts = document.getElementById('comprasAlerts');
+  tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#718096;padding:20px">Cargando stock de Northtraders...</td></tr>';
+  alerts.innerHTML = '';
+  try {
+    var data = await fetch('/api/compras').then(function(r){return r.json();});
+    if (data.error) { tb.innerHTML = '<tr><td colspan="8" style="color:#f87171">' + data.error + '</td></tr>'; return; }
+    // Alertas de compra
+    var needBuy = data.filter(function(x){return x.alerta;});
+    if (needBuy.length > 0) {
+      alerts.innerHTML = needBuy.map(function(x){
+        var priceStr = x.mejor_precio ? '$' + x.mejor_precio.price + ' ' + x.mejor_precio.currency + ' - ' + x.mejor_precio.supplier_name : 'Sin cotizacion reciente';
+        return '<div style="background:#7f1d1d;border-left:4px solid #ef4444;border-radius:6px;padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center"><div><strong style="color:#fca5a5">COMPRAR: ' + x.descripcion + '</strong><div style="font-size:12px;color:#fca5a5;margin-top:4px">Falta ' + x.falta + ' u. | Stock: ' + x.stock_total + ' | Min: ' + x.minimo + ' | ' + priceStr + '</div></div></div>';
+      }).join('');
+    } else if (data.length > 0) {
+      alerts.innerHTML = '<div style="background:#14532d;border-left:4px solid #22c55e;border-radius:6px;padding:10px 14px;color:#86efac">&#10003; Todo el stock esta por encima de los minimos definidos</div>';
+    }
+    // Tabla de minimos
+    if (!data.length) { tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#718096;padding:20px">No hay minimos configurados. Haz click en + Agregar para empezar.</td></tr>'; return; }
+    tb.innerHTML = data.map(function(x){
+      var stockColor = x.alerta ? 'color:#f87171;font-weight:600' : 'color:#68d391';
+      var priceCell = x.mejor_precio ? '$' + x.mejor_precio.price + ' ' + x.mejor_precio.currency + '<br><span style="font-size:11px;color:#718096">' + x.mejor_precio.supplier_name + '</span>' : '<span style="color:#718096">-</span>';
+      return '<tr><td style="font-size:12px;color:#718096">' + x.codigo + '</td><td>' + x.descripcion + '</td><td style="' + stockColor + '">' + x.stock + '</td><td style="color:#718096">' + x.transito + '</td><td>' + x.minimo + '</td><td style="' + (x.falta > 0 ? 'color:#f87171;font-weight:600' : 'color:#718096') + '">' + (x.falta > 0 ? x.falta : '-') + '</td><td>' + priceCell + '</td><td><button class="btn btn-sm" onclick="deleteMinimo(' + x.id + ')" style="background:#7f1d1d;color:#fca5a5;font-size:11px">&#10005;</button></td></tr>';
+    }).join('');
+    // Cargar datalist para autocompletar
+    var stockData = await fetch('/api/stock').then(function(r){return r.json();}).catch(function(){return {items:[]};});
+    if (stockData.items) {
+      var dl = document.getElementById('stockList');
+      if (dl) dl.innerHTML = stockData.items.map(function(s){return '<option value="' + s.codigo + '" label="' + s.desc + '">';}).join('');
+    }
+  } catch(e) { tb.innerHTML = '<tr><td colspan="8" style="color:#f87171">Error: ' + e.message + '</td></tr>'; }
+}
+
+function openAddMinimo() {
+  var form = document.getElementById('addMinimoForm');
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+async function saveMinimo() {
+  var codigo = document.getElementById('newCodigo').value.trim();
+  var desc = document.getElementById('newDesc').value.trim();
+  var minimo = parseInt(document.getElementById('newMinimo').value) || 0;
+  if (!codigo) { alert('Ingresa el codigo del articulo'); return; }
+  try {
+    await fetch('/api/purchase-minimums', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({codigo:codigo, descripcion:desc, minimo:minimo})});
+    document.getElementById('newCodigo').value = '';
+    document.getElementById('newDesc').value = '';
+    document.getElementById('newMinimo').value = '';
+    document.getElementById('addMinimoForm').style.display = 'none';
+    loadCompras();
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+async function deleteMinimo(id) {
+  if (!confirm('Eliminar este minimo?')) return;
+  try {
+    await fetch('/api/purchase-minimums/' + id, {method:'DELETE'});
+    loadCompras();
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
 init();
-</script>
-</body>
-</html>
+
