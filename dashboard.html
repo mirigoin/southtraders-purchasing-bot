@@ -188,207 +188,209 @@ label{font-size:12px;color:#718096;margin-bottom:4px;display:block}
   </div>
 </div>
 <script>
-let currentSlot = null;
-let suppliers = [];
+var currentSlot=null;
+var suppliers=[];
 
-function showTab(id, el) {
-  document.querySelectorAll('.tab-content').forEach(function(t) { t.classList.remove('active'); });
-  document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+function showTab(id,el){
+  var tabs=document.querySelectorAll('.tab-content');
+  for(var i=0;i<tabs.length;i++) tabs[i].classList.remove('active');
+  var btns=document.querySelectorAll('.tab');
+  for(var i=0;i<btns.length;i++) btns[i].classList.remove('active');
   document.getElementById(id).classList.add('active');
-  if (el) el.classList.add('active');
-  if (id === 'tab-best') loadBest();
-  if (id === 'tab-suppliers') loadSuppliers();
-  if (id === 'tab-quotes') loadQuotes();
-  if (id === 'tab-request') loadQuoteRequests();
-  if (id === 'tab-messages') loadMessages();
-  if (id === 'tab-conn') { loadBaileysStatus(); loadGroups(); }
+  if(el) el.classList.add('active');
+  if(id==='tab-best') loadBest();
+  if(id==='tab-suppliers') loadSuppliers();
+  if(id==='tab-quotes') loadQuotes();
+  if(id==='tab-request') loadQuoteRequests();
+  if(id==='tab-messages') loadMessages();
+  if(id==='tab-conn'){ loadBaileysStatus(); loadGroups(); }
 }
 
-async function init() {
+async function init(){
   await loadStats();
   await loadBest();
-  setInterval(loadStats, 30000);
+  setInterval(loadStats,30000);
 }
 
-async function loadStats() {
+async function loadStats(){
   try {
-    var results = await Promise.all([
-      fetch('/api/baileys/status').then(function(r) { return r.json(); }),
-      fetch('/api/suppliers').then(function(r) { return r.json(); }),
-      fetch('/api/quotes?hours=24').then(function(r) { return r.json(); }),
-      fetch('/api/quotes?hours=168').then(function(r) { return r.json(); }),
-      fetch('/api/quote-requests').then(function(r) { return r.json(); })
+    var r=await Promise.all([
+      fetch('/api/baileys/status').then(function(x){return x.json();}),
+      fetch('/api/suppliers').then(function(x){return x.json();}),
+      fetch('/api/quotes?hours=24').then(function(x){return x.json();}),
+      fetch('/api/quotes?hours=168').then(function(x){return x.json();}),
+      fetch('/api/quote-requests').then(function(x){return x.json();})
     ]);
-    var bStatus = results[0], suppRes = results[1], q24 = results[2], q7d = results[3], reqRes = results[4];
-    var connected = bStatus.connected;
-    document.getElementById('statusDot').style.background = connected ? '#22c55e' : '#ef4444';
-    document.getElementById('statusText').textContent = connected ? 'WhatsApp conectado' : 'WhatsApp desconectado';
-    document.getElementById('statConn').textContent = connected ? 'OK' : 'OFF';
-    document.getElementById('statSuppliers').textContent = suppRes.filter(function(s) { return s.active; }).length;
-    document.getElementById('statQuotes24').textContent = q24.length;
-    document.getElementById('statQuotes7d').textContent = q7d.length;
-    document.getElementById('statRequests').textContent = reqRes.length;
-    suppliers = suppRes;
-  } catch(e) { console.error('loadStats error', e); }
+    var b=r[0],s=r[1],q24=r[2],q7d=r[3],rq=r[4];
+    var ok=b.connected;
+    document.getElementById('statusDot').style.background=ok?'#22c55e':'#ef4444';
+    document.getElementById('statusText').textContent=ok?'WhatsApp conectado':'WhatsApp desconectado';
+    document.getElementById('statConn').textContent=ok?'OK':'OFF';
+    document.getElementById('statSuppliers').textContent=s.filter(function(x){return x.active;}).length;
+    document.getElementById('statQuotes24').textContent=q24.length;
+    document.getElementById('statQuotes7d').textContent=q7d.length;
+    document.getElementById('statRequests').textContent=rq.length;
+    suppliers=s;
+  } catch(e){ console.error(e); }
 }
 
-async function loadBest() {
-  var tbody = document.getElementById('bestTbody');
+async function loadBest(){
+  var tb=document.getElementById('bestTbody');
   try {
-    var data = await fetch('/api/quotes/best').then(function(r) { return r.json(); });
-    if (!data.length) {
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#718096;padding:20px">Sin cotizaciones aun. Cuando lleguen mensajes de proveedores apareceran aqui.</td></tr>';
-      return;
-    }
-    tbody.innerHTML = data.map(function(q) {
-      return '<tr><td>' + (q.product||'') + '</td><td>' + (q.model||'') + '</td><td>' + (q.capacity||'') + '</td><td><strong style="color:#68d391">$' + q.price + ' ' + q.currency + '</strong></td><td>' + (q.supplier_name||'') + '</td><td>' + (q.qty||'-') + '</td><td>' + (q.incoterm||'') + '</td><td>' + new Date(q.ts).toLocaleDateString() + '</td></tr>';
+    var d=await fetch('/api/quotes/best').then(function(x){return x.json();});
+    if(!d.length){ tb.innerHTML='<tr><td colspan="8" style="text-align:center;color:#718096;padding:20px">Sin cotizaciones aun</td></tr>'; return; }
+    tb.innerHTML=d.map(function(q){
+      return '<tr><td>'+(q.product||'')+'<\/td><td>'+(q.model||'')+'<\/td><td>'+(q.capacity||'')+'<\/td><td><strong style="color:#68d391">$'+q.price+' '+q.currency+'<\/strong><\/td><td>'+(q.supplier_name||'')+'<\/td><td>'+(q.qty||'-')+'<\/td><td>'+(q.incoterm||'')+'<\/td><td>'+new Date(q.ts).toLocaleDateString()+'<\/td><\/tr>';
     }).join('');
-  } catch(e) { tbody.innerHTML = '<tr><td colspan="8" style="color:#f87171">Error cargando</td></tr>'; }
+  } catch(e){ tb.innerHTML='<tr><td colspan="8" style="color:#f87171">Error<\/td><\/tr>'; }
 }
 
-async function loadSuppliers() {
-  var grid = document.getElementById('supplierGrid');
+async function loadSuppliers(){
+  var g=document.getElementById('supplierGrid');
   try {
-    var data = await fetch('/api/suppliers').then(function(r) { return r.json(); });
-    suppliers = data;
-    grid.innerHTML = data.map(function(s) {
-      return '<div class="supplier-card ' + (s.active ? 'active' : 'empty') + '" onclick="openSupplier(' + s.slot + ')"><div class="slot">Slot #' + s.slot + '</div><div class="name">' + (s.name || s.alias || 'vacio') + '</div><div class="meta">' + (s.whatsapp_group_name ? s.whatsapp_group_name : '') + '</div></div>';
+    var d=await fetch('/api/suppliers').then(function(x){return x.json();});
+    suppliers=d;
+    g.innerHTML=d.map(function(s){
+      return '<div class="supplier-card '+(s.active?'active':'empty')+'" onclick="openSupplier('+s.slot+')"><div class="slot">Slot #'+s.slot+'<\/div><div class="name">'+(s.name||s.alias||'vacio')+'<\/div><div class="meta">'+(s.whatsapp_group_name||'')+'<\/div><\/div>';
     }).join('');
-  } catch(e) { grid.innerHTML = 'Error cargando'; }
+  } catch(e){ g.innerHTML='Error'; }
 }
 
-function openSupplier(slot) {
-  var s = suppliers.find(function(x) { return x.slot == slot; });
-  if (!s) return;
-  currentSlot = slot;
-  document.getElementById('modalTitle').textContent = 'Slot #' + slot;
-  document.getElementById('mName').value = s.name || '';
-  document.getElementById('mAlias').value = s.alias || '';
-  document.getElementById('mPhone').value = s.contact_phone || '';
-  document.getElementById('mContactName').value = s.contact_name || '';
-  document.getElementById('mCountry').value = s.country || '';
-  document.getElementById('mActive').value = s.active ? 'true' : 'false';
-  document.getElementById('mGroupName').value = s.whatsapp_group_name || '';
-  document.getElementById('mNotes').value = s.notes || '';
-  document.getElementById('modalMsg').textContent = '';
+function openSupplier(slot){
+  var s=suppliers.find(function(x){return x.slot==slot;});
+  if(!s) return;
+  currentSlot=slot;
+  document.getElementById('modalTitle').textContent='Slot #'+slot;
+  document.getElementById('mName').value=s.name||'';
+  document.getElementById('mAlias').value=s.alias||'';
+  document.getElementById('mPhone').value=s.contact_phone||'';
+  document.getElementById('mContactName').value=s.contact_name||'';
+  document.getElementById('mCountry').value=s.country||'';
+  document.getElementById('mActive').value=s.active?'true':'false';
+  document.getElementById('mGroupName').value=s.whatsapp_group_name||'';
+  document.getElementById('mNotes').value=s.notes||'';
+  document.getElementById('modalMsg').textContent='';
   document.getElementById('supplierModal').classList.add('open');
 }
 
-function closeModal() { document.getElementById('supplierModal').classList.remove('open'); }
+function closeModal(){ document.getElementById('supplierModal').classList.remove('open'); }
 
-async function saveSupplier() {
-  var body = {
-    name: document.getElementById('mName').value || null,
-    alias: document.getElementById('mAlias').value || null,
-    contact_phone: document.getElementById('mPhone').value || null,
-    contact_name: document.getElementById('mContactName').value || null,
-    country: document.getElementById('mCountry').value || null,
-    notes: document.getElementById('mNotes').value || null,
-    active: document.getElementById('mActive').value === 'true'
+async function saveSupplier(){
+  var body={
+    name:document.getElementById('mName').value||null,
+    alias:document.getElementById('mAlias').value||null,
+    contact_phone:document.getElementById('mPhone').value||null,
+    contact_name:document.getElementById('mContactName').value||null,
+    country:document.getElementById('mCountry').value||null,
+    notes:document.getElementById('mNotes').value||null,
+    active:document.getElementById('mActive').value==='true'
   };
   try {
-    await fetch('/api/suppliers/' + currentSlot, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
-    document.getElementById('modalMsg').textContent = 'Guardado OK';
+    await fetch('/api/suppliers/'+currentSlot,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    document.getElementById('modalMsg').textContent='Guardado';
     loadSuppliers();
-  } catch(e) { document.getElementById('modalMsg').textContent = 'Error'; }
+  } catch(e){ document.getElementById('modalMsg').textContent='Error'; }
 }
 
-async function loadQuotes() {
-  var tbody = document.getElementById('quotesTbody');
-  var product = document.getElementById('filterProduct').value;
-  var hours = document.getElementById('filterHours').value;
-  var url = '/api/quotes?limit=100';
-  if (product) url += '&product=' + encodeURIComponent(product);
-  if (hours) url += '&hours=' + hours;
+async function loadQuotes(){
+  var tb=document.getElementById('quotesTbody');
+  var p=document.getElementById('filterProduct').value;
+  var h=document.getElementById('filterHours').value;
+  var url='/api/quotes?limit=100';
+  if(p) url+='&product='+encodeURIComponent(p);
+  if(h) url+='&hours='+h;
   try {
-    var data = await fetch(url).then(function(r) { return r.json(); });
-    if (!data.length) { tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#718096;padding:20px">Sin cotizaciones</td></tr>'; return; }
-    tbody.innerHTML = data.map(function(q) {
-      return '<tr><td>' + (q.product||'') + '</td><td>' + (q.model||'') + '</td><td>' + (q.capacity||'') + '</td><td>' + (q.color||'') + '</td><td><strong style="color:#68d391">$' + q.price + '</strong></td><td>' + (q.qty||'-') + '</td><td>' + (q.incoterm||'') + '</td><td>' + (q.supplier_name||'') + '</td><td>' + new Date(q.ts).toLocaleDateString() + '</td></tr>';
+    var d=await fetch(url).then(function(x){return x.json();});
+    if(!d.length){ tb.innerHTML='<tr><td colspan="9" style="text-align:center;color:#718096;padding:20px">Sin cotizaciones<\/td><\/tr>'; return; }
+    tb.innerHTML=d.map(function(q){
+      return '<tr><td>'+(q.product||'')+'<\/td><td>'+(q.model||'')+'<\/td><td>'+(q.capacity||'')+'<\/td><td>'+(q.color||'')+'<\/td><td><strong style="color:#68d391">$'+q.price+'<\/strong><\/td><td>'+(q.qty||'-')+'<\/td><td>'+(q.incoterm||'')+'<\/td><td>'+(q.supplier_name||'')+'<\/td><td>'+new Date(q.ts).toLocaleDateString()+'<\/td><\/tr>';
     }).join('');
-  } catch(e) { tbody.innerHTML = '<tr><td colspan="9" style="color:#f87171">Error</td></tr>'; }
+  } catch(e){ tb.innerHTML='<tr><td colspan="9" style="color:#f87171">Error<\/td><\/tr>'; }
 }
 
-async function loadQuoteRequests() {
-  var tbody = document.getElementById('reqTbody');
+async function loadQuoteRequests(){
+  var tb=document.getElementById('reqTbody');
   try {
-    var data = await fetch('/api/quote-requests').then(function(r) { return r.json(); });
-    if (!data.length) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#718096">Sin pedidos</td></tr>'; return; }
-    tbody.innerHTML = data.map(function(r) {
-      return '<tr><td>' + r.product + '</td><td>' + (r.target_price ? '$'+r.target_price : '-') + '</td><td>' + (r.suppliers_sent||'-') + '</td><td>' + new Date(r.ts).toLocaleString() + '</td></tr>';
+    var d=await fetch('/api/quote-requests').then(function(x){return x.json();});
+    if(!d.length){ tb.innerHTML='<tr><td colspan="4" style="text-align:center;color:#718096">Sin pedidos<\/td><\/tr>'; return; }
+    tb.innerHTML=d.map(function(r){
+      return '<tr><td>'+r.product+'<\/td><td>'+(r.target_price?'$'+r.target_price:'-')+'<\/td><td>'+(r.suppliers_sent||'-')+'<\/td><td>'+new Date(r.ts).toLocaleString()+'<\/td><\/tr>';
     }).join('');
-  } catch(e) {}
+  } catch(e){}
 }
 
-async function sendRequest() {
-  var product = document.getElementById('rqProduct').value;
-  if (!product) return;
-  var target_price = document.getElementById('rqPrice').value || null;
-  var slotsRaw = document.getElementById('rqSlots').value;
-  var supplier_slots = slotsRaw ? slotsRaw.split(',').map(Number) : [];
+async function sendRequest(){
+  var p=document.getElementById('rqProduct').value;
+  if(!p) return;
+  var tp=document.getElementById('rqPrice').value||null;
+  var sr=document.getElementById('rqSlots').value;
+  var ss=sr?sr.split(',').map(Number):[];
   try {
-    var res = await fetch('/api/request-quote', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ product: product, target_price: target_price, supplier_slots: supplier_slots }) }).then(function(r) { return r.json(); });
-    document.getElementById('rqResult').textContent = 'Enviado a ' + res.sent + ' proveedores: ' + (res.suppliers||[]).join(', ');
+    var res=await fetch('/api/request-quote',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({product:p,target_price:tp,supplier_slots:ss})}).then(function(x){return x.json();});
+    document.getElementById('rqResult').textContent='Enviado a '+res.sent+' proveedores';
     loadQuoteRequests();
-  } catch(e) { document.getElementById('rqResult').textContent = 'Error: ' + e.message; }
+  } catch(e){ document.getElementById('rqResult').textContent='Error: '+e.message; }
 }
 
-async function loadMessages() {
-  var container = document.getElementById('msgList');
-  var hours = document.getElementById('msgHours').value;
-  var onlyQuotes = document.getElementById('onlyQuotes').checked;
-  var url = '/api/group-messages?hours=' + hours;
-  if (onlyQuotes) url += '&has_quote=true';
+async function loadMessages(){
+  var c=document.getElementById('msgList');
+  var h=document.getElementById('msgHours').value;
+  var oq=document.getElementById('onlyQuotes').checked;
+  var url='/api/group-messages?hours='+h;
+  if(oq) url+='&has_quote=true';
   try {
-    var data = await fetch(url).then(function(r) { return r.json(); });
-    if (!data.length) { container.innerHTML = '<div style="text-align:center;color:#718096;padding:20px">Sin mensajes</div>'; return; }
-    container.innerHTML = data.map(function(m) {
-      return '<div class="msg-item ' + (m.has_quote ? 'has-quote' : '') + '"><div class="msg-meta">' + (m.group_name||m.group_id) + ' | ' + (m.sender_name||m.sender_phone) + ' | ' + new Date(m.ts).toLocaleString() + (m.has_quote ? ' [cotizacion]' : '') + '</div><div class="msg-text">' + m.message_text + '</div></div>';
+    var d=await fetch(url).then(function(x){return x.json();});
+    if(!d.length){ c.innerHTML='<div style="text-align:center;color:#718096;padding:20px">Sin mensajes<\/div>'; return; }
+    c.innerHTML=d.map(function(m){
+      return '<div class="msg-item '+(m.has_quote?'has-quote':'')+'"><div class="msg-meta">'+(m.group_name||m.group_id)+' | '+(m.sender_name||m.sender_phone)+' | '+new Date(m.ts).toLocaleString()+(m.has_quote?' [cotiz]':'')+'<\/div><div class="msg-text">'+m.message_text+'<\/div><\/div>';
     }).join('');
-  } catch(e) { container.innerHTML = '<div style="color:#f87171">Error</div>'; }
+  } catch(e){ c.innerHTML='<div style="color:#f87171">Error<\/div>'; }
 }
 
-async function loadBaileysStatus() {
+async function loadBaileysStatus(){
   try {
-    var data = await fetch('/api/baileys/status').then(function(r) { return r.json(); });
-    var el = document.getElementById('baileysStatus');
-    var qr = document.getElementById('qrSection');
-    if (data.connected) {
-      el.innerHTML = '<span style="color:#22c55e">WhatsApp conectado via Baileys</span>';
-      qr.style.display = 'none';
-    } else if (data.status === 'waiting_qr') {
-      el.innerHTML = '<span style="color:#f59e0b">Esperando escaneo de QR...</span>';
-      qr.style.display = 'block';
-      qr.innerHTML = '<p style="color:#f59e0b;margin-bottom:12px">Escana con WhatsApp - 3 puntitos - Dispositivos vinculados</p><img src="/api/baileys/qr-image?t=' + Date.now() + '" style="border:8px solid #fff;border-radius:8px;max-width:280px;display:block;margin:0 auto"><br><button class="btn btn-primary btn-sm" onclick="loadBaileysStatus()" style="margin-top:12px">Actualizar QR</button>';
+    var d=await fetch('/api/baileys/status').then(function(x){return x.json();});
+    var el=document.getElementById('baileysStatus');
+    var qr=document.getElementById('qrSection');
+    if(d.connected){
+      el.innerHTML='<span style="color:#22c55e">WhatsApp conectado via Baileys<\/span>';
+      qr.style.display='none';
+    } else if(d.status==='waiting_qr'){
+      el.innerHTML='<span style="color:#f59e0b">Esperando QR...<\/span>';
+      qr.style.display='block';
+      qr.innerHTML='<p style="color:#f59e0b;margin-bottom:12px">Escana con WhatsApp<\/p><img src="/api/baileys/qr-image?t='+Date.now()+'" style="border:8px solid #fff;border-radius:8px;max-width:280px;display:block;margin:0 auto"><br><button class="btn btn-primary btn-sm" onclick="loadBaileysStatus()" style="margin-top:12px">Actualizar QR<\/button>';
     } else {
-      el.innerHTML = '<span style="color:#f87171">Estado: ' + data.status + '</span>';
+      el.innerHTML='<span style="color:#f87171">Estado: '+d.status+'<\/span>';
     }
-  } catch(e) {}
+  } catch(e){}
 }
 
-async function loadGroups() {
-  var tbody = document.getElementById('groupsTbody');
+async function loadGroups(){
+  var tb=document.getElementById('groupsTbody');
   try {
-    var data = await fetch('/api/baileys/groups').then(function(r) { return r.json(); });
-    if (data.error) { tbody.innerHTML = '<tr><td colspan="4" style="color:#718096">' + data.error + '</td></tr>'; return; }
-    if (!data.groups || !data.groups.length) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#718096">Sin grupos. Asegurate que el numero este en grupos de WhatsApp.</td></tr>'; return; }
-    tbody.innerHTML = data.groups.map(function(g) {
-      var safeId = g.id.replace(/[^a-z0-9]/gi, '_');
-      var opts = suppliers.map(function(s) { return '<option value="' + s.slot + '">#' + s.slot + ' ' + (s.name||'') + '</option>'; }).join('');
-      return '<tr><td>' + g.name + '</td><td style="font-size:11px;color:#718096">' + g.id + '</td><td>' + g.participants + '</td><td><select id="gslot_' + safeId + '" style="width:80px">' + opts + '</select> <button class="btn btn-green btn-sm" onclick="linkGroup('' + g.id.replace(/\/g,'\\').replace(/'/g,"\'") + '','' + g.name.replace(/\/g,'\\').replace(/'/g,"\'") + '')" style="margin-left:4px">Asignar</button></td></tr>';
+    var d=await fetch('/api/baileys/groups').then(function(x){return x.json();});
+    if(d.error){ tb.innerHTML='<tr><td colspan="4" style="color:#718096">'+d.error+'<\/td><\/tr>'; return; }
+    if(!d.groups||!d.groups.length){ tb.innerHTML='<tr><td colspan="4" style="text-align:center;color:#718096">Sin grupos<\/td><\/tr>'; return; }
+    tb.innerHTML=d.groups.map(function(g){
+      var sid=g.id.replace(/[^a-z0-9]/gi,'_');
+      var opts=suppliers.map(function(s){ return '<option value="'+s.slot+'">#'+s.slot+' '+(s.name||'')+'<\/option>'; }).join('');
+      return '<tr><td>'+g.name+'<\/td><td style="font-size:11px;color:#718096">'+g.id+'<\/td><td>'+g.participants+'<\/td><td><select id="gslot_'+sid+'" style="width:80px">'+opts+'<\/select> <button class="btn btn-green btn-sm" data-id="'+g.id+'" data-name="'+g.name.replace(/"/g,"&quot;")+"\" onclick=\"linkGroup(this)\" style=\"margin-left:4px\">Asignar<\/button><\/td><\/tr>";
     }).join('');
-  } catch(e) { tbody.innerHTML = '<tr><td colspan="4" style="color:#f87171">Error: ' + e.message + '</td></tr>'; }
+  } catch(e){ tb.innerHTML='<tr><td colspan="4" style="color:#f87171">'+e.message+'<\/td><\/tr>'; }
 }
 
-async function linkGroup(groupId, groupName) {
-  var safeId = groupId.replace(/[^a-z0-9]/gi, '_');
-  var slot = document.getElementById('gslot_' + safeId) ? document.getElementById('gslot_' + safeId).value : null;
-  if (!slot) return;
+async function linkGroup(btn){
+  var gid=btn.getAttribute('data-id');
+  var gname=btn.getAttribute('data-name');
+  var sid=gid.replace(/[^a-z0-9]/gi,'_');
+  var el=document.getElementById('gslot_'+sid);
+  var slot=el?el.value:null;
+  if(!slot) return;
   try {
-    await fetch('/api/suppliers/' + slot + '/link-group', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ group_id: groupId, group_name: groupName }) });
-    alert('Grupo asignado al slot #' + slot);
+    await fetch('/api/suppliers/'+slot+'/link-group',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({group_id:gid,group_name:gname})});
+    alert('Grupo asignado al slot #'+slot);
     loadSuppliers();
-  } catch(e) { alert('Error: ' + e.message); }
+  } catch(e){ alert('Error: '+e.message); }
 }
 
 init();
