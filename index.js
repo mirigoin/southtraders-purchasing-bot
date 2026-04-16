@@ -131,7 +131,7 @@ Reglas:
         }
       }
     );
-    const raw = resp.data.content[0].text.trim();
+    const raw = resp.data.content[0].text.trim().replace(/^```[\w]*\n?/,"").replace(/\n?```$/,"").trim();
     return JSON.parse(raw);
   } catch (e) {
     console.error('Claude extract error:', e.message);
