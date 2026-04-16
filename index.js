@@ -169,6 +169,17 @@ async function sendWA(to, text) {
 
 // Alert owner
 async function alertOwner(message) {
+  // Intentar via Baileys primero (siempre disponible)
+  if (baileysClient && baileysStatus === 'connected' && OWNER_PHONE) {
+    try {
+      const ownerJid = OWNER_PHONE + '@s.whatsapp.net';
+      await baileysClient.sendMessage(ownerJid, { text: message });
+      return;
+    } catch (e) {
+      console.error('Baileys alertOwner error:', e.message);
+    }
+  }
+  // Fallback: Meta Cloud API
   await sendWA(OWNER_PHONE, message);
 }
 
