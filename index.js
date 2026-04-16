@@ -493,21 +493,36 @@ app.post('/api/request-quote', async (req, res) => {
       [product, target_price || null, supplierNames || null, msg, 'open']
     );
 
-    // Enviar WhatsApp a cada grupo via Baileys
+    // Enviar WhatsApp a cada proveedor
     let sent = 0;
     for (const s of targets) {
       try {
         if (baileysClient && baileysStatus === 'connected') {
-          await baileysClient.sendMessage(s.whatsapp_group_id, { text: msg });
-          sent++;
-          console.log('Quote request sent to ' + s.name + ' group: ' + s.whatsapp_group_id);
-        } else {
-          console.log('Baileys not connected, skipping ' + s.name);
+          // Intentar al grupo primero
+          let destJid = s.whatsapp_group_id;
+          let sentOk = false;
+          try {
+            await baileysClient.sendMessage(destJid, { text: msg });
+            sentOk = true;
+            console.log('Sent to group ' + s.name + ' at ' + destJid);
+          } catch(groupErr) {
+            console.log('Group send failed (' + groupErr.message + '), trying contact_phone...');
+            // Fallback: mandar directo al contact_phone si existe
+            if (s.contact_phone) {
+              const phone = s.contact_phone.replace(/[^0-9]/g, '');
+              await baileysClient.sendMessage(phone + '@s.whatsapp.net', { text: msg });
+              sentOk = true;
+              console.log('Sent direct to contact ' + s.name + ' at ' + phone);
+            }
+          }
+          if (sentOk) sent++;
         }
       } catch(e) {
         console.error('Error sending to ' + s.name + ': ' + e.message);
       }
     }
+    // Notificar al owner el pedido enviado
+    if (sent > 0) await alertOwner('📤 Pedido enviado a ' + sent + ' proveedor(es): ' + supplierNames + '\n' + msg);
 
     res.json({ ok: true, sent, suppliers: targets.map(s => s.name || 'Slot'+s.slot) });
   } catch(e) {
