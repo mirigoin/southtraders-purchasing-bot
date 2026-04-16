@@ -486,13 +486,12 @@ async function linkGroup(groupId, groupName) {
   const slot = document.getElementById('gslot_' + safeId)?.value;
   if (!slot) return;
   try {
-    await fetch(`/api/suppliers/${slot}/link-group`, {
+    await fetch('/api/suppliers/' + slot + '/link-group', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ group_id: groupId, group_name: groupName })
     });
-    alert(`✅ Grupo "${groupName}" asignado 
-document.addEventListener("DOMContentLoaded", init);#${slot}`);
+    alert('Grupo "' + groupName + '" asignado al slot #' + slot);
     loadSuppliers();
   } catch(e) { alert('Error: ' + e.message); }
 }
