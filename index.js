@@ -521,8 +521,11 @@ app.post('/api/request-quote', async (req, res) => {
         console.error('Error sending to ' + s.name + ': ' + e.message);
       }
     }
-    // Notificar al owner el pedido enviado
-    if (sent > 0) await alertOwner('📤 Pedido enviado a ' + sent + ' proveedor(es): ' + supplierNames + '\n' + msg);
+    // Notificar al owner SIEMPRE - con resultado
+    const ownerMsg = sent > 0
+      ? '📤 Pedido enviado a ' + sent + ' proveedor(es): ' + supplierNames + '\n' + msg
+      : '📋 Pedido registrado (envío manual requerido):\n' + supplierNames + '\n' + msg;
+    await alertOwner(ownerMsg);
 
     res.json({ ok: true, sent, suppliers: targets.map(s => s.name || 'Slot'+s.slot) });
   } catch(e) {
