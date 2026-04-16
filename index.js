@@ -43,8 +43,7 @@ async function initDB() {
 
   // Check if slots exist, if not seed 1-50
   const count = await pool.query('SELECT COUNT(*) FROM suppliers');
-  if (parseInt(count.rows[0].count) === 0) {
-    const values = [];
+feat: stock vs minimums + compras endpoint + purchase_minimums table    const values = [];
     for (let i = 1; i <= 50; i++) {
       values.push(`(${i})`);
     }
@@ -94,6 +93,15 @@ async function initDB() {
     has_quote BOOLEAN DEFAULT FALSE,
     processed BOOLEAN DEFAULT FALSE,
     ts TIMESTAMPTZ DEFAULT NOW()
+  )`);
+
+  await pool.query(`CREATE TABLE IF NOT EXISTS purchase_minimums (
+    id SERIAL PRIMARY KEY,
+    codigo TEXT UNIQUE NOT NULL,
+    descripcion TEXT,
+    minimo INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
   )`);
 
   console.log('DB OK');
@@ -600,6 +608,115 @@ app.post('/webhook', async (req, res) => {
     }
   } catch (e) {
     console.error('Webhook error:', e.message);
+  }
+});
+
+// ============ STOCK & COMPRAS ============
+
+// Stock desde Northtraders
+app.get('/api/stock', async (req, res) => {
+  try {
+    const { JSDOM } = require('jsdom');
+    const resp = await axios.get('https://northtraders.oppen.io/report/shared?shared=fe0f1305-3a71-4b78-be99-e54e3396cbdd', { timeout: 15000 });
+    const dom = new JSDOM(resp.data);
+    const rows = dom.window.document.querySelectorAll('table tr');
+    const items = [];
+    for (let i = 2; i < rows.length; i++) {
+      const cells = rows[i].querySelectorAll('td');
+      if (cells.length >= 3) {
+        const codigo = cells[0].textContent.trim();
+        const desc = cells[1].textContent.trim();
+        const stock = parseFloat(cells[2].textContent.trim().replace(',', '.')) || 0;
+        const transito = parseFloat(cells[3] ? cells[3].textContent.trim().replace(',', '.') : '0') || 0;
+        if (codigo) items.push({ codigo, desc, stock, transito });
+      }
+    }
+    res.json({ ok: true, items, updated: new Date().toISOString() });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// CRUD purchase_minimums
+app.get('/api/purchase-minimums', async (req, res) => {
+  const result = await pool.query('SELECT * FROM purchase_minimums ORDER BY descripcion ASC');
+  res.json(result.rows);
+});
+
+app.post('/api/purchase-minimums', async (req, res) => {
+  const { codigo, descripcion, minimo } = req.body;
+  try {
+    await pool.query(
+      'INSERT INTO purchase_minimums (codigo, descripcion, minimo) VALUES ($1,$2,$3) ON CONFLICT (codigo) DO UPDATE SET descripcion=$2, minimo=$3, updated_at=NOW()',
+      [codigo, descripcion, minimo]
+    );
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/purchase-minimums/:id', async (req, res) => {
+  await pool.query('DELETE FROM purchase_minimums WHERE id=$1', [req.params.id]);
+  res.json({ ok: true });
+});
+
+// Compras: stock vs minimos + mejor precio
+app.get('/api/compras', async (req, res) => {
+  try {
+    const { JSDOM } = require('jsdom');
+    // Obtener stock
+    const stockResp = await axios.get('https://northtraders.oppen.io/report/shared?shared=fe0f1305-3a71-4b78-be99-e54e3396cbdd', { timeout: 15000 });
+    const dom = new JSDOM(stockResp.data);
+    const rows = dom.window.document.querySelectorAll('table tr');
+    const stockMap = {};
+    for (let i = 2; i < rows.length; i++) {
+      const cells = rows[i].querySelectorAll('td');
+      if (cells.length >= 3) {
+        const codigo = cells[0].textContent.trim();
+        const desc = cells[1].textContent.trim();
+        const stock = parseFloat(cells[2].textContent.trim().replace(',', '.')) || 0;
+        const transito = parseFloat(cells[3] ? cells[3].textContent.trim().replace(',', '.') : '0') || 0;
+        if (codigo) stockMap[codigo] = { desc, stock, transito };
+      }
+    }
+    // Obtener minimos
+    const minimoRes = await pool.query('SELECT * FROM purchase_minimums');
+    const minimos = minimoRes.rows;
+    // Para cada minimo, comparar con stock y buscar mejor precio
+    const compras = [];
+    for (const m of minimos) {
+      const stockItem = stockMap[m.codigo] || { desc: m.descripcion, stock: 0, transito: 0 };
+      const stockTotal = stockItem.stock + stockItem.transito;
+      const falta = Math.max(0, m.minimo - stockTotal);
+      // Buscar mejor cotizacion en ultimos 7 dias por descripcion fuzzy
+      const desc = m.descripcion || '';
+      const parts = desc.replace(/APPLEs+/i,'').replace(/s+-s+.*/, '').trim().split(/s+/);
+      const searchTerm = parts.slice(0,4).join(' ');
+      let bestQuote = null;
+      if (searchTerm) {
+        const qResult = await pool.query(
+          `SELECT supplier_name, price, currency, incoterm, qty, ts FROM quotes WHERE (product || ' ' || COALESCE(model,'') || ' ' || COALESCE(capacity,'')) ILIKE $1 AND ts > NOW() - INTERVAL '7 days' ORDER BY price ASC LIMIT 1`,
+          ['%' + searchTerm.split(' ').slice(0,2).join('%') + '%']
+        );
+        if (qResult.rows.length > 0) bestQuote = qResult.rows[0];
+      }
+      compras.push({
+        id: m.id,
+        codigo: m.codigo,
+        descripcion: m.descripcion || stockItem.desc,
+        stock: stockItem.stock,
+        transito: stockItem.transito,
+        stock_total: stockTotal,
+        minimo: m.minimo,
+        falta,
+        alerta: falta > 0,
+        mejor_precio: bestQuote
+      });
+    }
+    // Ordenar: alertas primero
+    compras.sort((a,b) => (b.alerta ? 1 : 0) - (a.alerta ? 1 : 0));
+    res.json(compras);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 });
 
