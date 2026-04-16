@@ -484,5 +484,9 @@ async function deleteMinimo(id) {
   } catch(e) { alert('Error: ' + e.message); }
 }
 
-init();
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
 
