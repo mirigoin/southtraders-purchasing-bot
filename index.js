@@ -20,7 +20,7 @@ const PORT = process.env.PORT || 10000;
 // ============ DB ============
 const pool = new Pool({
   connectionString: DATABASE_URL,
-  ssl: DATABASE_URL && DATABASE_URL.includes('render.com') ? { rejectUnauthorized: false } : false
+  ssl: DATABASE_URL && DATABASE_URL.includes('render.com') ? { rejctUnauthorized: false } : false
 });
 
 async function initDB() {
@@ -317,6 +317,18 @@ app.get('/dashboard', (req, res) => {
 // Baileys QR code
 app.get('/api/baileys/qr', (req, res) => {
   res.json({ status: baileysStatus, qr: baileysQR });
+});
+
+// Baileys QR image - devuelve PNG para escanear desde el dashboard
+app.get('/api/baileys/qr-image', async (req, res) => {
+  if (!baileysQR) return res.status(404).json({ error: 'No QR available', status: baileysStatus });
+  try {
+    const QRCode = require('qrcode');
+    const png = await QRCode.toBuffer(baileysQR, { type: 'png', width: 300, margin: 2 });
+    res.set('Content-Type', 'image/png');
+    res.set('Cache-Control', 'no-cache');
+    res.send(png);
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // Baileys status
