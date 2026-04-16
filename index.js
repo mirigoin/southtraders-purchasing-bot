@@ -43,7 +43,6 @@ async function initDB() {
 
   // Check if slots exist, if not seed 1-50
   const count = await pool.query('SELECT COUNT(*) FROM suppliers');
-feat: stock vs minimums + compras endpoint + purchase_minimums table    const values = [];
     for (let i = 1; i <= 50; i++) {
       values.push(`(${i})`);
     }
