@@ -24,7 +24,6 @@ const pool = new Pool({
 });
 
 async function initDB() {
-  // Suppliers - 50 slots
   await pool.query(`CREATE TABLE IF NOT EXISTS suppliers (
     id SERIAL PRIMARY KEY,
     slot INTEGER UNIQUE NOT NULL,
@@ -41,16 +40,14 @@ async function initDB() {
     updated_at TIMESTAMPTZ DEFAULT NOW()
   )`);
 
-  // Check if slots exist, if not seed 1-50
   const count = await pool.query('SELECT COUNT(*) FROM suppliers');
-    for (let i = 1; i <= 50; i++) {
-      values.push(`(${i})`);
-    }
+  if (parseInt(count.rows[0].count) === 0) {
+    const values = [];
+    for (let i = 1; i <= 50; i++) { values.push(`(${i})`); }
     await pool.query(`INSERT INTO suppliers (slot) VALUES ${values.join(',')}`);
     console.log('Seeded 50 supplier slots');
   }
 
-  // Quotes - cotizaciones extraidas
   await pool.query(`CREATE TABLE IF NOT EXISTS quotes (
     id SERIAL PRIMARY KEY,
     supplier_slot INTEGER REFERENCES suppliers(slot),
@@ -69,7 +66,6 @@ async function initDB() {
     ts TIMESTAMPTZ DEFAULT NOW()
   )`);
 
-  // Quote requests - pedidos de cotizacion que mande Marco
   await pool.query(`CREATE TABLE IF NOT EXISTS quote_requests (
     id SERIAL PRIMARY KEY,
     product TEXT,
@@ -81,7 +77,6 @@ async function initDB() {
     ts TIMESTAMPTZ DEFAULT NOW()
   )`);
 
-  // Group messages log - todos los mensajes de grupos
   await pool.query(`CREATE TABLE IF NOT EXISTS group_messages (
     id SERIAL PRIMARY KEY,
     group_id TEXT,
