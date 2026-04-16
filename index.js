@@ -471,51 +471,50 @@ app.get('/api/quotes/best', async (req, res) => {
 
 // Request quote from suppliers (sends via Baileys to groups)
 app.post('/api/request-quote', async (req, res) => {
-  const { product, target_price, supplier_slots } = req.body;
-  if (!product) return res.status(400).json({ error: 'product required' });
+  try {
+    const { product, target_price, supplier_slots } = req.body;
+    if (!product) return res.status(400).json({ error: 'product required' });
 
-  let msg = `📱 South Traders - Pedido de cotización\n\nBuscamos: ${product}`;
-  if (target_price) msg += `\n🎯 Target: USD ${target_price}`;
-  msg += `\n📦 Cantidad: a confirmar según precio\n\n¿Disponibilidad y mejor precio? Gracias!`;
+    // Obtener proveedores activos con grupo de WA
+    const suppRes = await pool.query('SELECT * FROM suppliers WHERE active = true AND whatsapp_group_id IS NOT NULL');
+    let targets = suppRes.rows;
 
-  let sent = 0;
-  const sentTo = [];
-
-  // Get target suppliers
-  let suppliers;
-  if (supplier_slots && supplier_slots.length > 0) {
-    suppliers = await pool.query('SELECT * FROM suppliers WHERE slot = ANY($1) AND active = TRUE', [supplier_slots]);
-  } else {
-    suppliers = await pool.query('SELECT * FROM suppliers WHERE active = TRUE');
-  }
-
-  for (const s of suppliers.rows) {
-    if (s.whatsapp_group_id && baileysClient && baileysStatus === 'connected') {
-      try {
-        await baileysClient.sendMessage(s.whatsapp_group_id, { text: msg });
-        sent++;
-        sentTo.push(s.name || s.alias || `Slot ${s.slot}`);
-      } catch (e) {
-        console.error(`Error sending to group ${s.name}:`, e.message);
-      }
-    } else if (s.contact_phone) {
-      // Fallback: send 1-to-1 via Cloud API
-      await sendWA(s.contact_phone, msg);
-      sent++;
-      sentTo.push(s.name || s.alias || `Slot ${s.slot}`);
+    // Filtrar por slots si se especificaron
+    if (supplier_slots && supplier_slots.length > 0) {
+      const slotsNum = supplier_slots.map(s => parseInt(s));
+      targets = targets.filter(s => slotsNum.includes(parseInt(s.slot)));
     }
+
+    // Guardar registro
+    const supplierNames = targets.map(s => s.name || 'Slot ' + s.slot).join(', ');
+    const msg = 'Cotizacion: ' + product + (target_price ? ' | Target: $' + target_price : '') + ' | Responder con precio, cantidad e incoterm';
+    await pool.query(
+      'INSERT INTO quote_requests (product, target_price, suppliers_sent, message_sent, status) VALUES ($1,$2,$3,$4,$5)',
+      [product, target_price || null, supplierNames || null, msg, 'open']
+    );
+
+    // Enviar WhatsApp a cada grupo via Baileys
+    let sent = 0;
+    for (const s of targets) {
+      try {
+        if (baileysClient && baileysStatus === 'connected') {
+          await baileysClient.sendMessage(s.whatsapp_group_id, { text: msg });
+          sent++;
+          console.log('Quote request sent to ' + s.name + ' group: ' + s.whatsapp_group_id);
+        } else {
+          console.log('Baileys not connected, skipping ' + s.name);
+        }
+      } catch(e) {
+        console.error('Error sending to ' + s.name + ': ' + e.message);
+      }
+    }
+
+    res.json({ ok: true, sent, suppliers: targets.map(s => s.name || 'Slot'+s.slot) });
+  } catch(e) {
+    console.error('request-quote error:', e);
+    res.status(500).json({ error: e.message });
   }
-
-  // Log the request
-  await pool.query(
-    'INSERT INTO quote_requests (product, target_price, suppliers_sent, message_sent) VALUES ($1,$2,$3,$4)',
-    [product, target_price, sentTo.join(', '), msg]
-  );
-
-  res.json({ ok: true, sent, suppliers: sentTo });
 });
-
-// List quote requests
 app.get('/api/quote-requests', async (req, res) => {
   const result = await pool.query('SELECT * FROM quote_requests ORDER BY ts DESC LIMIT 50');
   res.json(result.rows);
