@@ -452,13 +452,13 @@ async function loadQR() {
     const qr = document.getElementById('qrSection');
     if (data.qr) {
       qr.style.display = 'block';
-      // Use qrcode lib or just show instructions
-      qr.innerHTML = `<p style="color:#f59e0b;margin-bottom:12px">Escanea este QR con WhatsApp (3 puntitos → Dispositivos vinculados → Vincular dispositivo)</p>
-      <p style="font-size:11px;color:#718096">QR disponible en los logs del servidor (printQRInTerminal:true)</p>`;
+      qr.innerHTML = `
+        <p style="color:#f59e0b;margin-bottom:12px">Escaneá con WhatsApp → 3 puntitos → Dispositivos vinculados</p>
+        <img src="/api/baileys/qr-image?t=${Date.now()}" style="border:8px solid #fff;border-radius:8px;max-width:280px;display:block;margin:0 auto" onerror="this.style.display='none'">
+        <br><button class="btn btn-primary btn-sm" style="margin-top:12px" onclick="loadQR()">&#8635; Actualizar QR</button>`;
     }
   } catch(e) {}
 }
-
 async function loadGroups() {
   const tbody = document.getElementById('groupsTbody');
   try {
