@@ -596,6 +596,15 @@ app.post('/api/request-quote', async (req, res) => {
     // Enviar WhatsApp a cada proveedor
     let sent = 0;
     for (const s of targets) {
+          } else if (s.contact_phone) {
+        // Fallback: mandar directo por Cloud API
+        try {
+          await sendWA(s.contact_phone, msg);
+          sent++;
+          console.log('Sent to', s.name || s.slot, 'via Cloud API to', s.contact_phone);
+        } catch(e) {
+          console.error('Cloud API send failed for', s.name, e.message);
+        }
       try {
         if (baileysClient && baileysStatus === 'connected') {
           // Intentar al grupo primero
