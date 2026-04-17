@@ -698,6 +698,22 @@ app.post('/api/send', async (req, res) => {
   res.status(400).json({ error: 'phone or group_id required' });
 });
 
+// ============ DEBUG ============
+app.post('/api/debug/send-raw', async (req, res) => {
+  var { phone, message } = req.body;
+  if (!phone || !message) return res.status(400).json({ error: 'phone+message required' });
+  try {
+    var resp = await axios.post(
+      `https://graph.facebook.com/v19.0/${PHONE_NUMBER_ID}/messages`,
+      { messaging_product: 'whatsapp', to: phone, type: 'text', text: { body: message } },
+      { headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' } }
+    );
+    res.json({ ok: true, meta_status: resp.status, meta_response: resp.data });
+  } catch(e) {
+    res.json({ ok: false, meta_status: e.response?.status, meta_error: e.response?.data, message: e.message });
+  }
+});
+
 // ============ WEBHOOK (Meta Cloud API) ============
 app.get('/webhook', (req, res) => {
   const mode = req.query['hub.mode'];
