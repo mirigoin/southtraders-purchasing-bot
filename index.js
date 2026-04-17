@@ -381,6 +381,16 @@ app.post('/api/baileys/restart', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+app.post('/api/baileys/start', async (req, res) => {
+  try {
+    baileysStatus = 'disconnected';
+    await initBaileys();
+    res.json({ ok: true, message: 'Baileys reiniciado, generando QR...' });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/api/baileys/status', (req, res) => {
   res.json({ status: baileysStatus, connected: baileysStatus === 'connected' });
 });
