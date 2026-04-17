@@ -382,21 +382,39 @@ app.post('/api/baileys/restart', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+// Estado de registro SMS
+let registrationSocket = null;
+
 app.post('/api/baileys/register', async (req, res) => {
   try {
     const { phone, code } = req.body;
     if (!phone) return res.status(400).json({ error: 'phone required' });
-    if (!baileysClient) return res.status(503).json({ error: 'Baileys not initialized' });
-    if (code) {
-      // Confirmar con el código SMS recibido
-      await baileysClient.register(code.replace(/-/g, ''));
-      res.json({ ok: true, message: 'Numero registrado exitosamente' });
+    const { makeRegistrationSocket, useMultiFileAuthState: useMultiFileAuthStateReg } = require('@whiskeysockets/baileys');
+    const authDir = '/opt/render/project/src/auth_info';
+    const { state, saveCreds } = await useMultiFileAuthStateReg(authDir);
+    if (!code) {
+      // Paso 1: Crear socket de registro y pedir SMS
+      registrationSocket = makeRegistrationSocket({ auth: state });
+      registrationSocket.ev.on('creds.update', saveCreds);
+      await registrationSocket.requestRegistrationCode({ phoneNumber: phone, method: 'sms' });
+      console.log('SMS de registro enviado a', phone);
+      res.json({ ok: true, message: 'SMS enviado a +' + phone + '. Llama a este endpoint con el code recibido.' });
     } else {
-      // Solicitar el código SMS
-      await baileysClient.requestRegistrationCode({ phoneNumber: phone, method: 'sms' });
-      res.json({ ok: true, message: 'Codigo SMS enviado al ' + phone });
+      // Paso 2: Confirmar con el código SMS
+      if (!registrationSocket) {
+        const socket = makeRegistrationSocket({ auth: state });
+        socket.ev.on('creds.update', saveCreds);
+        registrationSocket = socket;
+      }
+      await registrationSocket.register(code.replace(/-/g, '').trim());
+      console.log('Numero registrado exitosamente:', phone);
+      registrationSocket = null;
+      // Reiniciar Baileys normal
+      setTimeout(() => initBaileys(), 1000);
+      res.json({ ok: true, message: 'Numero registrado! Baileys se reconecta ahora.' });
     }
   } catch(e) {
+    console.error('Register error:', e);
     res.status(500).json({ error: e.message });
   }
 });
