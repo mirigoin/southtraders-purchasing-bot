@@ -383,9 +383,17 @@ app.post('/api/baileys/restart', async (req, res) => {
 
 app.post('/api/baileys/start', async (req, res) => {
   try {
+    // Borrar sesion vieja del disco
+    const fs = require('fs');
+    const authDir = '/opt/render/project/src/auth_info';
+    if (fs.existsSync(authDir)) {
+      fs.rmSync(authDir, { recursive: true, force: true });
+      console.log('Auth dir deleted for fresh QR');
+    }
     baileysStatus = 'disconnected';
-    await initBaileys();
-    res.json({ ok: true, message: 'Baileys reiniciado, generando QR...' });
+    baileysClient = null;
+    setTimeout(() => initBaileys(), 500);
+    res.json({ ok: true, message: 'Sesion borrada. Generando QR nuevo en 2 segundos...' });
   } catch(e) {
     res.status(500).json({ error: e.message });
   }
