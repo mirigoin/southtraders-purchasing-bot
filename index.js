@@ -7,7 +7,6 @@ require('dotenv').config();
 const app = express();
 app.use(express.json());
 app.use(express.static('public'));
-
 // ============ ENV ============
 const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
 const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
@@ -625,6 +624,16 @@ app.post('/api/request-quote', async (req, res) => {
             }
           }
           if (sentOk) sent++;
+        } else if (s.contact_phone) {
+          // Baileys no conectado - mandar directo por Cloud API
+          try {
+            const phone = s.contact_phone.replace(/\D/g, '');
+            await sendWA(phone, msg);
+            sent++;
+            console.log('Sent via Cloud API to ' + (s.name || 'Slot'+s.slot) + ' at ' + phone);
+          } catch(cloudErr) {
+            console.error('Cloud API send failed for ' + (s.name || s.slot) + ': ' + cloudErr.message);
+          }
         }
       } catch(e) {
         console.error('Error sending to ' + s.name + ': ' + e.message);
