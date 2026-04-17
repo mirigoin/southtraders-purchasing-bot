@@ -320,7 +320,7 @@ async function initBaileys() {
 }
 
 // ============ COSTOS (lee planilla South Pizarra columna J) ============
-var COSTOS_CSV_URL = 'https://docs.google.com/spreadsheets/d/11n3cIyVpgVDpiOJixsPstx-sAhnwWTAgmq6TAhm8yQw/export?format=csv&gid=1000845640';
+var COSTOS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJnHEwjzr2DODFe50HiG4g1ARBm8kLRFkSj2mP7pI26ymYrN-5q-M4R9S_mhapc0Ip9jQt6ZT9vREd/pub?gid=0&single=true&output=csv';
 var costosCache = { map: {}, ts: 0 };
 var COSTOS_TTL = 10 * 60 * 1000; // 10 min
 
