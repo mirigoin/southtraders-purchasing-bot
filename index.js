@@ -383,12 +383,15 @@ app.post('/api/baileys/restart', async (req, res) => {
 
 app.post('/api/baileys/start', async (req, res) => {
   try {
-    // Borrar sesion vieja del disco
+    // Borrar archivos de sesion uno por uno (no el directorio, que esta bloqueado)
     const fs = require('fs');
     const authDir = '/opt/render/project/src/auth_info';
     if (fs.existsSync(authDir)) {
-      fs.rmSync(authDir, { recursive: true, force: true });
-      console.log('Auth dir deleted for fresh QR');
+      const files = fs.readdirSync(authDir);
+      for (const f of files) {
+        try { fs.unlinkSync(authDir + '/' + f); } catch(e) {}
+      }
+      console.log('Auth files deleted:', files.length);
     }
     baileysStatus = 'disconnected';
     baileysClient = null;
