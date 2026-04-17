@@ -180,6 +180,7 @@ async function sendWA(to, text) {
 
 // Alert owner
 async function alertOwner(message) {
+  if (!message || typeof message !== 'string' || message.trim().length === 0) return;
   // Intentar via Baileys primero (siempre disponible)
   if (baileysClient && baileysStatus === 'connected' && OWNER_PHONE) {
     try {
@@ -249,72 +250,63 @@ async function initBaileys() {
 
     // Listen to ALL group messages
     sock.ev.on('messages.upsert', async ({ messages }) => {
-      for (const msg of messages) {
-        if (!msg.message || msg.key.fromMe) continue;
+        for (const msg of messages) {
+          if (!msg.message || msg.key.fromMe) continue;
+          const remoteJid = msg.key.remoteJid || '';
+          const isGroup = remoteJid.endsWith('@g.us');
+          const isDM = remoteJid.endsWith('@s.whatsapp.net');
+          if (!isGroup && !isDM) continue;
 
-        const isGroup = msg.key.remoteJid?.endsWith('@g.us');
-        if (!isGroup) continue;
+          const text = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
+          if (!text || text.length < 3) continue;
 
-        const groupId = msg.key.remoteJid;
-        const senderPhone = msg.key.participant?.replace('@s.whatsapp.net', '') || '';
-        const text = msg.message.conversation
-          || msg.message.extendedTextMessage?.text
-          || '';
-
-        if (!text || text.length < 3) continue;
-
-        // Get group name
-        let groupName = groupId;
-        try {
-          const meta = await sock.groupMetadata(groupId);
-          groupName = meta.subject || groupId;
-        } catch (e) { /* ignore */ }
-
-        // Get sender name
-        let senderName = senderPhone;
-        try {
-          senderName = msg.pushName || senderPhone;
-        } catch (e) { /* ignore */ }
-
-        // Save raw message
-        await pool.query(
-          `INSERT INTO group_messages (group_id, group_name, sender_phone, sender_name, message_text, wa_message_id)
-          VALUES ($1,$2,$3,$4,$5,$6)`,
-          [groupId, groupName, senderPhone, senderName, text, msg.key.id]
-        );
-
-        // Check if this group belongs to a registered supplier
-        const supplier = await pool.query(
-          'SELECT * FROM suppliers WHERE whatsapp_group_id = $1 AND active = TRUE',
-          [groupId]
-        );
-
-        if (supplier.rows.length > 0) {
-          const s = supplier.rows[0];
-
-          // Extract quotes with Claude
-          const result = await extractQuote(text, s.name || s.alias || groupName);
-          if (result.quotes && result.quotes.length > 0) {
-            // Mark message as having a quote
+          if (isGroup) {
+            const groupId = remoteJid;
+            const senderPhone = msg.key.participant?.replace('@s.whatsapp.net', '') || '';
+            let groupName = groupId;
+            try { const meta = await sock.groupMetadata(groupId); groupName = meta.subject || groupId; } catch(e) {}
+            let senderName = senderPhone;
+            try { senderName = msg.pushName || senderPhone; } catch(e) {}
             await pool.query(
-              `UPDATE group_messages SET has_quote = TRUE, processed = TRUE WHERE id = (SELECT id FROM group_messages WHERE group_id = $1 AND message_text = $2 ORDER BY ts DESC LIMIT 1)`,
-              [groupId, text]
+              `INSERT INTO group_messages (group_id, group_name, sender_phone, sender_name, message_text, wa_message_id) VALUES ($1,$2,$3,$4,$5,$6)`,
+              [groupId, groupName, senderPhone, senderName, text, msg.key.id]
             );
-
-            // Save extracted quotes
-            await saveQuotes(result.quotes, s.slot, s.name || s.alias, text, 'group');
-
-            // Alert owner with best prices
-            const summary = result.quotes.map(q =>
-              `${q.product} ${q.model} ${q.capacity}: $${q.price} ${q.currency} x${q.qty || '?'} (${q.incoterm || 'FOB'})`
-            ).join('\n');
-            await alertOwner(`📊 Cotización de ${s.name || groupName}:\n${summary}`);
+            // Buscar supplier por group_id
+            const supplier = await pool.query('SELECT * FROM suppliers WHERE whatsapp_group_id = $1 AND active = TRUE', [groupId]);
+            let supSlot = null, supName = groupName;
+            if (supplier.rows.length > 0) { supSlot = supplier.rows[0].slot; supName = supplier.rows[0].name || supplier.rows[0].alias || groupName; }
+            // Extraer quote siempre (registrado o no)
+            const result = await extractQuote(text, supName);
+            if (result.quotes && result.quotes.length > 0) {
+              await pool.query(`UPDATE group_messages SET has_quote = TRUE, processed = TRUE WHERE wa_message_id = $1`, [msg.key.id]);
+              await saveQuotes(result.quotes, supSlot, supName, text, 'group');
+              try { await pool.query('UPDATE quotes SET group_id = $1 WHERE raw_text = $2 AND group_id IS NULL', [groupId, text]); } catch(e) {}
+            }
+          } else if (isDM) {
+            const senderPhone = remoteJid.replace('@s.whatsapp.net', '');
+            let senderName = msg.pushName || senderPhone;
+            // Guardar tambien en group_messages con group_id=null y group_name='DM:<phone>'
+            await pool.query(
+              `INSERT INTO group_messages (group_id, group_name, sender_phone, sender_name, message_text, wa_message_id) VALUES ($1,$2,$3,$4,$5,$6)`,
+              [null, 'DM:' + senderPhone, senderPhone, senderName, text, msg.key.id]
+            );
+            // Buscar supplier por contact_phone (flexible: comparar sufijos por si hay + o prefijos)
+            const supplierRes = await pool.query(
+              `SELECT * FROM suppliers WHERE active = TRUE AND contact_phone IS NOT NULL AND (regexp_replace(contact_phone, '[^0-9]', '', 'g') = $1 OR regexp_replace(contact_phone, '[^0-9]', '', 'g') LIKE '%' || $1 OR $1 LIKE '%' || regexp_replace(contact_phone, '[^0-9]', '', 'g')) LIMIT 1`,
+              [senderPhone]
+            );
+            let supSlot = null, supName = 'DM:' + senderPhone;
+            if (supplierRes.rows.length > 0) { supSlot = supplierRes.rows[0].slot; supName = supplierRes.rows[0].name || supplierRes.rows[0].alias || supName; }
+            const result = await extractQuote(text, supName);
+            if (result.quotes && result.quotes.length > 0) {
+              await pool.query(`UPDATE group_messages SET has_quote = TRUE, processed = TRUE WHERE wa_message_id = $1`, [msg.key.id]);
+              await saveQuotes(result.quotes, supSlot, supName, text, 'dm');
+            }
           }
         }
-      }
-    });
+      });
 
-    baileysClient = sock;
+      baileysClient = sock;
     console.log('Baileys initialized');
   } catch (e) {
     if (e.code === 'MODULE_NOT_FOUND') {
