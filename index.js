@@ -319,7 +319,109 @@ async function initBaileys() {
   }
 }
 
+// ============ COSTOS (lee planilla South Pizarra columna J) ============
+var COSTOS_CSV_URL = 'https://docs.google.com/spreadsheets/d/11n3cIyVpgVDpiOJixsPstx-sAhnwWTAgmq6TAhm8yQw/export?format=csv&gid=1000845640';
+var costosCache = { map: {}, ts: 0 };
+var COSTOS_TTL = 10 * 60 * 1000; // 10 min
+
+function normalizeDesc(s) {
+  if (!s) return '';
+  return s.toUpperCase().replace(/[^A-Z0-9]+/g, ' ').trim();
+}
+
+function parseCsvLine(line) {
+  // CSV con quotes para campos que tienen comas
+  var out = [];
+  var cur = '';
+  var inQ = false;
+  for (var i = 0; i < line.length; i++) {
+    var c = line[i];
+    if (c === '"') { inQ = !inQ; continue; }
+    if (c === ',' && !inQ) { out.push(cur); cur = ''; continue; }
+    cur += c;
+  }
+  out.push(cur);
+  return out;
+}
+
+function parsePrice(raw) {
+  if (!raw) return null;
+  var clean = String(raw).replace(/\$/g, '').replace(/\s/g, '').trim();
+  if (!clean) return null;
+  // Formato esperable: "840,00" o "840.00" o "840"
+  // Si tiene coma como decimal y punto como miles, asumimos formato latam
+  if (clean.indexOf(',') !== -1 && clean.indexOf('.') !== -1) {
+    clean = clean.replace(/\./g, '').replace(',', '.');
+  } else if (clean.indexOf(',') !== -1) {
+    clean = clean.replace(',', '.');
+  }
+  var n = parseFloat(clean);
+  return isNaN(n) ? null : n;
+}
+
+async function loadCostos(force) {
+  var now = Date.now();
+  if (!force && costosCache.ts && (now - costosCache.ts < COSTOS_TTL)) return costosCache;
+  try {
+    var resp = await axios.get(COSTOS_CSV_URL, { timeout: 15000, responseType: 'text' });
+    var csv = resp.data;
+    var lines = csv.split('\n');
+    var map = {};
+    var count = 0;
+    for (var i = 0; i < lines.length; i++) {
+      var cells = parseCsvLine(lines[i]);
+      // Necesitamos al menos 10 columnas (A-J)
+      if (cells.length < 10) continue;
+      var desc = (cells[6] || cells[3] || cells[0] || '').trim(); // G, D o A: descripcion del producto
+      var costo = parsePrice(cells[9]); // J
+      if (!desc || !costo) continue;
+      // Filtrar headers/categorias (no tienen costo numerico, suelen tener asteriscos)
+      if (desc.indexOf('*') !== -1) continue;
+      var key = normalizeDesc(desc);
+      if (key.length < 3) continue;
+      map[key] = { desc: desc, costo: costo };
+      count++;
+    }
+    costosCache = { map: map, ts: now, count: count };
+    console.log('[costos] loaded ' + count + ' rows from sheet');
+    return costosCache;
+  } catch(e) {
+    console.error('[costos] load error:', e.message);
+    return costosCache; // devuelvo lo que haya
+  }
+}
+
+function findCosto(productSearchStr) {
+  if (!productSearchStr || !costosCache.map) return null;
+  var key = normalizeDesc(productSearchStr);
+  if (!key) return null;
+  // Match exacto
+  if (costosCache.map[key]) return costosCache.map[key];
+  // Match parcial: que las palabras del search aparezcan en alguna entry
+  var words = key.split(' ').filter(function(w) { return w.length >= 2; });
+  if (words.length === 0) return null;
+  var bestScore = 0, best = null;
+  for (var k in costosCache.map) {
+    var score = 0;
+    for (var w of words) {
+      if (k.indexOf(w) !== -1) score++;
+    }
+    if (score === words.length && score > bestScore) { bestScore = score; best = costosCache.map[k]; }
+  }
+  return best;
+}
+
+// Refresh inicial al arrancar (no esperamos)
+loadCostos().catch(function(e) { console.error('initial costos load failed:', e.message); });
+
 // ============ ROUTES ============
+// Endpoint para ver/refrescar costos
+app.get('/api/costos', async (req, res) => {
+  var force = req.query.refresh === '1';
+  var c = await loadCostos(force);
+  res.json({ count: c.count || Object.keys(c.map || {}).length, ts: c.ts, sample: Object.entries(c.map || {}).slice(0, 3) });
+});
+
 
 // Health
 app.get('/', (req, res) => {
@@ -552,12 +654,20 @@ app.get('/api/quotes', async (req, res) => {
 app.get('/api/quotes/best', async (req, res) => {
   const result = await pool.query(`
     SELECT DISTINCT ON (product, model, capacity)
-      product, model, capacity, price, currency, supplier_name, qty, incoterm, ts
+      product, model, capacity, price, currency, supplier_name, supplier_slot, qty, incoterm, ts
     FROM quotes
     WHERE ts > NOW() - INTERVAL '7 days'
     ORDER BY product, model, capacity, price ASC
   `);
-  res.json(result.rows);
+  await loadCostos();
+  var enriched = result.rows.map(function(row) {
+    var search = [row.product, row.model, row.capacity].filter(Boolean).join(' ');
+    var c = findCosto(search);
+    row.ultimo_costo = c ? c.costo : null;
+    row.costo_match = c ? c.desc : null;
+    return row;
+  });
+  res.json(enriched);
 });
 
 // ============ QUOTE REQUESTS ============
@@ -935,7 +1045,14 @@ app.get('/api/compras', async (req, res) => {
       });
     }
     // Ordenar: alertas primero
-    compras.sort((a,b) => (b.alerta ? 1 : 0) - (a.alerta ? 1 : 0));
+    // Enriquecer con ultimo costo de la planilla
+      await loadCostos();
+      compras.forEach(function(c) {
+        var search = c.descripcion || '';
+        var costo = findCosto(search);
+        c.ultimo_costo = costo ? costo.costo : null;
+      });
+      compras.sort((a,b) => (b.alerta ? 1 : 0) - (a.alerta ? 1 : 0));
     res.json(compras);
   } catch (e) {
     res.status(500).json({ error: e.message });
