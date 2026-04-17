@@ -382,6 +382,25 @@ app.post('/api/baileys/restart', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+app.post('/api/baileys/register', async (req, res) => {
+  try {
+    const { phone, code } = req.body;
+    if (!phone) return res.status(400).json({ error: 'phone required' });
+    if (!baileysClient) return res.status(503).json({ error: 'Baileys not initialized' });
+    if (code) {
+      // Confirmar con el código SMS recibido
+      await baileysClient.register(code.replace(/-/g, ''));
+      res.json({ ok: true, message: 'Numero registrado exitosamente' });
+    } else {
+      // Solicitar el código SMS
+      await baileysClient.requestRegistrationCode({ phoneNumber: phone, method: 'sms' });
+      res.json({ ok: true, message: 'Codigo SMS enviado al ' + phone });
+    }
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.post('/api/baileys/pairing-code', async (req, res) => {
   try {
     const { phone } = req.body;
