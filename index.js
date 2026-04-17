@@ -209,6 +209,7 @@ async function initBaileys() {
     const sock = makeWASocket({
       version,
       auth: state,
+    usePairingCode: true,
       printQRInTerminal: true,
       browser: ['Marco Bot', 'Chrome', '22.0'],
         getMessage: async (key) => {
@@ -379,6 +380,19 @@ app.post('/api/baileys/restart', async (req, res) => {
     res.json({ ok: true, message: 'Reiniciando Baileys...' });
     setTimeout(() => initBaileys(), 500);
   } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/baileys/pairing-code', async (req, res) => {
+  try {
+    const { phone } = req.body;
+    if (!phone) return res.status(400).json({ error: 'phone required' });
+    if (!baileysClient) return res.status(503).json({ error: 'Baileys not initialized' });
+    const code = await baileysClient.requestPairingCode(phone);
+    console.log('Pairing code for', phone, ':', code);
+    res.json({ ok: true, code, phone });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.post('/api/baileys/start', async (req, res) => {
