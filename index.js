@@ -104,6 +104,8 @@ async function initDB() {
   await pool.query(`ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS responses INTEGER DEFAULT 0`);
   await pool.query(`ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'open'`);
   await pool.query(`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS group_id TEXT`);
+  await pool.query(`ALTER TABLE group_messages ADD COLUMN IF NOT EXISTS wa_message_id TEXT`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_group_messages_wa_id ON group_messages(wa_message_id)`);
 
   console.log('DB OK');
 }
@@ -212,12 +214,12 @@ async function initBaileys() {
       printQRInTerminal: true,
       browser: ['Marco Bot', 'Chrome', '22.0'],
         getMessage: async (key) => {
-      try {
-        const r = await pool.query('SELECT message_text FROM group_messages WHERE id = $1 LIMIT 1', [key.id]);
-        if (r.rows.length > 0) return { conversation: r.rows[0].message_text };
-      } catch(e) {}
-      return { conversation: 'placeholder' };
-    },
+        try {
+          const r = await pool.query('SELECT message_text FROM group_messages WHERE wa_message_id = $1 LIMIT 1', [key.id]);
+          if (r.rows.length > 0) return { conversation: r.rows[0].message_text };
+        } catch(e) {}
+        return { conversation: '' };
+      },
 });
 
     sock.ev.on('creds.update', saveCreds);
@@ -276,9 +278,9 @@ async function initBaileys() {
 
         // Save raw message
         await pool.query(
-          `INSERT INTO group_messages (group_id, group_name, sender_phone, sender_name, message_text) 
-          VALUES ($1,$2,$3,$4,$5)`,
-          [groupId, groupName, senderPhone, senderName, text]
+          `INSERT INTO group_messages (group_id, group_name, sender_phone, sender_name, message_text, wa_message_id)
+          VALUES ($1,$2,$3,$4,$5,$6)`,
+          [groupId, groupName, senderPhone, senderName, text, msg.key.id]
         );
 
         // Check if this group belongs to a registered supplier
