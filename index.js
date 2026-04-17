@@ -360,6 +360,27 @@ app.get('/api/baileys/qr-image', async (req, res) => {
 });
 
 // Baileys status
+app.post('/api/baileys/logout', async (req, res) => {
+  try {
+    if (baileysClient) {
+      await baileysClient.logout();
+    }
+    // Borrar archivos de sesion
+    const fs = require('fs');
+    const authDir = '/opt/render/project/src/auth_info';
+    if (fs.existsSync(authDir)) {
+      fs.rmSync(authDir, { recursive: true, force: true });
+    }
+    baileysStatus = 'disconnected';
+    baileysClient = null;
+    // Reiniciar Baileys para mostrar QR
+    setTimeout(() => initBaileys(), 1000);
+    res.json({ ok: true, message: 'Sesion cerrada. Escaneá el QR nuevo.' });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/api/baileys/status', (req, res) => {
   res.json({ status: baileysStatus, connected: baileysStatus === 'connected' });
 });
