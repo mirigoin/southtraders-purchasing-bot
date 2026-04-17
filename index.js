@@ -575,7 +575,7 @@ app.post('/api/request-quote', async (req, res) => {
     if (!product) return res.status(400).json({ error: 'product required' });
 
     // Obtener proveedores activos con grupo de WA
-    const suppRes = await pool.query('SELECT * FROM suppliers WHERE active = true AND whatsapp_group_id IS NOT NULL');
+    const suppRes = await pool.query('SELECT * FROM suppliers WHERE active = true AND (whatsapp_group_id IS NOT NULL OR contact_phone IS NOT NULL)');
     let targets = suppRes.rows;
 
     // Filtrar por slots si se especificaron
