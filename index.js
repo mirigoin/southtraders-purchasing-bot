@@ -595,48 +595,43 @@ app.post('/api/request-quote', async (req, res) => {
     // Enviar WhatsApp a cada proveedor
     let sent = 0;
     for (const s of targets) {
-          } else if (s.contact_phone) {
-        // Fallback: mandar directo por Cloud API
-        try {
-          await sendWA(s.contact_phone, msg);
-          sent++;
-          console.log('Sent to', s.name || s.slot, 'via Cloud API to', s.contact_phone);
-        } catch(e) {
-          console.error('Cloud API send failed for', s.name, e.message);
-        }
       try {
         if (baileysClient && baileysStatus === 'connected') {
-          // Intentar al grupo primero
-          let destJid = s.whatsapp_group_id;
+          // Intentar grupo primero, fallback a contact_phone
           let sentOk = false;
-          try {
-            await baileysClient.sendMessage(destJid, { text: msg });
-            sentOk = true;
-            console.log('Sent to group ' + s.name + ' at ' + destJid);
-          } catch(groupErr) {
-            console.log('Group send failed (' + groupErr.message + '), trying contact_phone...');
-            // Fallback: mandar directo al contact_phone si existe
-            if (s.contact_phone) {
-              const phone = s.contact_phone.replace(/[^0-9]/g, '');
+          if (s.whatsapp_group_id) {
+            try {
+              await baileysClient.sendMessage(s.whatsapp_group_id, { text: msg });
+              sentOk = true;
+              console.log('Sent to group', s.name || s.slot);
+            } catch(groupErr) {
+              console.log('Group send failed:', groupErr.message);
+            }
+          }
+          if (!sentOk && s.contact_phone) {
+            try {
+              const phone = s.contact_phone.replace(/\D/g, '');
               await baileysClient.sendMessage(phone + '@s.whatsapp.net', { text: msg });
               sentOk = true;
-              console.log('Sent direct to contact ' + s.name + ' at ' + phone);
+              console.log('Sent direct via Baileys to', s.name || s.slot);
+            } catch(dmErr) {
+              console.log('Baileys DM failed:', dmErr.message);
             }
           }
           if (sentOk) sent++;
         } else if (s.contact_phone) {
-          // Baileys no conectado - mandar directo por Cloud API
+          // Baileys no conectado - Cloud API al contact_phone
           try {
             const phone = s.contact_phone.replace(/\D/g, '');
             await sendWA(phone, msg);
             sent++;
-            console.log('Sent via Cloud API to ' + (s.name || 'Slot'+s.slot) + ' at ' + phone);
+            console.log('Sent via Cloud API to', s.name || s.slot);
           } catch(cloudErr) {
-            console.error('Cloud API send failed for ' + (s.name || s.slot) + ': ' + cloudErr.message);
+            console.error('Cloud API failed for', s.name || s.slot, cloudErr.message);
           }
         }
       } catch(e) {
-        console.error('Error sending to ' + s.name + ': ' + e.message);
+        console.error('Error sending to', s.name || s.slot, e.message);
       }
     }
     // Notificar al owner SIEMPRE - con resultado
