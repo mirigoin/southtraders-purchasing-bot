@@ -1129,8 +1129,8 @@ app.get('/api/admin/parser-baseline', async (req, res) => {
         id: m.id,
         sender: m.sender_name,
         ts: m.ts,
-        text_preview: m.message_text ? m.message_msgText.slice(0, 200) : null,
-        text_len: m.message_text ? m.message_msgText.length : 0,
+        text_preview: m.message_text ? m.message_text.slice(0, 200) : null,
+        text_len: m.message_text ? m.message_text.length : 0,
         has_quote: m.has_quote,
         processed: m.processed
       })),
@@ -1185,8 +1185,8 @@ app.get('/api/admin/reparse-missed', async (req, res) => {
           msg_id: msg.id,
           sender: msg.sender_name,
           group: msg.group_name,
-          msg_len: msg.message_msgText.length,
-          msg_preview: msg.message_msgText.slice(0, 200),
+          msg_len: msg.message_text.length,
+          msg_preview: msg.message_text.slice(0, 200),
           db_has_quote: msg.has_quote,
           db_processed: msg.processed,
           ai_quote_count: aiQuotes.length,
@@ -1211,6 +1211,42 @@ app.get('/api/admin/reparse-missed', async (req, res) => {
     res.json({ ok: true, summary, results });
   } catch (e) {
     res.status(500).json({ error: e.message, stack: e.stack });
+  }
+});
+
+// ============ RECENT MESSAGES (debug — incluye media cols) ============
+app.get('/api/admin/recent-messages', async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+    const onlyMedia = req.query.media === 'true';
+    const where = onlyMedia ? 'WHERE media_type IS NOT NULL' : '';
+    const rows = await pool.query(`
+      SELECT id, group_name, sender_phone, sender_name, message_text,
+             media_type, media_id, media_caption, media_filename, media_mime,
+             wa_message_id, has_quote, processed, ts
+      FROM group_messages
+      ${where}
+      ORDER BY ts DESC
+      LIMIT $1
+    `.replace('${where}', where), [limit]);
+    const items = rows.rows.map(m => ({
+      id: m.id,
+      ts: m.ts,
+      sender_phone: m.sender_phone,
+      sender_name: m.sender_name || '(null)',
+      group_name: m.group_name || '(null)',
+      preview: m.message_text ? m.message_text.slice(0, 150) : null,
+      media_type: m.media_type,
+      media_id: m.media_id,
+      media_filename: m.media_filename,
+      media_caption: m.media_caption,
+      wa_message_id: m.wa_message_id,
+      has_quote: m.has_quote,
+      processed: m.processed
+    }));
+    res.json({ ok: true, count: items.length, items });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 });
 
