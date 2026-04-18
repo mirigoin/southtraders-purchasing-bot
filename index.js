@@ -931,7 +931,14 @@ app.get('/api/quotes', async (req, res) => {
   if (limit) query += ` LIMIT ${parseInt(limit)}`;
 
   const result = await pool.query(query, params);
-  res.json(result.rows);
+  await loadCostos();
+  var enriched = result.rows.map(function(row) {
+    var search = [row.product, row.model, row.capacity].filter(Boolean).join(' ');
+    var c = findCosto(search);
+    row.ultimo_costo = c ? c.costo : null;
+    return row;
+  });
+  res.json(enriched);
 });
 
 // Best prices summary
