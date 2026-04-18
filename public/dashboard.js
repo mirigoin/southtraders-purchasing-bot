@@ -154,7 +154,7 @@ async function loadMessages(){
     var d=await fetch(url).then(function(x){return x.json();});
     if(!d.length){ c.innerHTML='<div style="text-align:center;color:#718096;padding:20px">Sin mensajes</div>'; return; }
     c.innerHTML=d.map(function(m){
-      return '<div class="msg-item '+(m.has_quote?'has-quote':'')+'"><div class="msg-meta">'+(m.group_name||m.group_id)+' | '+(m.sender_name||m.sender_phone)+' | '+new Date(m.ts).toLocaleString()+(m.has_quote?' [cotiz]':'')+'</div><div class="msg-text">'+m.message_text+'</div></div>';
+      return '<div class="msg-item '+(m.has_quote?'has-quote':'')+'"><div class="msg-meta">'+(m.group_name||m.group_id)+' | '+(m.sender_name||m.sender_phone)+' | '+new Date(m.ts).toLocaleString()+(m.media_type=='image'?' [img]':m.media_type=='document'?' [doc]':'')+(m.has_quote?' [cotiz]':'')+'</div><div class="msg-text">'+(m.message_text||m.media_caption||m.media_filename||'(media sin texto)')+'</div></div>';
     }).join('');
   } catch(e){ c.innerHTML='<div style="color:#f87171">Error</div>'; }
 }
