@@ -115,7 +115,7 @@ async function loadQuotes(){
     var d=await fetch(url).then(function(x){return x.json();});
     if(!d.length){ tb.innerHTML='<tr><td colspan="9" style="text-align:center;color:#718096;padding:20px">Sin cotizaciones</td></tr>'; return; }
     tb.innerHTML=d.map(function(q){
-      return '<tr><td>'+(q.product||'')+'</td><td>'+(q.model||'')+'</td><td>'+(q.capacity||'')+'</td><td>'+(q.color||'')+'</td><td><strong style="color:#68d391">$'+q.price+'</strong></td><td>'+(q.qty||'-')+'</td><td>'+(q.incoterm||'')+'</td><td>'+(q.supplier_name||'')+'</td><td>'+new Date(q.ts).toLocaleDateString()+'</td></tr>';
+      return '<tr><td>'+(q.product||'')+'</td><td>'+(q.model||'')+'</td><td>'+(q.capacity||'')+'</td><td>'+(q.color||'')+'</td><td><strong style="color:#68d391">$'+q.price+'</strong></td><td style="color:#555;">'+(q.ultimo_costo?'$'+q.ultimo_costo:'-')+'</td><td>'+(q.qty||'-')+'</td><td>'+(q.incoterm||'')+'</td><td>'+(q.supplier_name||'')+'</td><td>'+new Date(q.ts).toLocaleDateString()+'</td></tr>';
     }).join('');
   } catch(e){ tb.innerHTML='<tr><td colspan="9" style="color:#f87171">Error</td></tr>'; }
 }
