@@ -15,6 +15,7 @@ function showTab(id,el){
   if(id==='tab-messages') loadMessages();
   if(id==='tab-conn'){ loadBaileysStatus(); loadGroups(); }
   if(id==='tab-compras'){ loadCompras(); }
+  if(id==='tab-missing'){ loadMissing(); }
 }
 
 async function init(){
@@ -264,3 +265,39 @@ async function deleteMinimo(id){
 }
 
 document.addEventListener('DOMContentLoaded', init);
+
+
+async function loadMissing() {
+  var sd = document.getElementById('missingStaleDays');
+  var staleDays = sd ? parseInt(sd.value) || 7 : 7;
+  var summaryEl = document.getElementById('missingSummary');
+  var listEl = document.getElementById('missingList');
+  if (summaryEl) summaryEl.textContent = 'Cargando...';
+  if (listEl) listEl.innerHTML = '<div style="text-align:center;padding:40px;color:#999;">Cargando...</div>';
+  try {
+    var resp = await fetch('/api/missing-quotes?stale_days=' + staleDays);
+    if (!resp.ok) throw new Error(resp.status);
+    var data = await resp.json();
+    var s = data.summary;
+    if (summaryEl) summaryEl.textContent = s.never + ' nunca · ' + s.stale + ' stale · ' + s.fresh + ' fresh · ' + s.total + ' total';
+    if (!listEl) return;
+    if (!data.items || !data.items.length) { listEl.innerHTML = '<div style="text-align:center;padding:40px;color:#999;">Sin datos</div>'; return; }
+    var html = data.items.map(function(item) {
+      var color = item.status === 'never' ? '#e74c3c' : (item.status === 'stale' ? '#f39c12' : '#27ae60');
+      var badge = item.status === 'never' ? '🔴 NUNCA' : (item.status === 'stale' ? '🟡 STALE (' + item.days_since + 'd)' : '🟢 FRESH (' + item.days_since + 'd)');
+      var lastLine = item.last_quote ? ('Último: ' + item.last_quote.supplier_name + ' · $' + item.last_quote.price + ' ' + (item.last_quote.currency || '') + ' · ' + (item.last_quote.incoterm || '')) : 'Sin cotización previa';
+      var costoLine = item.ultimo_costo ? (' · Costo planilla: $' + item.ultimo_costo) : '';
+      return '<div style="padding:12px 14px;margin-bottom:8px;background:white;border-left:4px solid ' + color + ';border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
+          '<div style="font-weight:600;font-size:14px;">' + item.desc + '</div>' +
+          '<div style="color:' + color + ';font-size:12px;font-weight:600;white-space:nowrap;">' + badge + '</div>' +
+        '</div>' +
+        '<div style="font-size:12px;color:#666;margin-top:6px;">' + lastLine + costoLine + '</div>' +
+      '</div>';
+    }).join('');
+    listEl.innerHTML = html;
+  } catch (e) {
+    if (summaryEl) summaryEl.textContent = 'Error cargando';
+    if (listEl) listEl.innerHTML = '<div style="text-align:center;padding:40px;color:#c00;">Error: ' + e.message + '</div>';
+  }
+}
