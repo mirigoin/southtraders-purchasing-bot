@@ -103,6 +103,18 @@ await pool.query(`
   ALTER TABLE group_messages ADD COLUMN IF NOT EXISTS wa_message_id TEXT;
 `);
 
+// Tabla de log de requests de precio (para rate limiting)
+await pool.query(`
+  CREATE TABLE IF NOT EXISTS price_request_log (
+    id SERIAL PRIMARY KEY,
+    supplier_phone TEXT NOT NULL,
+    product_key TEXT NOT NULL,
+    requested_at TIMESTAMPTZ DEFAULT NOW(),
+    notified_owner BOOLEAN DEFAULT FALSE
+  );
+  CREATE INDEX IF NOT EXISTS idx_prl_phone_prod ON price_request_log(supplier_phone, product_key, requested_at DESC);
+`);
+
 // Re-sincronizar secuencias de SERIAL (importante después de seed de datos externos)
 try {
   await pool.query(`SELECT setval(pg_get_serial_sequence('group_messages', 'id'), COALESCE((SELECT MAX(id) FROM group_messages), 1))`);
@@ -135,6 +147,77 @@ try {
 }
 
 // ============ CLAUDE - EXTRACT QUOTES ============
+// ============ STOCK-WITHOUT-PRICE DETECTION (Nivel 2 — pedir precio) ============
+// Cuando un proveedor anuncia stock sin precio, notifica al owner con mensaje sugerido en ingles.
+// Rate limit: max 1 notificacion por producto+proveedor cada 6 horas.
+async function notifyOwnerStockNoPrice(quotes, msgInfo) {
+  if (!quotes || !Array.isArray(quotes) || quotes.length === 0) return;
+  const noPriceQuotes = quotes.filter(q => q.price === null || q.price === undefined);
+  if (noPriceQuotes.length === 0) return;
+
+  const supplierPhone = msgInfo.supplierPhone || msgInfo.from || 'unknown';
+  const supplierName = msgInfo.supplierName || msgInfo.senderName || supplierPhone;
+
+  // Generar product_key de cada quote (canonical)
+  const productKeys = noPriceQuotes.map(q => {
+    return [q.product, q.model, q.capacity, q.color, q.spec].filter(Boolean).join('|').toLowerCase();
+  });
+
+  // Rate limit check: descartar productos ya notificados en las últimas 6h
+  const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000);
+  const allowedKeys = [];
+  for (const key of productKeys) {
+    try {
+      const recent = await pool.query(
+        'SELECT 1 FROM price_request_log WHERE supplier_phone = $1 AND product_key = $2 AND requested_at > $3 LIMIT 1',
+        [supplierPhone, key, sixHoursAgo]
+      );
+      if (recent.rows.length === 0) allowedKeys.push(key);
+    } catch (e) {
+      console.error('[notifyOwnerStockNoPrice] rate-limit query failed:', e.message);
+    }
+  }
+  if (allowedKeys.length === 0) return; // todos rate-limited
+
+  // Logear las nuevas requests
+  for (let i = 0; i < productKeys.length; i++) {
+    if (!allowedKeys.includes(productKeys[i])) continue;
+    try {
+      await pool.query(
+        'INSERT INTO price_request_log (supplier_phone, product_key, notified_owner) VALUES ($1, $2, TRUE)',
+        [supplierPhone, productKeys[i]]
+      );
+    } catch(e) { /* duplicate ok */ }
+  }
+
+  // Armar lista de productos en formato amigable
+  const productLines = noPriceQuotes
+    .filter((q, i) => allowedKeys.includes(productKeys[i]))
+    .map(q => {
+      const desc = [q.product, q.model, q.capacity, q.color, q.spec ? '(' + q.spec + ' spec)' : null].filter(Boolean).join(' ');
+      const qtyStr = q.qty ? ` (qty: ${q.qty})` : '';
+      return `• ${desc}${qtyStr}`;
+    });
+
+  // Mensaje sugerido en INGLES para que copies y pegues en el grupo
+  const suggestedReply = noPriceQuotes.length === 1
+    ? `Hi! Thanks for the update on stock. Could you share the price? Thanks, Marco`
+    : `Hi! Thanks for the stock update. Could you share the prices for these items? Thanks, Marco`;
+
+  const alertMsg = [
+    `🔔 Stock without price detected`,
+    `From: ${supplierName} (${supplierPhone})`,
+    ``,
+    `Items:`,
+    productLines.join('\n'),
+    ``,
+    `Suggested reply (copy-paste to the group):`,
+    `"${suggestedReply}"`
+  ].join('\n');
+
+  await alertOwner(alertMsg);
+}
+
 // ============ MEDIA HELPERS (WhatsApp attachments) ============
 async function downloadMediaFromMeta(mediaId) {
   if (!mediaId || !WHATSAPP_TOKEN) return null;
@@ -1459,6 +1542,15 @@ app.post('/webhook', async (req, res) => {
         }
         if (result.quotes && result.quotes.length > 0) {
           await saveQuotes(result.quotes, s.slot, s.name || s.alias, msgText, 'direct');
+          // Nivel 2: si hay quotes SIN precio, alertar al owner para pedir precio
+          try {
+            await notifyOwnerStockNoPrice(result.quotes, {
+              supplierPhone: from,
+              supplierName: s.name || s.alias
+            });
+          } catch (e) {
+            console.error('[notifyOwnerStockNoPrice] failed:', e.message);
+          }
           const summary = result.quotes.map(q =>
             `${q.product} ${q.model} ${q.capacity}: $${q.price} x${q.qty || '?'}`
           ).join('\n');
