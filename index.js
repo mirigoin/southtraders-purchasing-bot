@@ -1065,7 +1065,11 @@ async function start() {
   app.listen(PORT, () => console.log(`Marco purchasing bot on port ${PORT}`));
 
   // Try to start Baileys (won't crash if not installed)
-  await initBaileys();
+  if (process.env.BAILEYS_DISABLED === 'true') {
+    console.log('[BAILEYS] Disabled via BAILEYS_DISABLED env var — skipping init');
+  } else {
+    await initBaileys();
+  }
 }
 
 start().catch(e => console.error('Start error:', e));
