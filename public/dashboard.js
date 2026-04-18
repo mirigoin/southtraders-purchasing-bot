@@ -284,15 +284,28 @@ async function loadMissing() {
     if (!data.items || !data.items.length) { listEl.innerHTML = '<div style="text-align:center;padding:40px;color:#999;">Sin datos</div>'; return; }
     var html = data.items.map(function(item) {
       var color = item.status === 'never' ? '#e74c3c' : (item.status === 'stale' ? '#f39c12' : '#27ae60');
-      var badge = item.status === 'never' ? '🔴 NUNCA' : (item.status === 'stale' ? '🟡 STALE (' + item.days_since + 'd)' : '🟢 FRESH (' + item.days_since + 'd)');
-      var lastLine = item.last_quote ? ('Último: ' + item.last_quote.supplier_name + ' · $' + item.last_quote.price + ' ' + (item.last_quote.currency || '') + ' · ' + (item.last_quote.incoterm || '')) : 'Sin cotización previa';
-      var costoLine = item.ultimo_costo ? (' · Costo planilla: $' + item.ultimo_costo) : '';
-      return '<div style="padding:12px 14px;margin-bottom:8px;background:white;border-left:4px solid ' + color + ';border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">' +
-        '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
-          '<div style="font-weight:600;font-size:14px;">' + item.desc + '</div>' +
-          '<div style="color:' + color + ';font-size:12px;font-weight:600;white-space:nowrap;">' + badge + '</div>' +
-        '</div>' +
-        '<div style="font-size:12px;color:#666;margin-top:6px;">' + lastLine + costoLine + '</div>' +
+      var badge = item.status === 'never' ? 'NUNCA' : (item.status === 'stale' ? 'STALE ' + item.days_since + 'd' : 'FRESH ' + item.days_since + 'd');
+      var lastInfo = item.last_quote ? (item.last_quote.supplier_name + ' · 
+    listEl.innerHTML = html;
+  } catch (e) {
+    if (summaryEl) summaryEl.textContent = 'Error cargando';
+    if (listEl) listEl.innerHTML = '<div style="text-align:center;padding:40px;color:#c00;">Error: ' + e.message + '</div>';
+  }
+}
+ + item.last_quote.price + (item.last_quote.incoterm ? ' ' + item.last_quote.incoterm : '')) : '—';
+      var costoStr = item.ultimo_costo ? ('
+    listEl.innerHTML = html;
+  } catch (e) {
+    if (summaryEl) summaryEl.textContent = 'Error cargando';
+    if (listEl) listEl.innerHTML = '<div style="text-align:center;padding:40px;color:#c00;">Error: ' + e.message + '</div>';
+  }
+}
+ + item.ultimo_costo) : '—';
+      return '<div style="display:flex;align-items:center;gap:10px;padding:5px 10px;margin-bottom:2px;background:white;border-left:3px solid ' + color + ';font-size:12px;line-height:1.3;">' +
+        '<div style="color:' + color + ';font-weight:700;min-width:70px;font-size:11px;">' + badge + '</div>' +
+        '<div style="flex:1;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + item.desc + '">' + item.desc + '</div>' +
+        '<div style="color:#888;white-space:nowrap;font-size:11px;">Planilla: ' + costoStr + '</div>' +
+        '<div style="color:#666;min-width:180px;text-align:right;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="' + lastInfo + '">' + lastInfo + '</div>' +
       '</div>';
     }).join('');
     listEl.innerHTML = html;
