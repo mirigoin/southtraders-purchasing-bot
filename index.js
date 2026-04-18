@@ -841,6 +841,62 @@ app.post('/api/admin/reprocess-messages', async (req, res) => {
 });
 
 // ============ REPROCESS (backfill) ============
+
+// [DEV ONLY] Seed marco-dev DB from marco-prod DB. Single-use, safe for dev.
+// Requires PROD_DATABASE_URL env var. Protected with BAILEYS_DISABLED=true as indicator this is dev.
+app.post('/api/admin/seed-from-prod', async (req, res) => {
+  if (process.env.BAILEYS_DISABLED !== 'true') {
+    return res.status(403).json({ error: 'This endpoint only runs on dev (BAILEYS_DISABLED=true)' });
+  }
+  if (!process.env.PROD_DATABASE_URL) {
+    return res.status(500).json({ error: 'PROD_DATABASE_URL env var not set' });
+  }
+  const { Pool: PgPool } = require('pg');
+  const prodPool = new PgPool({ connectionString: process.env.PROD_DATABASE_URL, ssl: { rejectUnauthorized: false } });
+  const tables = ['suppliers', 'quotes', 'group_messages', 'minimum_stock'];
+  const result = {};
+  try {
+    for (const table of tables) {
+      try {
+        const prodRows = await prodPool.query(`SELECT * FROM ${table}`);
+        result[table] = { prod_count: prodRows.rows.length };
+        if (prodRows.rows.length === 0) { result[table].inserted = 0; continue; }
+        // Obtener columnas disponibles en dev
+        const devCols = await pool.query(`SELECT column_name FROM information_schema.columns WHERE table_name=$1`, [table]);
+        const devColNames = devCols.rows.map(r => r.column_name);
+        // Truncate dev table (excepto suppliers para conservar los 50 slots placeholder)
+        if (table !== 'suppliers') {
+          await pool.query(`TRUNCATE TABLE ${table} RESTART IDENTITY CASCADE`);
+        }
+        let inserted = 0;
+        for (const row of prodRows.rows) {
+          // Filtrar solo columnas que existen en dev
+          const keys = Object.keys(row).filter(k => devColNames.includes(k));
+          if (keys.length === 0) continue;
+          const values = keys.map(k => row[k]);
+          const placeholders = keys.map((_, i) => `$${i+1}`).join(',');
+          if (table === 'suppliers') {
+            // UPSERT por slot
+            const updateSet = keys.filter(k => k !== 'slot' && k !== 'id').map((k,i) => `${k}=EXCLUDED.${k}`).join(',');
+            await pool.query(`INSERT INTO suppliers (${keys.join(',')}) VALUES (${placeholders}) ON CONFLICT (slot) DO UPDATE SET ${updateSet}`, values);
+          } else {
+            await pool.query(`INSERT INTO ${table} (${keys.join(',')}) VALUES (${placeholders})`, values);
+          }
+          inserted++;
+        }
+        result[table].inserted = inserted;
+      } catch(tableErr) {
+        result[table] = { error: tableErr.message };
+      }
+    }
+    await prodPool.end();
+    res.json({ ok: true, result });
+  } catch(e) {
+    try { await prodPool.end(); } catch(_){}
+    res.status(500).json({ error: e.message, stack: e.stack });
+  }
+});
+
 app.post('/api/admin/reprocess-messages', async (req, res) => {
   var hours = (req.body && req.body.hours) || 72;
   var limit = (req.body && req.body.limit) || 200;
