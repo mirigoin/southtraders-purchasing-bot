@@ -951,7 +951,7 @@ app.get('/api/admin/parser-baseline', async (req, res) => {
     `);
     // Sample de mensajes para analisis rapido
     const sampleMsgs = await pool.query(`
-      SELECT id, sender_name, text, ts FROM group_messages
+      SELECT id, sender_name, message_text, has_quote, processed, ts FROM group_messages
       ORDER BY ts DESC LIMIT 30
     `);
     const sampleQuotes = await pool.query(`
@@ -961,10 +961,10 @@ app.get('/api/admin/parser-baseline', async (req, res) => {
     // Distribucion de longitud de mensajes (heuristica: mensajes <50 chars rara vez son cotizaciones)
     const lengthDist = await pool.query(`
       SELECT 
-        COUNT(*) FILTER (WHERE LENGTH(text) < 20) as tiny,
-        COUNT(*) FILTER (WHERE LENGTH(text) BETWEEN 20 AND 100) as short,
-        COUNT(*) FILTER (WHERE LENGTH(text) BETWEEN 100 AND 500) as medium,
-        COUNT(*) FILTER (WHERE LENGTH(text) >= 500) as long
+        COUNT(*) FILTER (WHERE LENGTH(message_text) < 20) as tiny,
+        COUNT(*) FILTER (WHERE LENGTH(message_text) BETWEEN 20 AND 100) as short,
+        COUNT(*) FILTER (WHERE LENGTH(message_text) BETWEEN 100 AND 500) as medium,
+        COUNT(*) FILTER (WHERE LENGTH(message_text) >= 500) as long
       FROM group_messages
     `);
     res.json({
@@ -977,8 +977,10 @@ app.get('/api/admin/parser-baseline', async (req, res) => {
         id: m.id,
         sender: m.sender_name,
         ts: m.ts,
-        text_preview: m.text ? m.text.slice(0, 150) : null,
-        text_len: m.text ? m.text.length : 0
+        text_preview: m.message_text ? m.message_text.slice(0, 200) : null,
+        text_len: m.message_text ? m.message_text.length : 0,
+        has_quote: m.has_quote,
+        processed: m.processed
       })),
       sample_quotes: sampleQuotes.rows
     });
