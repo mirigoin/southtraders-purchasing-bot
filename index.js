@@ -989,6 +989,79 @@ app.get('/api/admin/parser-baseline', async (req, res) => {
   }
 });
 
+// ============ AI RE-PARSER (analiza mensajes que pudieron perderse) ============
+// GET /api/admin/reparse-missed?limit=N&category=unprocessed|noquote|all
+// NO escribe a DB. Devuelve diff entre lo que tiene la DB y lo que la IA detecta ahora.
+app.get('/api/admin/reparse-missed', async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 20, 50);
+    const category = req.query.category || 'noquote';
+
+    let where;
+    if (category === 'unprocessed') {
+      where = `WHERE processed = false`;
+    } else if (category === 'noquote') {
+      // mensajes que Claude vio y no extrajo nada, pero longitud sugerente
+      where = `WHERE has_quote = false AND processed = true AND LENGTH(message_text) >= 40`;
+    } else if (category === 'all') {
+      where = `WHERE LENGTH(message_text) >= 30`;
+    } else {
+      return res.status(400).json({ error: 'category must be unprocessed|noquote|all' });
+    }
+
+    const msgs = await pool.query(`
+      SELECT id, sender_name, group_name, message_text, has_quote, processed, ts
+      FROM group_messages
+      ${where}
+      ORDER BY ts DESC
+      LIMIT $1
+    `.replace('${where}', where), [limit]);
+
+    const results = [];
+    let aiQuotesFound = 0;
+    let aiCallsMade = 0;
+    let errors = 0;
+
+    for (const msg of msgs.rows) {
+      try {
+        aiCallsMade++;
+        const supplierName = msg.sender_name || msg.group_name || 'unknown';
+        const aiResult = await extractQuote(msg.message_text, supplierName);
+        const aiQuotes = (aiResult && aiResult.quotes) || [];
+        aiQuotesFound += aiQuotes.length;
+        results.push({
+          msg_id: msg.id,
+          sender: msg.sender_name,
+          group: msg.group_name,
+          msg_len: msg.message_text.length,
+          msg_preview: msg.message_text.slice(0, 200),
+          db_has_quote: msg.has_quote,
+          db_processed: msg.processed,
+          ai_quote_count: aiQuotes.length,
+          ai_quotes: aiQuotes
+        });
+      } catch (msgErr) {
+        errors++;
+        results.push({ msg_id: msg.id, error: msgErr.message });
+      }
+    }
+
+    const summary = {
+      category,
+      messages_analyzed: msgs.rows.length,
+      ai_calls_made: aiCallsMade,
+      ai_errors: errors,
+      total_new_quotes_detected: aiQuotesFound,
+      messages_with_new_quotes: results.filter(r => r.ai_quote_count > 0).length,
+      potential_recovery_rate: aiCallsMade > 0 ? (results.filter(r => r.ai_quote_count > 0).length / aiCallsMade * 100).toFixed(1) + '%' : 'N/A'
+    };
+
+    res.json({ ok: true, summary, results });
+  } catch (e) {
+    res.status(500).json({ error: e.message, stack: e.stack });
+  }
+});
+
 // [DEV ONLY] Seed marco-dev DB from marco-prod DB. Single-use, safe for dev.
 // Requires PROD_DATABASE_URL env var. Protected with BAILEYS_DISABLED=true as indicator this is dev.
 app.post('/api/admin/seed-from-prod', async (req, res) => {
