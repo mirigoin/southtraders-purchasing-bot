@@ -52,7 +52,7 @@ async function loadBest(){
     var d=await fetch('/api/quotes/best').then(function(x){return x.json();});
     if(!d.length){ tb.innerHTML='<tr><td colspan="8" style="text-align:center;color:#718096;padding:20px">Sin cotizaciones aun</td></tr>'; return; }
     tb.innerHTML=d.map(function(q){
-      return '<tr><td>'+(q.product||'')+'</td><td>'+(q.model||'')+'</td><td>'+(q.capacity||'')+'</td><td><strong style="color:#68d391">$'+q.price+' '+q.currency+'</strong></td><td>'+(q.supplier_name||'')+'</td><td>'+(q.qty||'-')+'</td><td>'+(q.incoterm||'')+'</td><td>'+new Date(q.ts).toLocaleDateString()+'</td></tr>';
+      return '<tr><td>'+(q.product||'')+'</td><td>'+(q.model||'')+'</td><td>'+(q.capacity||'')+'</td><td><strong style="color:#68d391">$'+q.price+' '+q.currency+'</strong></td><td style="color:#555;">'+(q.ultimo_costo?'$'+q.ultimo_costo:'-')+'</td><td>'+(q.supplier_name||'')+'</td><td>'+(q.qty||'-')+'</td><td>'+(q.incoterm||'')+'</td><td>'+new Date(q.ts).toLocaleDateString()+'</td></tr>';
     }).join('');
   } catch(e){ tb.innerHTML='<tr><td colspan="8" style="color:#f87171">Error</td></tr>'; }
 }
@@ -292,8 +292,8 @@ async function loadMissing() {
       return '<div style="display:flex;align-items:center;gap:10px;padding:5px 10px;margin-bottom:2px;background:white;border-left:3px solid ' + color + ';font-size:12px;line-height:1.3;">' +
         '<div style="color:' + color + ';font-weight:700;min-width:70px;font-size:11px;">' + badge + '</div>' +
         '<div style="flex:1;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + item.desc + '">' + item.desc + '</div>' +
-        '<div style="color:#888;white-space:nowrap;font-size:11px;">Planilla: ' + costoStr + '</div>' +
-        '<div style="color:#666;min-width:180px;text-align:right;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="' + lastInfo + '">' + lastInfo + '</div>' +
+        '<div style="color:#444;white-space:nowrap;font-size:11px;">Costo: ' + costoStr + '</div>' +
+        '<div style="color:#222;min-width:180px;text-align:right;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="' + lastInfo + '">' + lastInfo + '</div>' +
       '</div>';
     }).join('');
     listEl.innerHTML = html;
