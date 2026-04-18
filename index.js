@@ -85,8 +85,23 @@ async function initDB() {
     message_text TEXT,
     has_quote BOOLEAN DEFAULT FALSE,
     processed BOOLEAN DEFAULT FALSE,
-    ts TIMESTAMPTZ DEFAULT NOW()
+    ts TIMESTAMPTZ DEFAULT NOW(),
+    media_type TEXT,
+    media_id TEXT,
+    media_caption TEXT,
+    media_filename TEXT,
+    media_mime TEXT,
+    wa_message_id TEXT
   )`);
+// Migrations: agregar columnas nuevas si no existen (idempotente)
+await pool.query(`
+  ALTER TABLE group_messages ADD COLUMN IF NOT EXISTS media_type TEXT;
+  ALTER TABLE group_messages ADD COLUMN IF NOT EXISTS media_id TEXT;
+  ALTER TABLE group_messages ADD COLUMN IF NOT EXISTS media_caption TEXT;
+  ALTER TABLE group_messages ADD COLUMN IF NOT EXISTS media_filename TEXT;
+  ALTER TABLE group_messages ADD COLUMN IF NOT EXISTS media_mime TEXT;
+  ALTER TABLE group_messages ADD COLUMN IF NOT EXISTS wa_message_id TEXT;
+`);
 
   await pool.query(`CREATE TABLE IF NOT EXISTS purchase_minimums (
     id SERIAL PRIMARY KEY,
@@ -111,7 +126,124 @@ async function initDB() {
 }
 
 // ============ CLAUDE - EXTRACT QUOTES ============
-async function extractQuote(text, supplierName) {
+// ============ MEDIA HELPERS (WhatsApp attachments) ============
+async function downloadMediaFromMeta(mediaId) {
+  if (!mediaId || !WHATSAPP_TOKEN) return null;
+  try {
+    // 1. Obtener URL temporal del media
+    const metaResp = await axios.get(`https://graph.facebook.com/v21.0/${mediaId}`, {
+      headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}` },
+      timeout: 10000
+    });
+    const mediaUrl = metaResp.data && metaResp.data.url;
+    const mime = metaResp.data && metaResp.data.mime_type || 'application/octet-stream';
+    if (!mediaUrl) return null;
+
+    // 2. Descargar el archivo
+    const fileResp = await axios.get(mediaUrl, {
+      headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}` },
+      responseType: 'arraybuffer',
+      timeout: 30000
+    });
+
+    return {
+      bytes: Buffer.from(fileResp.data),
+      mimeType: mime,
+      sizeBytes: fileResp.data.byteLength
+    };
+  } catch (e) {
+    console.error('[downloadMediaFromMeta] error:', e.message);
+    return null;
+  }
+}
+
+// Procesa una imagen con Claude Vision (Sonnet). Usa el mismo formato de salida que extractQuote.
+async function extractQuoteFromImage(imageBytes, mimeType, supplierName, caption) {
+  if (!ANTHROPIC_API_KEY || !imageBytes) return { quotes: [] };
+  // Guard owner igual que en texto
+  const OWNER_NAMES = ['marcelo', 'marquitos', 'south traders'];
+  const senderLower = (supplierName || '').toLowerCase();
+  if (OWNER_NAMES.some(n => senderLower.includes(n))) {
+    return { quotes: [], skipped_reason: 'sender_is_owner' };
+  }
+
+  const base64 = Buffer.from(imageBytes).toString('base64');
+  const imageMime = (mimeType && mimeType.startsWith('image/')) ? mimeType : 'image/jpeg';
+
+  const systemPrompt = `Eres un asistente que extrae cotizaciones de productos Apple y Samsung de IMAGENES enviadas por proveedores mayoristas (fotos de listas de precios, screenshots de Excel, capturas con precios escritos). Devuelve SOLO un JSON valido sin markdown ni backticks.
+
+Formato requerido (igual que para mensajes de texto):
+{"quotes": [{"product": "iPhone|MacBook|...", "model": "17 Pro|...", "capacity": "256GB|null", "color": "Black|null", "spec": "US|EU|IND|null", "condition": "new|used|refurbished", "price": <numero o null>, "currency": "USD|EUR|null", "qty": <numero o null>, "incoterm": "FOB|CIF|EXW|null"}]}
+
+REGLAS:
+- Si la imagen es un logo, meme, foto personal, no cotizacion: devuelve {"quotes":[]}.
+- Si es una tabla con precios: extrae una quote por fila/variante. Las columnas tipicas son: modelo, color, precio, cantidad.
+- PRECIO vs CANTIDAD: precios suelen estar con $/USD o ser numeros 100-5000. Cantidades son numeros pequenos (<200) junto a colores o "pcs".
+- SPEC/REGION: "eu spec", "us spec", "ind spec", "hk spec" -> campo spec.
+- Si no se puede leer la imagen, devuelve {"quotes":[]}.
+`;
+
+  const userText = caption ? `Caption del mensaje: "${caption}"\n\nExtrae cotizaciones de la imagen adjunta.` : 'Extrae cotizaciones de la imagen adjunta.';
+
+  try {
+    const resp = await axios.post(
+      'https://api.anthropic.com/v1/messages',
+      {
+        model: 'claude-sonnet-4-5-20250929',
+        max_tokens: 1500,
+        system: systemPrompt,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: imageMime, data: base64 } },
+            { type: 'text', text: userText }
+          ]
+        }]
+      },
+      {
+        headers: {
+          'x-api-key': ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json'
+        },
+        timeout: 45000
+      }
+    );
+    const raw = resp.data && resp.data.content && resp.data.content[0] && resp.data.content[0].text || '{"quotes":[]}';
+    const cleaned = raw.replace(/```json|```/g, '').trim();
+    let parsed;
+    try { parsed = JSON.parse(cleaned); } catch(e) { parsed = { quotes: [] }; }
+    if (!parsed.quotes) parsed.quotes = [];
+    return parsed;
+  } catch (e) {
+    console.error('[extractQuoteFromImage] error:', e.message);
+    return { quotes: [] };
+  }
+}
+
+// Procesa un XLSX: convierte a texto tabular y usa el extractQuote normal
+async function extractQuoteFromXlsx(buffer, supplierName) {
+  try {
+    const XLSX = require('xlsx');
+    const wb = XLSX.read(buffer, { type: 'buffer' });
+    const allText = [];
+    wb.SheetNames.forEach(name => {
+      const sheet = wb.Sheets[name];
+      const csv = XLSX.utils.sheet_to_csv(sheet, { blankrows: false, FS: ' | ' });
+      if (csv && csv.trim()) {
+        allText.push(`=== Hoja: ${name} ===\n${csv}`);
+      }
+    });
+    const combined = allText.join('\n\n').slice(0, 15000); // limite sano para prompt
+    if (!combined.trim()) return { quotes: [] };
+    return await extractQuote(combined, supplierName);
+  } catch (e) {
+    console.error('[extractQuoteFromXlsx] error:', e.message);
+    return { quotes: [] };
+  }
+}
+
+async function extractQuote(msgText, supplierName) {
   if (!ANTHROPIC_API_KEY) return { quotes: [] };
   // GUARD: ignorar mensajes de nosotros mismos (no son cotizaciones de proveedor)
   const OWNER_NAMES = ['marcelo', 'marquitos', 'south traders'];
@@ -162,7 +294,7 @@ Si NADA encaja, devuelve {"quotes":[]}.`,
         }
       }
     );
-    const raw = resp.data.content[0].text.trim().replace(/^```[\w]*\n?/,"").replace(/\n?```$/,"").trim();
+    const raw = resp.data.content[0].msgText.trim().replace(/^```[\w]*\n?/,"").replace(/\n?```$/,"").trim();
     return JSON.parse(raw);
   } catch (e) {
     console.error('Claude extract error:', e.message);
@@ -278,7 +410,7 @@ async function initBaileys() {
           if (!isGroup && !isDM) continue;
 
           const text = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
-          if (!text || text.length < 3) continue;
+          if (!text || msgText.length < 3) continue;
 
           if (isGroup) {
             const groupId = remoteJid;
@@ -289,17 +421,17 @@ async function initBaileys() {
             try { senderName = msg.pushName || senderPhone; } catch(e) {}
             await pool.query(
               `INSERT INTO group_messages (group_id, group_name, sender_phone, sender_name, message_text, wa_message_id) VALUES ($1,$2,$3,$4,$5,$6)`,
-              [groupId, groupName, senderPhone, senderName, text, msg.key.id]
+              [groupId, groupName, senderPhone, senderName, msgText, msg.key.id]
             );
             // Buscar supplier por group_id
             const supplier = await pool.query('SELECT * FROM suppliers WHERE whatsapp_group_id = $1 AND active = TRUE', [groupId]);
             let supSlot = null, supName = groupName;
             if (supplier.rows.length > 0) { supSlot = supplier.rows[0].slot; supName = supplier.rows[0].name || supplier.rows[0].alias || groupName; }
             // Extraer quote siempre (registrado o no)
-            const result = await extractQuote(text, supName);
+            const result = await extractQuote(msgText, supName);
             if (result.quotes && result.quotes.length > 0) {
               await pool.query(`UPDATE group_messages SET has_quote = TRUE, processed = TRUE WHERE wa_message_id = $1`, [msg.key.id]);
-              await saveQuotes(result.quotes, supSlot, supName, text, 'group');
+              await saveQuotes(result.quotes, supSlot, supName, msgText, 'group');
               try { await pool.query('UPDATE quotes SET group_id = $1 WHERE raw_text = $2 AND group_id IS NULL', [groupId, text]); } catch(e) {}
             }
           } else if (isDM) {
@@ -308,7 +440,7 @@ async function initBaileys() {
             // Guardar tambien en group_messages con group_id=null y group_name='DM:<phone>'
             await pool.query(
               `INSERT INTO group_messages (group_id, group_name, sender_phone, sender_name, message_text, wa_message_id) VALUES ($1,$2,$3,$4,$5,$6)`,
-              [null, 'DM:' + senderPhone, senderPhone, senderName, text, msg.key.id]
+              [null, 'DM:' + senderPhone, senderPhone, senderName, msgText, msg.key.id]
             );
             // Buscar supplier por contact_phone (flexible: comparar sufijos por si hay + o prefijos)
             const supplierRes = await pool.query(
@@ -317,10 +449,10 @@ async function initBaileys() {
             );
             let supSlot = null, supName = 'DM:' + senderPhone;
             if (supplierRes.rows.length > 0) { supSlot = supplierRes.rows[0].slot; supName = supplierRes.rows[0].name || supplierRes.rows[0].alias || supName; }
-            const result = await extractQuote(text, supName);
+            const result = await extractQuote(msgText, supName);
             if (result.quotes && result.quotes.length > 0) {
               await pool.query(`UPDATE group_messages SET has_quote = TRUE, processed = TRUE WHERE wa_message_id = $1`, [msg.key.id]);
-              await saveQuotes(result.quotes, supSlot, supName, text, 'dm');
+              await saveQuotes(result.quotes, supSlot, supName, msgText, 'dm');
             }
           }
         }
@@ -997,8 +1129,8 @@ app.get('/api/admin/parser-baseline', async (req, res) => {
         id: m.id,
         sender: m.sender_name,
         ts: m.ts,
-        text_preview: m.message_text ? m.message_text.slice(0, 200) : null,
-        text_len: m.message_text ? m.message_text.length : 0,
+        text_preview: m.message_text ? m.message_msgText.slice(0, 200) : null,
+        text_len: m.message_text ? m.message_msgText.length : 0,
         has_quote: m.has_quote,
         processed: m.processed
       })),
@@ -1053,8 +1185,8 @@ app.get('/api/admin/reparse-missed', async (req, res) => {
           msg_id: msg.id,
           sender: msg.sender_name,
           group: msg.group_name,
-          msg_len: msg.message_text.length,
-          msg_preview: msg.message_text.slice(0, 200),
+          msg_len: msg.message_msgText.length,
+          msg_preview: msg.message_msgText.slice(0, 200),
           db_has_quote: msg.has_quote,
           db_processed: msg.processed,
           ai_quote_count: aiQuotes.length,
@@ -1212,9 +1344,41 @@ app.post('/webhook', async (req, res) => {
     if (!change?.messages) return;
 
     for (const msg of change.messages) {
-      if (msg.type !== 'text') continue;
+      // Manejar distintos tipos de mensaje: text, image, document (xlsx), ignorar audio/video
+      let msgText = null;
+      let mediaType = null;
+      let mediaId = null;
+      let mediaCaption = null;
+      let mediaFilename = null;
+      if (msg.type === 'text') {
+        msgText = msg.text && msg.text.body;
+      } else if (msg.type === 'image') {
+        mediaType = 'image';
+        mediaId = msg.image && msg.image.id;
+        mediaCaption = msg.image && msg.image.caption;
+        msgText = mediaCaption || '[IMAGEN]';
+      } else if (msg.type === 'document') {
+        mediaType = 'document';
+        mediaId = msg.document && msg.document.id;
+        mediaFilename = msg.document && msg.document.filename;
+        mediaCaption = msg.document && msg.document.caption;
+        msgText = mediaCaption || ('[DOC:' + (mediaFilename || 'file') + ']');
+      } else {
+        continue; // ignoramos audio, video, sticker, location por ahora
+      }
       const from = msg.from;
-      const text = msg.text.body;
+
+      // Persistir el mensaje entrante en group_messages (incluyendo media)
+      // processed=false inicialmente, lo marcamos true despues de intentar parser
+      try {
+        await pool.query(
+          `INSERT INTO group_messages (group_id, group_name, sender_phone, sender_name, message_text, media_type, media_id, media_caption, media_filename, wa_message_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+          [null, null, from, null, msgText, mediaType, mediaId, mediaCaption, mediaFilename, msg.id || null]
+        );
+      } catch (dbErr) {
+        console.error('[webhook] insert group_messages failed:', dbErr.message);
+      }
+      // (text proviene del switch anterior como msgText)
 
       // Check if this is from a known supplier
       const supplier = await pool.query(
@@ -1224,9 +1388,32 @@ app.post('/webhook', async (req, res) => {
 
       if (supplier.rows.length > 0) {
         const s = supplier.rows[0];
-        const result = await extractQuote(text, s.name || s.alias);
+        // Decidir parser segun tipo de mensaje: texto, imagen (vision) o xlsx
+        const supplierNameForAi = s.name || s.alias;
+        let result = { quotes: [] };
+        if (mediaType === 'image' && mediaId) {
+          const media = await downloadMediaFromMeta(mediaId);
+          if (media && media.bytes) {
+            result = await extractQuoteFromImage(media.bytes, media.mimeType, supplierNameForAi, mediaCaption);
+          }
+        } else if (mediaType === 'document' && mediaId) {
+          const media = await downloadMediaFromMeta(mediaId);
+          if (media && media.bytes) {
+            const fname = (mediaFilename || '').toLowerCase();
+            const isXlsx = fname.endsWith('.xlsx') || fname.endsWith('.xls') || (media.mimeType || '').includes('spreadsheet');
+            if (isXlsx) {
+              result = await extractQuoteFromXlsx(media.bytes, supplierNameForAi);
+            } else {
+              // Por ahora, otros documentos (pdf, etc.) no se procesan
+              result = { quotes: [] };
+            }
+          }
+        } else {
+          // texto normal
+          result = await extractQuote(msgText, supplierNameForAi);
+        }
         if (result.quotes && result.quotes.length > 0) {
-          await saveQuotes(result.quotes, s.slot, s.name || s.alias, text, 'direct');
+          await saveQuotes(result.quotes, s.slot, s.name || s.alias, msgText, 'direct');
           const summary = result.quotes.map(q =>
             `${q.product} ${q.model} ${q.capacity}: $${q.price} x${q.qty || '?'}`
           ).join('\n');
