@@ -842,6 +842,92 @@ app.post('/api/admin/reprocess-messages', async (req, res) => {
 
 // ============ REPROCESS (backfill) ============
 
+// ============ MISSING QUOTES TRACKING (#12) ============
+// Para cada producto de la planilla COMPRAS 2026, devuelve cuando se cotizo por ultima vez
+// Query params: ?stale_days=7 (default 7). Marca stale si hace mas de N dias, never si nunca.
+app.get('/api/missing-quotes', async (req, res) => {
+  try {
+    const staleDays = parseInt(req.query.stale_days) || 7;
+    const staleMs = staleDays * 24 * 60 * 60 * 1000;
+    const now = Date.now();
+
+    // 1. Leer la planilla (produce Map key->{desc, costo})
+    const costosMap = await loadCostos();
+    if (!costosMap || typeof costosMap.entries !== 'function') {
+      return res.status(500).json({ error: 'loadCostos() returned invalid result' });
+    }
+
+    // 2. Para cada producto de la planilla, buscar la ultima quote que matchee
+    // El match se hace via costo_match (columna existente en quotes)
+    const rows = await pool.query(`
+      SELECT costo_match, product, model, capacity, price, currency, supplier_name, supplier_slot, incoterm, ts
+      FROM quotes
+      WHERE costo_match IS NOT NULL
+      ORDER BY costo_match, ts DESC
+    `);
+
+    // Tomar la mas reciente por costo_match
+    const lastByKey = new Map();
+    for (const r of rows.rows) {
+      if (!lastByKey.has(r.costo_match)) lastByKey.set(r.costo_match, r);
+    }
+
+    // 3. Armar el resultado recorriendo la planilla
+    const items = [];
+    for (const [key, entry] of costosMap.entries()) {
+      const lastQuote = lastByKey.get(key);
+      if (!lastQuote) {
+        items.push({
+          costo_match: key,
+          desc: entry.desc,
+          ultimo_costo: entry.costo,
+          status: 'never',
+          last_quote: null,
+          days_since: null
+        });
+      } else {
+        const daysSince = Math.floor((now - new Date(lastQuote.ts).getTime()) / (24 * 60 * 60 * 1000));
+        const isStale = (now - new Date(lastQuote.ts).getTime()) > staleMs;
+        items.push({
+          costo_match: key,
+          desc: entry.desc,
+          ultimo_costo: entry.costo,
+          status: isStale ? 'stale' : 'fresh',
+          last_quote: {
+            price: lastQuote.price,
+            currency: lastQuote.currency,
+            supplier_name: lastQuote.supplier_name,
+            supplier_slot: lastQuote.supplier_slot,
+            incoterm: lastQuote.incoterm,
+            ts: lastQuote.ts
+          },
+          days_since: daysSince
+        });
+      }
+    }
+
+    // Ordenar: never primero, despues stale por dias desc, despues fresh
+    items.sort((a, b) => {
+      const order = { never: 0, stale: 1, fresh: 2 };
+      if (order[a.status] !== order[b.status]) return order[a.status] - order[b.status];
+      if (a.status === 'stale') return (b.days_since || 0) - (a.days_since || 0);
+      return 0;
+    });
+
+    const summary = {
+      never: items.filter(i => i.status === 'never').length,
+      stale: items.filter(i => i.status === 'stale').length,
+      fresh: items.filter(i => i.status === 'fresh').length,
+      total: items.length,
+      stale_threshold_days: staleDays
+    };
+
+    res.json({ ok: true, summary, items });
+  } catch (e) {
+    res.status(500).json({ error: e.message, stack: e.stack });
+  }
+});
+
 // [DEV ONLY] Seed marco-dev DB from marco-prod DB. Single-use, safe for dev.
 // Requires PROD_DATABASE_URL env var. Protected with BAILEYS_DISABLED=true as indicator this is dev.
 app.post('/api/admin/seed-from-prod', async (req, res) => {
