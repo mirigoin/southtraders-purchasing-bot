@@ -858,25 +858,27 @@ app.get('/api/missing-quotes', async (req, res) => {
       return res.status(500).json({ error: 'loadCostos().map is null/empty' });
     }
 
-    // 2. Para cada producto de la planilla, buscar la ultima quote que matchee
-    // El match se hace via costo_match (columna existente en quotes)
+    // 2. Traer todas las quotes, calcular match con findCosto (misma logica que /api/quotes/best)
     const rows = await pool.query(`
-      SELECT costo_match, product, model, capacity, price, currency, supplier_name, supplier_slot, incoterm, ts
+      SELECT product, model, capacity, price, currency, supplier_name, supplier_slot, incoterm, ts
       FROM quotes
-      WHERE costo_match IS NOT NULL
-      ORDER BY costo_match, ts DESC
+      ORDER BY ts DESC
     `);
 
-    // Tomar la mas reciente por costo_match
+    // Calcular costo_match para cada quote y tomar la mas reciente por match
     const lastByKey = new Map();
     for (const r of rows.rows) {
-      if (!lastByKey.has(r.costo_match)) lastByKey.set(r.costo_match, r);
+      const searchText = [r.product, r.model, r.capacity].filter(Boolean).join(' ');
+      const c = findCosto(searchText);
+      if (!c || !c.desc) continue;
+      const key = c.desc;
+      if (!lastByKey.has(key)) lastByKey.set(key, r);
     }
 
     // 3. Armar el resultado recorriendo la planilla
     const items = [];
     for (const [key, entry] of Object.entries(costosObj)) {
-      const lastQuote = lastByKey.get(key);
+      const lastQuote = lastByKey.get(entry.desc);
       if (!lastQuote) {
         items.push({
           costo_match: key,
