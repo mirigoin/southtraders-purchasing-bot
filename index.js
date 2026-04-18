@@ -931,6 +931,62 @@ app.get('/api/missing-quotes', async (req, res) => {
   }
 });
 
+// ============ PARSER BASELINE ANALYSIS ============
+// Mide cuantos group_messages generaron quotes (regex actual).
+// NO modifica nada. Solo lee y devuelve estadisticas.
+app.get('/api/admin/parser-baseline', async (req, res) => {
+  try {
+    // Total de group_messages
+    const totalMsgs = await pool.query('SELECT COUNT(*) as n FROM group_messages');
+    // Total de quotes
+    const totalQuotes = await pool.query('SELECT COUNT(*) as n FROM quotes');
+    // Mensajes que tienen AL MENOS UNA quote asociada
+    // Asumimos que quotes.ts match con group_messages.ts (aproximado por timestamp)
+    // Mas fiable: ver si hay FK o un source_message_id
+    const schemaQuotes = await pool.query(`
+      SELECT column_name FROM information_schema.columns WHERE table_name='quotes'
+    `);
+    const schemaMsgs = await pool.query(`
+      SELECT column_name FROM information_schema.columns WHERE table_name='group_messages'
+    `);
+    // Sample de mensajes para analisis rapido
+    const sampleMsgs = await pool.query(`
+      SELECT id, sender_name, text, ts FROM group_messages
+      ORDER BY ts DESC LIMIT 30
+    `);
+    const sampleQuotes = await pool.query(`
+      SELECT id, product, model, capacity, price, supplier_name, ts FROM quotes
+      ORDER BY ts DESC LIMIT 30
+    `);
+    // Distribucion de longitud de mensajes (heuristica: mensajes <50 chars rara vez son cotizaciones)
+    const lengthDist = await pool.query(`
+      SELECT 
+        COUNT(*) FILTER (WHERE LENGTH(text) < 20) as tiny,
+        COUNT(*) FILTER (WHERE LENGTH(text) BETWEEN 20 AND 100) as short,
+        COUNT(*) FILTER (WHERE LENGTH(text) BETWEEN 100 AND 500) as medium,
+        COUNT(*) FILTER (WHERE LENGTH(text) >= 500) as long
+      FROM group_messages
+    `);
+    res.json({
+      total_messages: parseInt(totalMsgs.rows[0].n),
+      total_quotes: parseInt(totalQuotes.rows[0].n),
+      messages_schema: schemaMsgs.rows.map(r => r.column_name),
+      quotes_schema: schemaQuotes.rows.map(r => r.column_name),
+      length_distribution: lengthDist.rows[0],
+      sample_messages: sampleMsgs.rows.map(m => ({
+        id: m.id,
+        sender: m.sender_name,
+        ts: m.ts,
+        text_preview: m.text ? m.text.slice(0, 150) : null,
+        text_len: m.text ? m.text.length : 0
+      })),
+      sample_quotes: sampleQuotes.rows
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message, stack: e.stack });
+  }
+});
+
 // [DEV ONLY] Seed marco-dev DB from marco-prod DB. Single-use, safe for dev.
 // Requires PROD_DATABASE_URL env var. Protected with BAILEYS_DISABLED=true as indicator this is dev.
 app.post('/api/admin/seed-from-prod', async (req, res) => {
