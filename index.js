@@ -679,18 +679,35 @@ function findCosto(productSearchStr) {
   if (!productSearchStr || !costosCache.map) return null;
   var key = normalizeDesc(productSearchStr);
   if (!key) return null;
-  // Match exacto
+  // 1) Match exacto (la forma más confiable)
   if (costosCache.map[key]) return costosCache.map[key];
-  // Match parcial: que las palabras del search aparezcan en alguna entry
-  var words = key.split(' ').filter(function(w) { return w.length >= 2; });
-  if (words.length === 0) return null;
-  var bestScore = 0, best = null;
+
+  // 2) Match por palabras exactas (NO substring) para evitar falsos positivos
+  // Ej: "iphone 17 256gb" NO debe matchear "iphone 17e 256gb" porque "17" != "17e"
+  var searchWords = key.split(' ').filter(function(w) { return w.length >= 2; });
+  if (searchWords.length === 0) return null;
+
+  var bestScore = 0;
+  var best = null;
+  var bestKeyLen = Infinity; // en empate, preferir la entry con MENOS palabras (más específica al match)
+
   for (var k in costosCache.map) {
-    var score = 0;
-    for (var w of words) {
-      if (k.indexOf(w) !== -1) score++;
+    var entryWords = k.split(' ').filter(function(w) { return w.length >= 1; });
+    // Todas las palabras del search deben existir exactas en entryWords
+    var allMatch = true;
+    for (var i = 0; i < searchWords.length; i++) {
+      if (entryWords.indexOf(searchWords[i]) === -1) { allMatch = false; break; }
     }
-    if (score === words.length && score > bestScore) { bestScore = score; best = costosCache.map[k]; }
+    if (!allMatch) continue;
+
+    // Score = cuántas palabras del search matchearon (siempre = searchWords.length aquí)
+    // Criterio de desempate: entry con menos palabras extras = mejor match
+    var score = searchWords.length;
+    if (score > bestScore || (score === bestScore && entryWords.length < bestKeyLen)) {
+      bestScore = score;
+      bestKeyLen = entryWords.length;
+      best = costosCache.map[k];
+    }
   }
   return best;
 }
