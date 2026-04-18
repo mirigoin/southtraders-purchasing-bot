@@ -103,6 +103,15 @@ await pool.query(`
   ALTER TABLE group_messages ADD COLUMN IF NOT EXISTS wa_message_id TEXT;
 `);
 
+// Re-sincronizar secuencias de SERIAL (importante después de seed de datos externos)
+try {
+  await pool.query(`SELECT setval(pg_get_serial_sequence('group_messages', 'id'), COALESCE((SELECT MAX(id) FROM group_messages), 1))`);
+  await pool.query(`SELECT setval(pg_get_serial_sequence('quotes', 'id'), COALESCE((SELECT MAX(id) FROM quotes), 1))`);
+  console.log('[init] serial sequences re-synced');
+} catch (e) {
+  console.error('[init] setval failed (non-fatal):', e.message);
+}
+
   await pool.query(`CREATE TABLE IF NOT EXISTS purchase_minimums (
     id SERIAL PRIMARY KEY,
     codigo TEXT UNIQUE NOT NULL,
