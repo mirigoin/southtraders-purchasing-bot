@@ -851,10 +851,11 @@ app.get('/api/missing-quotes', async (req, res) => {
     const staleMs = staleDays * 24 * 60 * 60 * 1000;
     const now = Date.now();
 
-    // 1. Leer la planilla (produce Map key->{desc, costo})
-    const costosMap = await loadCostos();
-    if (!costosMap || typeof costosMap.entries !== 'function') {
-      return res.status(500).json({ error: 'loadCostos() returned invalid result' });
+    // 1. Leer la planilla (loadCostos devuelve { map: {key: {desc, costo}}, ts })
+    const costosCacheLocal = await loadCostos();
+    const costosObj = costosCacheLocal && costosCacheLocal.map ? costosCacheLocal.map : null;
+    if (!costosObj) {
+      return res.status(500).json({ error: 'loadCostos().map is null/empty' });
     }
 
     // 2. Para cada producto de la planilla, buscar la ultima quote que matchee
@@ -874,7 +875,7 @@ app.get('/api/missing-quotes', async (req, res) => {
 
     // 3. Armar el resultado recorriendo la planilla
     const items = [];
-    for (const [key, entry] of costosMap.entries()) {
+    for (const [key, entry] of Object.entries(costosObj)) {
       const lastQuote = lastByKey.get(key);
       if (!lastQuote) {
         items.push({
