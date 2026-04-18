@@ -113,6 +113,12 @@ async function initDB() {
 // ============ CLAUDE - EXTRACT QUOTES ============
 async function extractQuote(text, supplierName) {
   if (!ANTHROPIC_API_KEY) return { quotes: [] };
+  // GUARD: ignorar mensajes de nosotros mismos (no son cotizaciones de proveedor)
+  const OWNER_NAMES = ['marcelo', 'marquitos', 'south traders'];
+  const senderLower = (supplierName || '').toLowerCase();
+  if (OWNER_NAMES.some(n => senderLower.includes(n))) {
+    return { quotes: [], skipped_reason: 'sender_is_owner' };
+  }
   try {
     const resp = await axios.post(
       'https://api.anthropic.com/v1/messages',
