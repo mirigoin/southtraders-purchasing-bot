@@ -115,6 +115,15 @@ await pool.query(`
   CREATE INDEX IF NOT EXISTS idx_prl_phone_prod ON price_request_log(supplier_phone, product_key, requested_at DESC);
 `);
 
+// Tabla de introducciones: tracking de a qué supplier/grupo ya se presentó Marco
+await pool.query(`
+  CREATE TABLE IF NOT EXISTS marco_introductions (
+    id SERIAL PRIMARY KEY,
+    supplier_phone TEXT UNIQUE NOT NULL,
+    introduced_at TIMESTAMPTZ DEFAULT NOW()
+  );
+`);
+
 // Re-sincronizar secuencias de SERIAL (importante después de seed de datos externos)
 try {
   await pool.query(`SELECT setval(pg_get_serial_sequence('group_messages', 'id'), COALESCE((SELECT MAX(id) FROM group_messages), 1))`);
@@ -199,14 +208,33 @@ async function notifyOwnerStockNoPrice(quotes, msgInfo) {
       return `• ${desc}${qtyStr}`;
     });
 
-  // Mensaje sugerido en INGLES para que copies y pegues en el grupo
-  const suggestedReply = noPriceQuotes.length === 1
-    ? `Hi! Thanks for the update on stock. Could you share the price? Thanks, Marco`
-    : `Hi! Thanks for the stock update. Could you share the prices for these items? Thanks, Marco`;
+  // Check si Marco ya se presentó a este supplier. Si no, incluir intro.
+  let alreadyIntroduced = false;
+  try {
+    const introRes = await pool.query(
+      'SELECT 1 FROM marco_introductions WHERE supplier_phone = $1 LIMIT 1',
+      [supplierPhone]
+    );
+    alreadyIntroduced = introRes.rows.length > 0;
+  } catch (e) {
+    console.error('[notifyOwnerStockNoPrice] intro check failed:', e.message);
+  }
+
+  // Mensaje sugerido en INGLES (sin firma — ya saben quién es)
+  // Primera vez: presentación completa. Despues: directo al grano.
+  const intro = !alreadyIntroduced
+    ? `Hi! I'm Marco, the purchasing assistant from South Traders. `
+    : '';
+  const askMultiple = noPriceQuotes.length > 1;
+  const body = askMultiple
+    ? `Could you share the prices for these items?`
+    : `Could you share the price?`;
+  const suggestedReply = intro + body;
 
   const alertMsg = [
     `🔔 Stock without price detected`,
     `From: ${supplierName} (${supplierPhone})`,
+    alreadyIntroduced ? '(Marco already introduced to this supplier)' : '(First contact — message includes intro)',
     ``,
     `Items:`,
     productLines.join('\n'),
@@ -216,6 +244,18 @@ async function notifyOwnerStockNoPrice(quotes, msgInfo) {
   ].join('\n');
 
   await alertOwner(alertMsg);
+
+  // Marcar como presentado (INSERT ... ON CONFLICT DO NOTHING por unique constraint)
+  if (!alreadyIntroduced) {
+    try {
+      await pool.query(
+        'INSERT INTO marco_introductions (supplier_phone) VALUES ($1) ON CONFLICT (supplier_phone) DO NOTHING',
+        [supplierPhone]
+      );
+    } catch (e) {
+      console.error('[notifyOwnerStockNoPrice] insert intro failed:', e.message);
+    }
+  }
 }
 
 // ============ MEDIA HELPERS (WhatsApp attachments) ============
