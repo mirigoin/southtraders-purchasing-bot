@@ -86,6 +86,7 @@ label{font-size:12px;color:#718096;margin-bottom:4px;display:block}
       <button class="tab" onclick="showTab('tab-messages',this)">💬 Mensajes</button>
       <button class="tab" onclick="showTab('tab-conn',this)">📡 Conexión</button>
       <button class="tab" onclick="showTab('tab-compras',this)">&#128722; Compras</button>
+      <button class="tab" onclick="showTab('tab-missing',this)">🔔 Faltantes</button>
     </div>
     <div id="tab-best" class="tab-content active">
       <div class="section-head" style="border:none;padding-bottom:0">
@@ -189,6 +190,25 @@ label{font-size:12px;color:#718096;margin-bottom:4px;display:block}
         </div>
         <table><thead><tr><th>C&#243;digo</th><th>Descripci&#243;n</th><th>Stock</th><th>Tr&#225;nsito</th><th>M&#237;nimo</th><th>Falta</th><th>Mejor precio</th><th></th></tr></thead>
         <tbody id="minimosTbody"><tr><td colspan="8" style="text-align:center;color:#718096;padding:20px">Haz click en "Actualizar stock" para cargar datos</td></tr></tbody></table>
+      </div>
+    </div>
+    <div id="tab-missing" class="tab-content">
+      <div class="section-head" style="border:none;padding:16px 20px 8px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-size:18px;font-weight:600;">🔔 Productos sin cotización reciente</div>
+            <div id="missingSummary" style="font-size:13px;color:#666;margin-top:4px;">Cargando...</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <label style="font-size:13px;color:#555;">Días stale:
+              <input id="missingStaleDays" type="number" value="7" min="1" max="90" style="width:60px;margin-left:6px;padding:4px;border:1px solid #ccc;border-radius:4px;" />
+            </label>
+            <button class="btn" onclick="loadMissing()" style="padding:6px 12px;">↻ Refresh</button>
+          </div>
+        </div>
+      </div>
+      <div id="missingList" style="padding:8px 20px 20px;">
+        <div style="text-align:center;padding:40px;color:#999;">Cargando...</div>
       </div>
     </div>
 
