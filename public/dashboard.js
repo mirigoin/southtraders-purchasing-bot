@@ -268,6 +268,8 @@ document.addEventListener('DOMContentLoaded', init);
 
 
 async function loadMissing() {
+  var DOT = String.fromCharCode(183);
+  var DASH = String.fromCharCode(8212);
   var sd = document.getElementById('missingStaleDays');
   var staleDays = sd ? parseInt(sd.value) || 7 : 7;
   var summaryEl = document.getElementById('missingSummary');
@@ -279,28 +281,14 @@ async function loadMissing() {
     if (!resp.ok) throw new Error(resp.status);
     var data = await resp.json();
     var s = data.summary;
-    if (summaryEl) summaryEl.textContent = s.never + ' nunca · ' + s.stale + ' stale · ' + s.fresh + ' fresh · ' + s.total + ' total';
+    if (summaryEl) summaryEl.textContent = s.never + ' nunca ' + DOT + ' ' + s.stale + ' stale ' + DOT + ' ' + s.fresh + ' fresh ' + DOT + ' ' + s.total + ' total';
     if (!listEl) return;
     if (!data.items || !data.items.length) { listEl.innerHTML = '<div style="text-align:center;padding:40px;color:#999;">Sin datos</div>'; return; }
     var html = data.items.map(function(item) {
       var color = item.status === 'never' ? '#e74c3c' : (item.status === 'stale' ? '#f39c12' : '#27ae60');
       var badge = item.status === 'never' ? 'NUNCA' : (item.status === 'stale' ? 'STALE ' + item.days_since + 'd' : 'FRESH ' + item.days_since + 'd');
-      var lastInfo = item.last_quote ? (item.last_quote.supplier_name + ' · 
-    listEl.innerHTML = html;
-  } catch (e) {
-    if (summaryEl) summaryEl.textContent = 'Error cargando';
-    if (listEl) listEl.innerHTML = '<div style="text-align:center;padding:40px;color:#c00;">Error: ' + e.message + '</div>';
-  }
-}
- + item.last_quote.price + (item.last_quote.incoterm ? ' ' + item.last_quote.incoterm : '')) : '—';
-      var costoStr = item.ultimo_costo ? ('
-    listEl.innerHTML = html;
-  } catch (e) {
-    if (summaryEl) summaryEl.textContent = 'Error cargando';
-    if (listEl) listEl.innerHTML = '<div style="text-align:center;padding:40px;color:#c00;">Error: ' + e.message + '</div>';
-  }
-}
- + item.ultimo_costo) : '—';
+      var lastInfo = item.last_quote ? (item.last_quote.supplier_name + ' ' + DOT + ' $' + item.last_quote.price + (item.last_quote.incoterm ? ' ' + item.last_quote.incoterm : '')) : DASH;
+      var costoStr = item.ultimo_costo ? ('$' + item.ultimo_costo) : DASH;
       return '<div style="display:flex;align-items:center;gap:10px;padding:5px 10px;margin-bottom:2px;background:white;border-left:3px solid ' + color + ';font-size:12px;line-height:1.3;">' +
         '<div style="color:' + color + ';font-weight:700;min-width:70px;font-size:11px;">' + badge + '</div>' +
         '<div style="flex:1;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + item.desc + '">' + item.desc + '</div>' +
