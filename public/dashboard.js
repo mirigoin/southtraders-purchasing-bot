@@ -49,33 +49,11 @@ async function loadBest(){
   var tb=document.getElementById('bestTbody');
   try {
     var d=await fetch('/api/quotes/best').then(function(x){return x.json();});
-    if(!d.length){ tb.innerHTML='<tr><td colspan="10" style="text-align:center;color:#718096;padding:20px">Sin cotizaciones aun.</td></tr>'; return; }
+    if(!d.length){ tb.innerHTML='<tr><td colspan="8" style="text-align:center;color:#718096;padding:20px">Sin cotizaciones aun</td></tr>'; return; }
     tb.innerHTML=d.map(function(q){
-      var ucHtml;
-      if (q.ultimo_costo!=null) { ucHtml = '<span style="color:#a0aec0">$'+q.ultimo_costo+'</span>'; }
-      else { ucHtml = '<span style="color:#4a5568">-</span>'; }
-      var diffHtml = '-';
-      if (q.ultimo_costo!=null && q.price!=null) {
-        var dd = ((q.price - q.ultimo_costo) / q.ultimo_costo) * 100;
-        var color = dd>5 ? '#fc8181' : (dd>0 ? '#f6e05e' : '#68d391');
-        var sign = dd>=0 ? '+' : '';
-        diffHtml = '<span style="color:'+color+'">'+sign+dd.toFixed(1)+'%</span>';
-      }
-      var html = '<tr>';
-      html += '<td>'+(q.product||'')+'</td>';
-      html += '<td>'+(q.model||'')+'</td>';
-      html += '<td>'+(q.capacity||'')+'</td>';
-      html += '<td><strong style="color:#68d391">$'+q.price+' '+q.currency+'</strong></td>';
-      html += '<td>'+ucHtml+'</td>';
-      html += '<td>'+diffHtml+'</td>';
-      html += '<td>'+(q.supplier_name||'')+'</td>';
-      html += '<td>'+(q.qty||'-')+'</td>';
-      html += '<td>'+(q.incoterm||'')+'</td>';
-      html += '<td>'+new Date(q.ts).toLocaleDateString()+'</td>';
-      html += '</tr>';
-      return html;
+      return '<tr><td>'+(q.product||'')+'</td><td>'+(q.model||'')+'</td><td>'+(q.capacity||'')+'</td><td><strong style="color:#68d391">$'+q.price+' '+q.currency+'</strong></td><td>'+(q.supplier_name||'')+'</td><td>'+(q.qty||'-')+'</td><td>'+(q.incoterm||'')+'</td><td>'+new Date(q.ts).toLocaleDateString()+'</td></tr>';
     }).join('');
-  } catch(e){ tb.innerHTML='<tr><td colspan="10" style="color:#f87171">Error: '+e.message+'</td></tr>'; }
+  } catch(e){ tb.innerHTML='<tr><td colspan="8" style="color:#f87171">Error</td></tr>'; }
 }
 
 async function loadSuppliers(){
@@ -247,46 +225,7 @@ async function loadCompras(){
     tb.innerHTML=data.map(function(x){
       var sc=x.alerta?'color:#f87171;font-weight:600':'color:#68d391';
       var pc=x.mejor_precio?'$'+x.mejor_precio.price+' '+x.mejor_precio.currency+'<br><small style="color:#718096">'+x.mejor_precio.supplier_name+'</small>':'-';
-      return '<tr><td style="font-size:12px;color:#718096">'+x.codigo+'</td><td>'+x.descripcion+'</td><td style="'+sc+'">'+x.stock+'</td><td style="color:#718096">'+x.transito+'</td><td>'+x.minimo+'</td><td style="'+(x.falta>0?'color:#f87171;font-weight:600':'color:#718096')+'">'+( x.falta>0?x.falta:'-')+'</td><td>'+pc+'</td><td>'+((x.ultimo_costo!=null)?('<span style="color:#a0aec0">('+x.id+')" style="background:#7f1d1d;color:#fca5a5;font-size:11px">x</button></td></tr>';
-    }).join('');
-    var sd=await fetch('/api/stock').then(function(r){return r.json();}).catch(function(){return {items:[]};});
-    if(sd.items){
-      var dl=document.getElementById('stockList');
-      if(dl) dl.innerHTML=sd.items.map(function(s){return '<option value="'+s.codigo+'" label="'+s.desc+'">'+ s.codigo+'</option>';}).join('');
-    }
-  } catch(e){ tb.innerHTML='<tr><td colspan="8" style="color:#f87171">Error: '+e.message+'</td></tr>'; }
-}
-
-function openAddMinimo(){
-  var f=document.getElementById('addMinimoForm');
-  f.style.display=f.style.display==='none'?'block':'none';
-}
-
-async function saveMinimo(){
-  var codigo=document.getElementById('newCodigo').value.trim();
-  var desc=document.getElementById('newDesc').value.trim();
-  var minimo=parseInt(document.getElementById('newMinimo').value)||0;
-  if(!codigo){ alert('Ingresa el codigo'); return; }
-  try {
-    await fetch('/api/purchase-minimums',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({codigo:codigo,descripcion:desc,minimo:minimo})});
-    document.getElementById('newCodigo').value='';
-    document.getElementById('newDesc').value='';
-    document.getElementById('newMinimo').value='';
-    document.getElementById('addMinimoForm').style.display='none';
-    loadCompras();
-  } catch(e){ alert('Error: '+e.message); }
-}
-
-async function deleteMinimo(id){
-  if(!confirm('Eliminar?')) return;
-  try {
-    await fetch('/api/purchase-minimums/'+id,{method:'DELETE'});
-    loadCompras();
-  } catch(e){ alert('Error: '+e.message); }
-}
-
-document.addEventListener('DOMContentLoaded', init);
-+x.ultimo_costo+'</span>'):('<span style="color:#4a5568">-</span>'))+'</td><td><button class="btn btn-sm" onclick="deleteMinimo('+x.id+')" style="background:#7f1d1d;color:#fca5a5;font-size:11px">x</button></td></tr>';
+      return '<tr><td style="font-size:12px;color:#718096">'+x.codigo+'</td><td>'+x.descripcion+'</td><td style="'+sc+'">'+x.stock+'</td><td style="color:#718096">'+x.transito+'</td><td>'+x.minimo+'</td><td style="'+(x.falta>0?'color:#f87171;font-weight:600':'color:#718096')+'">'+( x.falta>0?x.falta:'-')+'</td><td>'+pc+'</td><td><button class="btn btn-sm" onclick="deleteMinimo('+x.id+')" style="background:#7f1d1d;color:#fca5a5;font-size:11px">x</button></td></tr>';
     }).join('');
     var sd=await fetch('/api/stock').then(function(r){return r.json();}).catch(function(){return {items:[]};});
     if(sd.items){
