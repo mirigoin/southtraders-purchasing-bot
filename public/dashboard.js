@@ -108,8 +108,10 @@ async function loadQuotes(){
   var tb=document.getElementById('quotesTbody');
   var p=document.getElementById('filterProduct').value;
   var h=document.getElementById('filterHours').value;
+  var s=document.getElementById('filterSupplier').value;
   var url='/api/quotes?limit=100';
   if(p) url+='&product='+encodeURIComponent(p);
+  if(s) url+='&supplier='+encodeURIComponent(s);
   if(h) url+='&hours='+h;
   try {
     var d=await fetch(url).then(function(x){return x.json();});
