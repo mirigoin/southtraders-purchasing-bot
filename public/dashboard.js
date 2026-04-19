@@ -293,7 +293,7 @@ async function loadMissing() {
       var costoStr = item.ultimo_costo ? ('$' + item.ultimo_costo) : DASH;
       return '<div style="display:flex;align-items:center;gap:10px;padding:5px 10px;margin-bottom:2px;background:white;border-left:3px solid ' + color + ';font-size:12px;line-height:1.3;">' +
         '<div style="color:' + color + ';font-weight:700;min-width:70px;font-size:11px;">' + badge + '</div>' +
-        '<div style="flex:1;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + item.desc + '">' + item.desc + '</div>' +
+        '<div style="flex:1;font-weight:600;color:#000;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + item.desc + '">' + item.desc + '</div>' +
         '<div style="color:#444;white-space:nowrap;font-size:11px;">Costo: ' + costoStr + '</div>' +
         '<div style="color:#222;min-width:180px;text-align:right;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="' + lastInfo + '">' + lastInfo + '</div>' +
       '</div>';
