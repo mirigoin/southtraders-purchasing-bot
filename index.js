@@ -1377,6 +1377,24 @@ app.get('/api/admin/reparse-missed', async (req, res) => {
 });
 
 // ============ RECENT MESSAGES (debug — incluye media cols) ============
+// DELETE quotes por supplier_name (requiere ?token=OWNER_PHONE)
+app.post('/api/admin/clear-quotes-by-supplier', async (req, res) => {
+  try {
+    const token = req.query.token;
+    if (!token || token !== process.env.OWNER_PHONE) {
+      return res.status(403).json({ error: 'forbidden' });
+    }
+    const supplier = req.query.supplier;
+    if (!supplier) {
+      return res.status(400).json({ error: 'supplier query param required' });
+    }
+    const result = await pool.query('DELETE FROM quotes WHERE supplier_name = $1 RETURNING id', [supplier]);
+    res.json({ ok: true, deleted_count: result.rows.length, ids: result.rows.map(r => r.id) });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/api/admin/recent-messages', async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit) || 20, 100);
