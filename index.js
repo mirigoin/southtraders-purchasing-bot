@@ -498,6 +498,12 @@ async function initBaileys() {
     usePairingCode: true,
       printQRInTerminal: true,
       browser: ['Marco Bot', 'Chrome', '22.0'],
+      connectTimeoutMs: 120000,
+      defaultQueryTimeoutMs: 120000,
+      keepAliveIntervalMs: 25000,
+      syncFullHistory: false,
+      markOnlineOnConnect: false,
+      shouldSyncHistoryMessage: () => false,
         getMessage: async (key) => {
         try {
           const r = await pool.query('SELECT message_text FROM group_messages WHERE wa_message_id = $1 LIMIT 1', [key.id]);
