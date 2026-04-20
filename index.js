@@ -416,7 +416,7 @@ REGLAS CRITICAS:
 5. DISPONIBILIDAD SIN PRECIO: Si el proveedor solo informa stock disponible sin precio, devolver la quote con price=null. Marca importante: estas son oportunidades de pedir cotizacion.
 
 Si NADA encaja, devuelve {"quotes":[]}.`,
-        messages: [{ role: 'user', content: `Proveedor: ${supplierName}\nMensaje:\n${text}` }]
+        messages: [{ role: 'user', content: `Proveedor: ${supplierName}\nMensaje:\n${msgText}` }]
       },
       {
         headers: {
