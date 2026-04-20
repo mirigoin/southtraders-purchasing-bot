@@ -548,7 +548,7 @@ async function initBaileys() {
           if (!isGroup && !isDM) continue;
 
           const text = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
-          if (!text || msgText.length < 3) continue;
+          if (!text || text.length < 3) continue;
 
           if (isGroup) {
             const groupId = remoteJid;
@@ -559,17 +559,17 @@ async function initBaileys() {
             try { senderName = msg.pushName || senderPhone; } catch(e) {}
             await pool.query(
               `INSERT INTO group_messages (group_id, group_name, sender_phone, sender_name, message_text, wa_message_id) VALUES ($1,$2,$3,$4,$5,$6)`,
-              [groupId, groupName, senderPhone, senderName, msgText, msg.key.id]
+              [groupId, groupName, senderPhone, senderName, text, msg.key.id]
             );
             // Buscar supplier por group_id
             const supplier = await pool.query('SELECT * FROM suppliers WHERE whatsapp_group_id = $1 AND active = TRUE', [groupId]);
             let supSlot = null, supName = groupName;
             if (supplier.rows.length > 0) { supSlot = supplier.rows[0].slot; supName = supplier.rows[0].name || supplier.rows[0].alias || groupName; }
             // Extraer quote siempre (registrado o no)
-            const result = await extractQuote(msgText, supName);
+            const result = await extractQuote(text, supName);
             if (result.quotes && result.quotes.length > 0) {
               await pool.query(`UPDATE group_messages SET has_quote = TRUE, processed = TRUE WHERE wa_message_id = $1`, [msg.key.id]);
-              await saveQuotes(result.quotes, supSlot, supName, msgText, 'group');
+              await saveQuotes(result.quotes, supSlot, supName, text, 'group');
               try { await pool.query('UPDATE quotes SET group_id = $1 WHERE raw_text = $2 AND group_id IS NULL', [groupId, text]); } catch(e) {}
             }
           } else if (isDM) {
@@ -578,7 +578,7 @@ async function initBaileys() {
             // Guardar tambien en group_messages con group_id=null y group_name='DM:<phone>'
             await pool.query(
               `INSERT INTO group_messages (group_id, group_name, sender_phone, sender_name, message_text, wa_message_id) VALUES ($1,$2,$3,$4,$5,$6)`,
-              [null, 'DM:' + senderPhone, senderPhone, senderName, msgText, msg.key.id]
+              [null, 'DM:' + senderPhone, senderPhone, senderName, text, msg.key.id]
             );
             // Buscar supplier por contact_phone (flexible: comparar sufijos por si hay + o prefijos)
             const supplierRes = await pool.query(
@@ -587,10 +587,10 @@ async function initBaileys() {
             );
             let supSlot = null, supName = 'DM:' + senderPhone;
             if (supplierRes.rows.length > 0) { supSlot = supplierRes.rows[0].slot; supName = supplierRes.rows[0].name || supplierRes.rows[0].alias || supName; }
-            const result = await extractQuote(msgText, supName);
+            const result = await extractQuote(text, supName);
             if (result.quotes && result.quotes.length > 0) {
               await pool.query(`UPDATE group_messages SET has_quote = TRUE, processed = TRUE WHERE wa_message_id = $1`, [msg.key.id]);
-              await saveQuotes(result.quotes, supSlot, supName, msgText, 'dm');
+              await saveQuotes(result.quotes, supSlot, supName, text, 'dm');
             }
           }
         }
