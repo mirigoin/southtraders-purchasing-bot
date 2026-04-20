@@ -413,7 +413,13 @@ REGLAS CRITICAS:
 
 4. SPEC/REGION: Si el mensaje dice "eu spec", "us spec", "ind spec", "jp spec", "arabic spec" etc., incluirlo en el campo "spec".
 
-5. DISPONIBILIDAD SIN PRECIO: Si el proveedor solo informa stock disponible sin precio, devolver la quote con price=null. Marca importante: estas son oportunidades de pedir cotizacion.
+5. ACTIVE vs NON ACTIVE / NON ACTIVATED:
+   - Si el mensaje dice "ACTIVE", "ACTIVATED", "ACTIVADO", "ACTIVO" claramente como estado del producto (no parte del nombre), DEVUELVE {"quotes":[]} para esa cotizacion. NO nos interesan productos activados.
+   - Si dice "NON ACTIVE", "NON ACTIVATED", "NOT ACTIVATED", "NO ACTIVE", "NON ACTIVO", "SIN ACTIVAR" entonces SI procesar la cotizacion con condition="non active".
+   - IMPORTANTE: un mismo mensaje puede listar PRIMERO bloque ACTIVE y DESPUES bloque NON ACTIVE. Solo devolver las quotes del bloque NON ACTIVE, ignorar completamente las ACTIVE.
+   - Ejemplo: "ACTIVE iPhone 17 $654 NON ACTIVE iPhone 17 $837" -> solo devolver quote con price=837 y condition="non active".
+
+6. DISPONIBILIDAD SIN PRECIO: Si el proveedor solo informa stock disponible sin precio, devolver la quote con price=null. Marca importante: estas son oportunidades de pedir cotizacion.
 
 Si NADA encaja, devuelve {"quotes":[]}.`,
         messages: [{ role: 'user', content: `Proveedor: ${supplierName}\nMensaje:\n${msgText}` }]
