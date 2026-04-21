@@ -1383,6 +1383,34 @@ app.get('/api/admin/reparse-missed', async (req, res) => {
 });
 
 // ============ RECENT MESSAGES (debug — incluye media cols) ============
+// READ-ONLY: buscar DMs y stats de group_messages (requiere token)
+app.get('/api/admin/dm-stats', async (req, res) => {
+  try {
+    const token = req.query.token;
+    if (!token || token !== process.env.OWNER_PHONE) {
+      return res.status(403).json({ error: 'forbidden' });
+    }
+    const total = await pool.query('SELECT COUNT(*) as c FROM group_messages');
+    const dmCount = await pool.query("SELECT COUNT(*) as c FROM group_messages WHERE group_id IS NULL");
+    const dmPrefixCount = await pool.query("SELECT COUNT(*) as c FROM group_messages WHERE group_name LIKE 'DM:%'");
+    const nullGroupSample = await pool.query("SELECT id, ts, group_id, group_name, sender_phone, sender_name, LEFT(message_text, 80) as msg_preview FROM group_messages WHERE group_id IS NULL ORDER BY ts DESC LIMIT 5");
+    const dmPrefixSample = await pool.query("SELECT id, ts, group_id, group_name, sender_phone, sender_name, LEFT(message_text, 80) as msg_preview FROM group_messages WHERE group_name LIKE 'DM:%' ORDER BY ts DESC LIMIT 5");
+    const firstDmEver = await pool.query("SELECT id, ts FROM group_messages WHERE group_id IS NULL OR group_name LIKE 'DM:%' ORDER BY ts ASC LIMIT 1");
+    const lastDmEver = await pool.query("SELECT id, ts FROM group_messages WHERE group_id IS NULL OR group_name LIKE 'DM:%' ORDER BY ts DESC LIMIT 1");
+    res.json({
+      total_messages: parseInt(total.rows[0].c),
+      dms_by_null_group_id: parseInt(dmCount.rows[0].c),
+      dms_by_name_prefix: parseInt(dmPrefixCount.rows[0].c),
+      null_group_sample: nullGroupSample.rows,
+      dm_prefix_sample: dmPrefixSample.rows,
+      first_dm_ever: firstDmEver.rows[0] || null,
+      last_dm_ever: lastDmEver.rows[0] || null
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // DELETE quotes por supplier_name (requiere ?token=OWNER_PHONE)
 app.post('/api/admin/clear-quotes-by-supplier', async (req, res) => {
   try {
