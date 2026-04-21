@@ -419,7 +419,39 @@ REGLAS CRITICAS:
    - IMPORTANTE: un mismo mensaje puede listar PRIMERO bloque ACTIVE y DESPUES bloque NON ACTIVE. Solo devolver las quotes del bloque NON ACTIVE, ignorar completamente las ACTIVE.
    - Ejemplo: "ACTIVE iPhone 17 $654 NON ACTIVE iPhone 17 $837" -> solo devolver quote con price=837 y condition="non active".
 
-6. DISPONIBILIDAD SIN PRECIO: Si el proveedor solo informa stock disponible sin precio, devolver la quote con price=null. Marca importante: estas son oportunidades de pedir cotizacion.
+6. IPHONE 17 "E" vs "AIR" - CRITICO:
+   - En 2025/2026 existen DOS iPhones 17 nuevos: el "iPhone 17 Air" y el "iPhone 17E" (escrito tambien como "17 E").
+   - "AIR" en contexto de iPhone (cuando se menciona "17", "iphone 17", o producto evidente Apple) es un modelo de iPhone, NO es un iPad Air ni MacBook Air.
+   - Ejemplo correcto: "17\nE 256 $595\nAIR 256 $653" -> 2 quotes:
+     * iPhone, model="17E", capacity="256GB", price=595
+     * iPhone, model="17 Air", capacity="256GB", price=653
+   - Solo interpretar AIR como iPad o MacBook si el mensaje menciona explicitamente "ipad", "tablet", "macbook", "laptop", o capacidades propias de laptops (512GB/1TB con RAM como 16GB/256GB).
+
+7. MACBOOK "NEO" - CRITICO:
+   - "NEO" es un modelo de MacBook Apple, NO es un Samsung ni otro producto.
+   - Formato tipico: "MACBOOK NEO A18 8GB 256GB" o solo "Neo 256", "Neo 512", "NEO 13\" A18 PRO".
+   - Siempre que aparezca "neo" aislado con capacidad (256/512) o combinado con A18, asumir product="MacBook", model="Neo".
+   - Ejemplo correcto: "Neo 256/512 $608/$708" -> 2 quotes:
+     * MacBook, model="Neo", capacity="256GB", price=608
+     * MacBook, model="Neo", capacity="512GB", price=708
+   - Ejemplo correcto: "Neo 256 $607.75" -> 1 quote: MacBook Neo 256GB $607.75
+
+8. SAMSUNG - MODELOS Y SPECS ARABIC/LATIN:
+   - Codigos que empiezan con "A" seguido de numero (A17, A57, A25, etc.) SON Samsung Galaxy serie A, NO son iPhones.
+   - Codigos que empiezan con "S" seguido de numero (S25, S26, S25U, S26U) son Samsung Galaxy serie S. La "U" al final significa "Ultra".
+   - Los Samsung tienen specs por region. Detectar y guardar en campo "spec":
+     * "arabian", "arabic", "arab" -> spec="ARABIC"
+     * "latin", "latino", "latam" -> spec="LATIN"
+     * "global", "international" -> spec="GLOBAL"
+   - El MISMO modelo con distinto spec es una cotizacion DIFERENTE. Generar 1 quote por spec.
+   - Ejemplo correcto: "A17 128 $128\nA57 256 $429\nS26U 512 arabian $1106\nS26U 512 latin $1129" -> 4 quotes:
+     * Samsung Galaxy, model="A17", capacity="128GB", price=128
+     * Samsung Galaxy, model="A57", capacity="256GB", price=429
+     * Samsung Galaxy, model="S26 Ultra", capacity="512GB", spec="ARABIC", price=1106
+     * Samsung Galaxy, model="S26 Ultra", capacity="512GB", spec="LATIN", price=1129
+   - IMPORTANTE: los Arabic suelen ser mas baratos que los Latin del mismo modelo. Si ves dos precios cerca (ej $1106 y $1129) con uno marcado arabic y otro latin, son dos quotes distintas, no elegir una.
+
+9. DISPONIBILIDAD SIN PRECIO: Si el proveedor solo informa stock disponible sin precio, devolver la quote con price=null. Marca importante: estas son oportunidades de pedir cotizacion.
 
 Si NADA encaja, devuelve {"quotes":[]}.`,
         messages: [{ role: 'user', content: `Proveedor: ${supplierName}\nMensaje:\n${msgText}` }]
