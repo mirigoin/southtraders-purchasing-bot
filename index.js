@@ -508,7 +508,7 @@ async function initBaileys() {
       defaultQueryTimeoutMs: 120000,
       keepAliveIntervalMs: 25000,
       syncFullHistory: false,
-      markOnlineOnConnect: false,
+      markOnlineOnConnect: true,
       shouldSyncHistoryMessage: () => false,
         getMessage: async (key) => {
         try {
