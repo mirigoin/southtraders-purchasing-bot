@@ -769,6 +769,13 @@ app.get('/api/costos', async (req, res) => {
 
 
 // Health
+app.delete('/quotes/:id', async function(req, res) {
+  try {
+    const r = await pool.query('DELETE FROM quotes WHERE id=$1', [req.params.id]);
+    res.json({ ok: true, deleted: r.rowCount });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/', (req, res) => {
   res.json({
     status: 'ok',
@@ -1846,4 +1853,11 @@ async function start() {
   }
 }
 
-start().catch(e => console.error('Start error:', e));
+start().catch(e => console.error('Start error:', e));app.delete('/quotes/:id', async function(req, res) {
+  try {
+    const r = await pool.query('DELETE FROM quotes WHERE id=$1', [req.params.id]);
+    res.json({ ok: true, deleted: r.rowCount });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+
