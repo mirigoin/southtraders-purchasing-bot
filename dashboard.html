@@ -278,6 +278,73 @@ async function deleteQFromModal(){
     else showToast('Error: '+(d.error||'?'));
   }catch(e){showToast('Error al eliminar');}
 }
+
+// CLICK EN BEST PRICES → MODAL
+(function() {
+  function attachBestRowClicks() {
+    const bestTab = document.getElementById('tab-best');
+    if (!bestTab) return;
+    const rows = bestTab.querySelectorAll('tbody tr');
+    rows.forEach(function(row) {
+      if (row.dataset.clickAttached) return;
+      row.dataset.clickAttached = '1';
+      row.style.cursor = 'pointer';
+      row.addEventListener('click', function() {
+        // Buscar el quote correspondiente por el texto de la fila
+        const cells = row.querySelectorAll('td');
+        if (!cells.length) return;
+        const product = cells[0]?.textContent?.trim() || '';
+        const model = cells[1]?.textContent?.trim() || '';
+        const capacity = cells[2]?.textContent?.trim() || '';
+        const price = cells[3]?.textContent?.replace(/[^0-9.]/g,'') || '';
+        const supplier = cells[5]?.textContent?.trim() || '';
+        // Buscar en los quotes cargados
+        if (window._allQuotesCache) {
+          const match = window._allQuotesCache.find(function(q) {
+            return (q.product||'').toLowerCase() === product.toLowerCase()
+              && String(q.price||'') === price;
+          });
+          if (match && typeof openQModal === 'function') {
+            openQModal(match);
+            return;
+          }
+        }
+        // Mostrar info basica si no hay cache
+        if (typeof openQModal === 'function') {
+          openQModal({
+            id: null,
+            product: product,
+            model: model,
+            capacity: capacity,
+            price: price,
+            supplier_name: supplier,
+            qty: cells[6]?.textContent?.trim(),
+            ts: new Date().toISOString(),
+            raw_text: '(Hacé click en Cotizaciones para ver el mensaje completo)'
+          });
+        }
+      });
+    });
+  }
+  // Cachear quotes cuando se cargan
+  const origFetch = window.fetch;
+  window.fetch = function() {
+    return origFetch.apply(this, arguments).then(function(r) {
+      const clone = r.clone();
+      const url = arguments[0] || '';
+      if (typeof url === 'string' && url.includes('/api/quotes') && !url.includes('best')) {
+        clone.json().then(function(data) {
+          if (Array.isArray(data)) window._allQuotesCache = data;
+          else if (data.quotes) window._allQuotesCache = data.quotes;
+        }).catch(function(){});
+      }
+      return r;
+    });
+  };
+  // Observer para detectar cambios en la tabla
+  setInterval(attachBestRowClicks, 2000);
+  attachBestRowClicks();
+})();
 </script>
 </body>
 </html>
