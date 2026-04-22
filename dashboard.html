@@ -3,312 +3,281 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Marco - Bot de Compras</title>
+<title>🤖 Marco — Purchasing Bot</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f1117;color:#e2e8f0;min-height:100vh}
-header{background:#1a1a2e;padding:14px 24px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #2d3748}
-header h1{font-size:17px;font-weight:700;color:#fff}
-.dot{width:8px;height:8px;border-radius:50%;background:#22c55e;animation:pulse 2s infinite;flex-shrink:0}
+header{background:#1a1a2e;padding:16px 24px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #2d3748}
+header h1{font-size:18px;font-weight:700;color:#fff}
+.dot{width:8px;height:8px;border-radius:50%;background:#22c55e;animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.ts{font-size:11px;color:#718096;margin-left:auto}
-.wrap{padding:16px 20px;max-width:1200px;margin:0 auto}
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
-.stat{background:#1a202c;border-radius:8px;padding:14px;border:1px solid #2d3748}
-.stat .n{font-size:26px;font-weight:700;color:#63b3ed}
-.stat .l{font-size:11px;color:#718096;margin-top:3px}
-.card{background:#1a202c;border-radius:8px;border:1px solid #2d3748;margin-bottom:16px}
-.card-head{padding:12px 16px;border-bottom:1px solid #2d3748;display:flex;align-items:center;justify-content:space-between}
-.card-head h2{font-size:13px;font-weight:600}
-.tabs{display:flex;gap:4px;padding:10px 16px;border-bottom:1px solid #2d3748;flex-wrap:wrap}
-.tab{padding:5px 12px;border-radius:5px;font-size:12px;cursor:pointer;border:none;background:none;color:#718096}
-.tab.active{background:#2d3748;color:#e2e8f0}
-.tab-content{display:none;padding:14px 16px}
-.tab-content.active{display:block}
-table{width:100%;border-collapse:collapse}
-th{padding:8px 10px;text-align:left;font-size:11px;font-weight:600;color:#718096;text-transform:uppercase;border-bottom:1px solid #2d3748;background:#171923}
-td{padding:7px 10px;font-size:12px;border-bottom:1px solid #1a202c}
-tr.clickable{cursor:pointer}
-tr.clickable:hover td{background:#2d3748}
-tr:last-child td{border-bottom:none}
-.price{font-weight:700;color:#68d391;font-size:13px}
-.model{font-weight:600;color:#fff}
-.supplier{color:#a0aec0}
-.time{color:#718096;font-size:11px}
-.badge{font-size:10px;padding:2px 7px;border-radius:20px;font-weight:500}
+.ts{font-size:12px;color:#718096;margin-left:auto}
+.wrap{padding:20px 24px;max-width:1200px;margin:0 auto}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+.stat{background:#1a202c;border-radius:10px;padding:16px;border:1px solid #2d3748}
+.stat .n{font-size:28px;font-weight:700;color:#63b3ed}
+.stat .l{font-size:12px;color:#718096;margin-top:4px}
+.section{background:#1a202c;border-radius:10px;border:1px solid #2d3748;margin-bottom:20px;overflow:hidden}
+.section-head{padding:14px 18px;border-bottom:1px solid #2d3748;display:flex;align-items:center;gap:8px;justify-content:space-between}
+.section-head h2{font-size:14px;font-weight:600;color:#e2e8f0}
+.badge{font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500}
 .badge-green{background:#1c4532;color:#68d391}
-input,select,textarea{background:#2d3748;border:1px solid #4a5568;border-radius:6px;color:#e2e8f0;padding:7px 10px;font-size:13px;width:100%}
-input:focus,select:focus{outline:none;border-color:#4299e1}
-.btn{padding:7px 14px;border:none;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer}
-.btn-blue{background:#2b6cb0;color:#fff}
-.btn-blue:hover{background:#2c5282}
-.btn-red{background:#c53030;color:#fff;font-size:11px;padding:4px 9px}
-.btn-red:hover{background:#9b2c2c}
-.btn-sm{font-size:11px;padding:4px 9px}
-.empty{text-align:center;padding:30px;color:#4a5568;font-size:13px}
-.toast{position:fixed;bottom:20px;right:20px;background:#2d3748;color:#e2e8f0;padding:10px 16px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999;border:1px solid #4a5568}
-.toast.show{opacity:1}
-.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:100;display:none;align-items:center;justify-content:center}
-.modal-overlay.open{display:flex}
-.modal{background:#1a202c;border-radius:10px;border:1px solid #4a5568;padding:20px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto}
-.modal h3{font-size:15px;font-weight:600;margin-bottom:12px;color:#e2e8f0}
-.modal-msg{background:#171923;border-radius:6px;padding:12px;font-size:13px;color:#a0aec0;line-height:1.6;margin-bottom:16px;white-space:pre-wrap;word-break:break-word}
-.modal-meta{font-size:11px;color:#718096;margin-bottom:16px}
-.modal-actions{display:flex;gap:8px;justify-content:flex-end}
+.badge-blue{background:#1a365d;color:#63b3ed}
+table{width:100%;border-collapse:collapse}
+th{padding:6px 10px;text-align:left;font-size:11px;font-weight:600;color:#718096;text-transform:uppercase;letter-spacing:.05em}
+td{padding:4px 10px;font-size:12px;border-bottom:1px solid #1a202c}
+tr:hover td{background:#2d3748}
+tr:last-child td{border-bottom:none}
+.tabs{display:flex;gap:4px;padding:12px 18px;border-bottom:1px solid #2d3748}
+.tab{padding:6px 14px;border-radius:6px;font-size:13px;cursor:pointer;border:none;background:none;color:#718096}
+.tab.active{background:#2d3748;color:#e2e8f0}
+.tab-content{display:none;padding:16px 18px}
+.tab-content.active{display:block}
+input,select,textarea{background:#2d3748;border:1px solid #4a5568;border-radius:6px;color:#e2e8f0;padding:8px 12px;font-size:13px;width:100%}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#63b3ed}
+.form-row{display:grid;gap:10px;margin-bottom:12px}
+.form-row.cols-2{grid-template-columns:1fr 1fr}
+label{font-size:12px;color:#718096;margin-bottom:4px;display:block}
+.btn{padding:8px 16px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;border:none}
+.btn-primary{background:#3b82f6;color:#fff}
+.btn-primary:hover{background:#2563eb}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn-green{background:#166534;color:#86efac}
+.supplier-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;padding:16px 18px}
+.supplier-card{background:#2d3748;border-radius:8px;padding:12px;cursor:pointer;border:2px solid transparent}
+.supplier-card.active{border-color:#22c55e}
+.supplier-card.empty{border-color:#4a5568;opacity:.6}
+.supplier-card .slot{font-size:10px;color:#718096}
+.supplier-card .name{font-size:14px;font-weight:600;margin:4px 0}
+.supplier-card .meta{font-size:11px;color:#718096}
+.qr-wrap{text-align:center;padding:30px}
+.msg-item{padding:10px 18px;border-bottom:1px solid #2d3748;font-size:13px}
+.msg-item:last-child{border-bottom:none}
+.msg-meta{font-size:11px;color:#718096;margin-bottom:4px}
+.msg-text{color:#e2e8f0}
+.has-quote{border-left:3px solid #22c55e}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center}
+.modal.open{display:flex}
+.modal-box{background:#1a202c;border-radius:10px;padding:24px;width:90%;max-width:520px;border:1px solid #2d3748}
+.modal-box h3{font-size:16px;font-weight:600;margin-bottom:16px}
+.close-btn{float:right;background:none;border:none;color:#718096;font-size:20px;cursor:pointer}
+.clickable-row{cursor:pointer}
+.clickable-row:hover td{background:#2d3748!important}
+.modal-ov{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.75);z-index:200;display:none;align-items:center;justify-content:center}
+.modal-ov.open{display:flex}
+.modal-bx{background:#1a202c;border-radius:10px;border:1px solid #4a5568;padding:20px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto}
+.modal-bx h3{font-size:14px;font-weight:600;margin-bottom:8px;color:#e2e8f0}
+.modal-msg{background:#171923;border-radius:6px;padding:10px;font-size:12px;color:#a0aec0;line-height:1.6;margin-bottom:12px;white-space:pre-wrap;word-break:break-word}
+.modal-meta{font-size:11px;color:#718096;margin-bottom:12px}
+.modal-acts{display:flex;gap:8px;justify-content:flex-end}
 </style>
 </head>
 <body>
 <header>
-  <div class="dot"></div>
-  <h1>📊 Marco — Bot de Compras South Traders</h1>
-  <span class="ts" id="ts">Cargando...</span>
+  <div class="dot" id="statusDot"></div>
+  <h1>🤖 Marco — Purchasing Bot</h1>
+  <span class="ts" id="statusText">⏳ Checking...</span>
 </header>
-
 <div class="wrap">
   <div class="stats">
-    <div class="stat"><div class="n" id="nQuotes">0</div><div class="l">Cotizaciones (48hs)</div></div>
-    <div class="stat"><div class="n" id="nSuppliers">0</div><div class="l">Proveedores activos</div></div>
-    <div class="stat"><div class="n" id="nModels">0</div><div class="l">Modelos</div></div>
-    <div class="stat"><div class="n" id="nGroups">0</div><div class="l">Grupos</div></div>
+    <div class="stat"><div class="n" id="statConn">-</div><div class="l">Conexión</div></div>
+    <div class="stat"><div class="n" id="statSuppliers">-</div><div class="l">Proveedores activos</div></div>
+    <div class="stat"><div class="n" id="statQuotes24">-</div><div class="l">Cotizaciones 24h</div></div>
+    <div class="stat"><div class="n" id="statQuotes7d">-</div><div class="l">Cotizaciones 7d</div></div>
+    <div class="stat"><div class="n" id="statRequests">-</div><div class="l">Pedidos enviados</div></div>
   </div>
-
-  <div class="card">
+  <div class="section">
     <div class="tabs">
       <button class="tab active" onclick="showTab('tab-best',this)">🏆 Best Prices</button>
-      <button class="tab" onclick="showTab('tab-quotes',this)">📋 Cotizaciones</button>
+      <button class="tab" onclick="showTab('tab-suppliers',this)">🏭 Proveedores</button>
+      <button class="tab" onclick="showTab('tab-quotes',this)">💰 Cotizaciones</button>
       <button class="tab" onclick="showTab('tab-request',this)">📤 Pedir Cotización</button>
-      <button class="tab" onclick="showTab('tab-suppliers',this)">👥 Grupos</button>
+      <button class="tab" onclick="showTab('tab-messages',this)">💬 Mensajes</button>
+      <button class="tab" onclick="showTab('tab-conn',this)">📡 Conexión</button>
+      <button class="tab" onclick="showTab('tab-compras',this)">&#128722; Compras</button>
+      <button class="tab" onclick="showTab('tab-missing',this)">🔔 Faltantes</button>
     </div>
-
-    <!-- BEST PRICES -->
     <div id="tab-best" class="tab-content active">
-      <p style="font-size:11px;color:#718096;margin-bottom:10px">Click en una fila para ver el mensaje original y eliminarlo si es incorrecto.</p>
-      <table>
-        <thead><tr>
-          <th>Modelo</th>
-          <th>Mejor precio</th>
-          <th>Proveedor</th>
-          <th>Qty</th>
-          <th>Fecha</th>
-        </tr></thead>
-        <tbody id="bestTbody"></tbody>
-      </table>
+      <div class="section-head" style="border:none;padding-bottom:0">
+        <h2>🏆 Mejores precios (últimos 7 días)</h2>
+        <button class="btn btn-primary btn-sm" onclick="loadBest()">↻ Refresh</button>
+      </div>
+      <table><thead><tr><th>Producto</th><th>Modelo</th><th>Capacidad</th><th>Precio</th><th>Costo</th><th>Proveedor</th><th>Qty</th><th>Incoterm</th><th>Fecha</th></tr></thead>
+      <tbody id="bestTbody"><tr><td colspan="8" style="text-align:center;color:#718096;padding:20px">Cargando...</td></tr></tbody></table>
     </div>
-
-    <!-- TODAS LAS COTIZACIONES -->
+    <div id="tab-suppliers" class="tab-content">
+      <div class="section-head" style="border:none;padding-bottom:0">
+        <h2>🏭 Proveedores (50 slots)</h2>
+        <button class="btn btn-primary btn-sm" onclick="loadSuppliers()">↻ Refresh</button>
+      </div>
+      <div class="supplier-grid" id="supplierGrid">Cargando...</div>
+    </div>
     <div id="tab-quotes" class="tab-content">
-      <table>
-        <thead><tr>
-          <th>Fecha</th>
-          <th>Proveedor</th>
-          <th>Modelo</th>
-          <th>Precio</th>
-          <th>Qty</th>
-          <th></th>
-        </tr></thead>
-        <tbody id="quotesTbody"></tbody>
-      </table>
+      <div class="section-head" style="border:none;padding-bottom:0">
+        <h2>💰 Cotizaciones</h2>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input style="width:160px" placeholder="Filtrar producto..." id="filterProduct" oninput="loadQuotes()">
+          <input style="width:160px" placeholder="Filtrar proveedor..." id="filterSupplier" oninput="loadQuotes()">
+          <select id="filterHours" onchange="loadQuotes()" style="width:130px">
+            <option value="">Todas</option>
+            <option value="24">24h</option>
+            <option value="168">7 días</option>
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="loadQuotes()">↻</button>
+        </div>
+      </div>
+      <table><thead><tr><th>Producto</th><th>Modelo</th><th>Cap</th><th>Color</th><th>Precio</th><th>Costo</th><th>Qty</th><th>Incoterm</th><th>Proveedor</th><th>Fecha</th></tr></thead>
+      <tbody id="quotesTbody"></tbody></table>
     </div>
-
-    <!-- PEDIR COTIZACION -->
     <div id="tab-request" class="tab-content">
-      <div style="display:flex;flex-direction:column;gap:10px;max-width:500px">
-        <div>
-          <label style="font-size:12px;color:#718096;margin-bottom:4px;display:block">Producto</label>
-          <input id="reqProduct" placeholder="Ej: iPhone 16 Pro 256GB">
+      <div class="section-head" style="border:none;padding-bottom:0"><h2>📤 Pedir Cotización</h2></div>
+      <div style="max-width:500px;padding:16px 0">
+        <div class="form-row"><div><label>Producto</label><input id="rqProduct" placeholder="iPhone 16 Pro Max 256GB"></div></div>
+        <div class="form-row cols-2">
+          <div><label>Target Price (USD)</label><input id="rqPrice" type="number" placeholder="950"></div>
+          <div><label>Slots (vacío = todos)</label><input id="rqSlots" placeholder="1,3,5"></div>
         </div>
-        <div>
-          <label style="font-size:12px;color:#718096;margin-bottom:4px;display:block">Target price USD (opcional)</label>
-          <input id="reqTarget" placeholder="Ej: 850 CIF Miami">
+        <button class="btn btn-primary" onclick="sendRequest()">📤 Enviar Pedido</button>
+        <div id="rqResult" style="margin-top:12px;font-size:13px;color:#68d391"></div>
+      </div>
+      <table><thead><tr><th>Producto</th><th>Target</th><th>Enviado a</th><th>Fecha</th></tr></thead>
+      <tbody id="reqTbody"></tbody></table>
+    </div>
+    <div id="tab-messages" class="tab-content">
+      <div class="section-head" style="border:none;padding-bottom:0">
+        <h2>💬 Mensajes de Grupos</h2>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select id="msgHours" onchange="loadMessages()" style="width:130px">
+            <option value="24">24h</option>
+            <option value="48">48h</option>
+            <option value="168">7 días</option>
+          </select>
+          <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:#718096">
+            <input type="checkbox" id="onlyQuotes" onchange="loadMessages()"> Solo cotizaciones
+          </label>
+          <button class="btn btn-primary btn-sm" onclick="loadMessages()">↻</button>
         </div>
-        <button class="btn btn-blue" onclick="requestQuote()" style="width:fit-content">Enviar a todos los grupos</button>
+      </div>
+      <div id="msgList" style="max-height:500px;overflow-y:auto"></div>
+    </div>
+    <div id="tab-conn" class="tab-content">
+      <div class="section-head" style="border:none;padding-bottom:0"><h2>📡 WhatsApp (Baileys)</h2></div>
+      <div style="padding:16px 0">
+        <div id="baileysStatus" style="font-size:14px;margin-bottom:16px"></div>
+        <div id="qrSection" class="qr-wrap" style="display:none"></div>
+        <div style="margin-top:16px">
+          <h3 style="font-size:14px;font-weight:600;margin-bottom:12px">📱 Grupos disponibles</h3>
+          <button class="btn btn-primary btn-sm" onclick="loadGroups()" style="margin-bottom:12px">↻ Cargar grupos</button>
+          <table><thead><tr><th>Grupo</th><th>ID</th><th>Participantes</th><th>Asignar a slot</th></tr></thead>
+          <tbody id="groupsTbody"></tbody></table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    <div id="tab-compras" class="tab-content">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <h2 style="font-size:14px;font-weight:600">&#128722; Compras</h2>
+        <button class="btn btn-primary btn-sm" onclick="loadCompras()">&#8635; Actualizar stock</button>
+      </div>
+      <div id="comprasAlerts" style="margin-bottom:16px"></div>
+      <div style="border-top:1px solid #2d3748;padding-top:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <h3 style="font-size:13px;color:#718096">M&#237;nimos configurados</h3>
+          <button class="btn btn-green btn-sm" onclick="openAddMinimo()">+ Agregar</button>
+        </div>
+        <div id="addMinimoForm" style="display:none;background:#2d3748;border-radius:8px;padding:14px;margin-bottom:12px">
+          <div style="display:grid;grid-template-columns:160px 1fr 80px;gap:8px;align-items:end">
+            <div><label>C&#243;digo</label><input id="newCodigo" placeholder="IPH16256BLK-IND" list="stockList"></div>
+            <div><label>Descripci&#243;n</label><input id="newDesc" placeholder="APPLE IPHONE 16 256GB BLACK"></div>
+            <div><label>M&#237;nimo</label><input id="newMinimo" type="number" min="0" placeholder="10"></div>
+          </div>
+          <datalist id="stockList"></datalist>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <button class="btn btn-primary btn-sm" onclick="saveMinimo()">Guardar</button>
+            <button class="btn btn-sm" onclick="document.getElementById('addMinimoForm').style.display='none'" style="background:#4a5568;color:#e2e8f0">Cancelar</button>
+          </div>
+        </div>
+        <table><thead><tr><th>C&#243;digo</th><th>Descripci&#243;n</th><th>Stock</th><th>Tr&#225;nsito</th><th>M&#237;nimo</th><th>Falta</th><th>Mejor precio</th><th></th></tr></thead>
+        <tbody id="minimosTbody"><tr><td colspan="8" style="text-align:center;color:#718096;padding:20px">Haz click en "Actualizar stock" para cargar datos</td></tr></tbody></table>
+      </div>
+    </div>
+    <div id="tab-missing" class="tab-content">
+      <div class="section-head" style="border:none;padding:16px 20px 8px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-size:18px;font-weight:600;">🔔 Productos sin cotización reciente</div>
+            <div id="missingSummary" style="font-size:13px;color:#666;margin-top:4px;">Cargando...</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <label style="font-size:13px;color:#555;">Días stale:
+              <input id="missingStaleDays" type="number" value="7" min="1" max="90" style="width:60px;margin-left:6px;padding:4px;border:1px solid #ccc;border-radius:4px;" />
+            </label>
+            <button class="btn" onclick="loadMissing()" style="padding:6px 12px;">↻ Refresh</button>
+          </div>
+        </div>
+      </div>
+      <div id="missingList" style="padding:8px 20px 20px;">
+        <div style="text-align:center;padding:40px;color:#999;">Cargando...</div>
       </div>
     </div>
 
-    <!-- GRUPOS -->
-    <div id="tab-suppliers" class="tab-content">
-      <table>
-        <thead><tr><th>Alias</th><th>Group ID</th><th>Estado</th></tr></thead>
-        <tbody id="suppliersTbody"></tbody>
-      </table>
+<div class="modal" id="supplierModal">
+  <div class="modal-box">
+    <button class="close-btn" onclick="closeModal()">×</button>
+    <h3 id="modalTitle">Slot #</h3>
+    <div class="form-row cols-2">
+      <div><label>Nombre</label><input id="mName"></div>
+      <div><label>Alias</label><input id="mAlias"></div>
+    </div>
+    <div class="form-row cols-2">
+      <div><label>Teléfono</label><input id="mPhone"></div>
+      <div><label>Contacto</label><input id="mContactName"></div>
+    </div>
+    <div class="form-row cols-2">
+      <div><label>País</label><input id="mCountry"></div>
+      <div><label>Activo</label><select id="mActive"><option value="true">Sí</option><option value="false">No</option></select></div>
+    </div>
+    <div class="form-row"><div><label>Grupo WA</label><input id="mGroupName" readonly></div></div>
+    <div class="form-row"><div><label>Notas</label><textarea id="mNotes" rows="2"></textarea></div></div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn btn-primary" onclick="saveSupplier()">💾 Guardar</button>
+      <span id="modalMsg" style="font-size:12px;color:#68d391;align-self:center"></span>
     </div>
   </div>
 </div>
-
-<!-- MODAL: mensaje original -->
-<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
-  <div class="modal">
-    <h3 id="modalTitle">Mensaje original</h3>
-    <div class="modal-meta" id="modalMeta"></div>
-    <div class="modal-msg" id="modalMsg"></div>
-    <div class="modal-actions">
-      <button class="btn btn-red" id="modalDeleteBtn" onclick="deleteQuote()">🗑 Eliminar cotización</button>
-      <button class="btn btn-blue" onclick="closeModal()">Cerrar</button>
+<script src="/dashboard.js"></script>
+<div class="modal-ov" id="qModal" onclick="if(event.target===this)closeQModal()">
+  <div class="modal-bx">
+    <h3 id="qModalTitle">Mensaje original</h3>
+    <div class="modal-meta" id="qModalMeta"></div>
+    <div class="modal-msg" id="qModalMsg"></div>
+    <div class="modal-acts">
+      <button class="action-btn danger" onclick="deleteQFromModal()">🗑 Eliminar</button>
+      <button class="action-btn" onclick="closeQModal()">Cerrar</button>
     </div>
   </div>
 </div>
-
-<div class="toast" id="toast"></div>
-
 <script>
-let allQuotes = [];
-let selectedQuoteId = null;
-
-function toast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2500);
+let _qId=null;
+function openQModal(q){
+  _qId=q.id;
+  const m=((q.product||'')+(q.model?' '+q.model:'')+(q.capacity?' '+q.capacity:'')).trim();
+  document.getElementById('qModalTitle').textContent=m||'Cotización';
+  document.getElementById('qModalMeta').textContent='Proveedor: '+(q.supplier_name||'-')+'  |  USD '+(q.price||'-')+'  |  Qty: '+(q.qty||'-')+'  |  '+new Date(q.ts).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+  document.getElementById('qModalMsg').textContent=q.raw_text||'(sin mensaje)';
+  document.getElementById('qModal').classList.add('open');
 }
-
-function fmt(ts) {
-  if (!ts) return '-';
-  const d = new Date(ts);
-  return d.toLocaleString('es-AR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+function closeQModal(){document.getElementById('qModal').classList.remove('open');_qId=null;}
+async function deleteQFromModal(){
+  if(!_qId||!confirm('Eliminar cotización?'))return;
+  try{
+    const r=await fetch('/api/quotes/'+_qId,{method:'DELETE'});
+    const d=await r.json();
+    if(d.ok||d.deleted>=0){showToast('✅ Eliminada');closeQModal();loadBestPrices();loadQuotes();}
+    else showToast('Error: '+(d.error||'?'));
+  }catch(e){showToast('Error al eliminar');}
 }
-
-function showTab(id, btn) {
-  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-  btn.classList.add('active');
-}
-
-function openModal(quote) {
-  selectedQuoteId = quote.id;
-  document.getElementById('modalTitle').textContent = quote.product + (quote.model ? ' ' + quote.model : '') + (quote.capacity ? ' ' + quote.capacity : '');
-  document.getElementById('modalMeta').textContent = 'Proveedor: ' + (quote.supplier_name||'-') + '  |  Precio: USD ' + (quote.price||'-') + '  |  Qty: ' + (quote.qty||'-') + '  |  ' + fmt(quote.ts);
-  document.getElementById('modalMsg').textContent = quote.raw_text || '(sin mensaje original)';
-  document.getElementById('modalOverlay').classList.add('open');
-}
-
-function closeModal(e) {
-  if (!e || e.target === document.getElementById('modalOverlay')) {
-    document.getElementById('modalOverlay').classList.remove('open');
-    selectedQuoteId = null;
-  }
-}
-
-async function deleteQuote() {
-  if (!selectedQuoteId) return;
-  if (!confirm('Eliminar esta cotización?')) return;
-  try {
-    const r = await fetch('/api/quotes/' + selectedQuoteId, { method: 'DELETE' });
-    const d = await r.json();
-    if (d.ok) {
-      toast('✅ Cotización eliminada');
-      closeModal();
-      load();
-    } else {
-      toast('Error: ' + (d.error||'desconocido'));
-    }
-  } catch(e) {
-    toast('Error al eliminar');
-  }
-}
-
-function renderBest(quotes) {
-  const tbody = document.getElementById('bestTbody');
-  if (!quotes.length) {
-    tbody.innerHTML = '<tr><td colspan="5" class="empty">Sin cotizaciones en las últimas 48hs</td></tr>';
-    return;
-  }
-  // Agrupar por modelo y tomar el mejor precio
-  const byModel = {};
-  quotes.forEach(q => {
-    const key = ((q.product||'') + ' ' + (q.model||'') + ' ' + (q.capacity||'')).trim();
-    if (!byModel[key] || parseFloat(q.price||q.best_price||0) < parseFloat(byModel[key].price||byModel[key].best_price||0)) {
-      byModel[key] = q;
-    }
-  });
-  const rows = Object.values(byModel).sort((a,b) => (a.product||'').localeCompare(b.product||''));
-  tbody.innerHTML = rows.map(q => {
-    const model = ((q.product||'') + (q.model ? ' '+q.model : '') + (q.capacity ? ' '+q.capacity : '')).trim();
-    const price = q.price || q.best_price || '-';
-    return '<tr class="clickable" onclick="openModal(' + JSON.stringify(q).split('"').join('&quot;') + ')">' +
-      '<td><span class="model">' + model + '</span></td>' +
-      '<td><span class="price">USD ' + (price !== '-' ? parseFloat(price).toLocaleString() : '-') + '</span></td>' +
-      '<td><span class="supplier">' + (q.supplier_name||'-') + '</span></td>' +
-      '<td>' + (q.qty||'-') + '</td>' +
-      '<td><span class="time">' + fmt(q.ts||q.last_seen) + '</span></td>' +
-      '</tr>';
-  }).join('');
-}
-
-function renderQuotes(quotes) {
-  const tbody = document.getElementById('quotesTbody');
-  if (!quotes.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="empty">Sin cotizaciones</td></tr>';
-    return;
-  }
-  tbody.innerHTML = quotes.slice(0,100).map(q => {
-    const model = ((q.product||'') + (q.model ? ' '+q.model : '') + (q.capacity ? ' '+q.capacity : '')).trim();
-    return '<tr>' +
-      '<td><span class="time">' + fmt(q.ts) + '</span></td>' +
-      '<td><span class="supplier">' + (q.supplier_name||'-') + '</span></td>' +
-      '<td><span class="model">' + model + '</span></td>' +
-      '<td><span class="price">' + (q.price ? 'USD '+parseFloat(q.price).toLocaleString() : '-') + '</span></td>' +
-      '<td>' + (q.qty||'-') + '</td>' +
-      '<td><button class="btn btn-red" onclick="event.stopPropagation();openModal(' + JSON.stringify(q).split('"').join('&quot;') + ')">Ver / Eliminar</button></td>' +
-      '</tr>';
-  }).join('');
-}
-
-function renderGroups(groups) {
-  const tbody = document.getElementById('suppliersTbody');
-  if (!groups.length) {
-    tbody.innerHTML = '<tr><td colspan="3" class="empty">Sin grupos. Agregá grupos via WhatsApp: "agregar grupo [nombre] [group_id]"</td></tr>';
-    return;
-  }
-  tbody.innerHTML = groups.map(g =>
-    '<tr><td><span class="model">' + g.alias + '</span></td>' +
-    '<td style="font-family:monospace;font-size:11px;color:#718096">' + g.group_id + '</td>' +
-    '<td><span class="badge badge-green">' + (g.active ? '✅ Activo' : '❌ Inactivo') + '</span></td></tr>'
-  ).join('');
-}
-
-async function load() {
-  try {
-    const [qRes, gRes] = await Promise.all([
-      fetch('/api/quotes').then(r=>r.json()),
-      fetch('/api/suppliers').then(r=>r.json())
-    ]);
-    allQuotes = Array.isArray(qRes) ? qRes : (qRes.quotes || qRes.data || []);
-    const groups = Array.isArray(gRes) ? gRes : (gRes.groups || gRes.suppliers || gRes.data || []);
-    const suppliers = [...new Set(allQuotes.map(q=>q.supplier_name).filter(Boolean))];
-    const models = [...new Set(allQuotes.map(q=>q.product).filter(Boolean))];
-    document.getElementById('nQuotes').textContent = allQuotes.length;
-    document.getElementById('nSuppliers').textContent = suppliers.length;
-    document.getElementById('nModels').textContent = models.length;
-    document.getElementById('nGroups').textContent = groups.length;
-    document.getElementById('ts').textContent = 'Actualizado: ' + new Date().toLocaleTimeString('es-AR');
-    renderBest(allQuotes);
-    renderQuotes(allQuotes);
-    renderGroups(groups);
-  } catch(e) {
-    console.error(e);
-  }
-}
-
-async function requestQuote() {
-  const product = document.getElementById('reqProduct').value.trim();
-  const target = document.getElementById('reqTarget').value.trim();
-  if (!product) { toast('Ingresá el producto'); return; }
-  const full = product + (target ? ' - target USD ' + target : '');
-  try {
-    const r = await fetch('/api/request-quote', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({product: full})
-    });
-    const d = await r.json();
-    toast(d.ok ? '✅ Enviado a ' + d.sent + ' grupos' : 'Error: ' + (d.error||''));
-    if (d.ok) { document.getElementById('reqProduct').value=''; document.getElementById('reqTarget').value=''; }
-  } catch(e) { toast('Error al enviar'); }
-}
-
-load();
-setInterval(load, 30000);
 </script>
 </body>
 </html>
