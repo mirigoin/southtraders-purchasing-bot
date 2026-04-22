@@ -273,8 +273,8 @@ async function load() {
       fetch('/api/quotes').then(r=>r.json()),
       fetch('/api/suppliers').then(r=>r.json())
     ]);
-    allQuotes = qRes.quotes || [];
-    const groups = gRes.groups || [];
+    allQuotes = Array.isArray(qRes) ? qRes : (qRes.quotes || qRes.data || []);
+    const groups = Array.isArray(gRes) ? gRes : (gRes.groups || gRes.suppliers || gRes.data || []);
     const suppliers = [...new Set(allQuotes.map(q=>q.supplier_name).filter(Boolean))];
     const models = [...new Set(allQuotes.map(q=>q.product).filter(Boolean))];
     document.getElementById('nQuotes').textContent = allQuotes.length;
