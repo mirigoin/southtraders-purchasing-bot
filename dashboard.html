@@ -193,7 +193,7 @@ async function deleteQuote() {
   if (!selectedQuoteId) return;
   if (!confirm('Eliminar esta cotización?')) return;
   try {
-    const r = await fetch('/quotes/' + selectedQuoteId, { method: 'DELETE' });
+    const r = await fetch('/api/quotes/' + selectedQuoteId, { method: 'DELETE' });
     const d = await r.json();
     if (d.ok) {
       toast('✅ Cotización eliminada');
@@ -270,8 +270,8 @@ function renderGroups(groups) {
 async function load() {
   try {
     const [qRes, gRes] = await Promise.all([
-      fetch('/quotes').then(r=>r.json()),
-      fetch('/groups').then(r=>r.json())
+      fetch('/api/quotes').then(r=>r.json()),
+      fetch('/api/suppliers').then(r=>r.json())
     ]);
     allQuotes = qRes.quotes || [];
     const groups = gRes.groups || [];
@@ -296,7 +296,7 @@ async function requestQuote() {
   if (!product) { toast('Ingresá el producto'); return; }
   const full = product + (target ? ' - target USD ' + target : '');
   try {
-    const r = await fetch('/request-quote', {
+    const r = await fetch('/api/request-quote', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({product: full})
