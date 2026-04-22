@@ -279,72 +279,81 @@ async function deleteQFromModal(){
   }catch(e){showToast('Error al eliminar');}
 }
 
-// CLICK EN BEST PRICES → MODAL
-(function() {
-  function attachBestRowClicks() {
-    const bestTab = document.getElementById('tab-best');
-    if (!bestTab) return;
-    const rows = bestTab.querySelectorAll('tbody tr');
-    rows.forEach(function(row) {
-      if (row.dataset.clickAttached) return;
-      row.dataset.clickAttached = '1';
-      row.style.cursor = 'pointer';
-      row.addEventListener('click', function() {
-        // Buscar el quote correspondiente por el texto de la fila
-        const cells = row.querySelectorAll('td');
-        if (!cells.length) return;
-        const product = cells[0]?.textContent?.trim() || '';
-        const model = cells[1]?.textContent?.trim() || '';
-        const capacity = cells[2]?.textContent?.trim() || '';
-        const price = cells[3]?.textContent?.replace(/[^0-9.]/g,'') || '';
-        const supplier = cells[5]?.textContent?.trim() || '';
-        // Buscar en los quotes cargados
-        if (window._allQuotesCache) {
-          const match = window._allQuotesCache.find(function(q) {
-            return (q.product||'').toLowerCase() === product.toLowerCase()
-              && String(q.price||'') === price;
-          });
-          if (match && typeof openQModal === 'function') {
-            openQModal(match);
-            return;
-          }
-        }
-        // Mostrar info basica si no hay cache
-        if (typeof openQModal === 'function') {
-          openQModal({
-            id: null,
-            product: product,
-            model: model,
-            capacity: capacity,
-            price: price,
-            supplier_name: supplier,
-            qty: cells[6]?.textContent?.trim(),
-            ts: new Date().toISOString(),
-            raw_text: '(Hacé click en Cotizaciones para ver el mensaje completo)'
-          });
-        }
-      });
+
+// CLICK EN BEST PRICES → MODAL CON MENSAJE ORIGINAL
+window.__allQuotesCache = [];
+
+function normalize(s){ return (s||'').toString().toLowerCase().trim(); }
+
+function findQuoteForRow(product, model, capacity, supplier) {
+  return window.__allQuotesCache.find(q =>
+    normalize(q.product)===normalize(product) &&
+    normalize(q.model)===normalize(model) &&
+    normalize(q.capacity)===normalize(capacity) &&
+    normalize(q.supplier_name)===normalize(supplier)
+  ) || window.__allQuotesCache.find(q =>
+    normalize(q.product)===normalize(product) &&
+    normalize(q.supplier_name)===normalize(supplier)
+  );
+}
+
+async function refreshQuoteCache() {
+  try {
+    const r = await fetch('/api/quotes');
+    const data = await r.json();
+    window.__allQuotesCache = Array.isArray(data) ? data : (data.quotes || []);
+  } catch(e) {}
+}
+
+window.deleteQFromModal = async function() {
+  const id = window._qSelectedId;
+  if (!id) { alert('Sin ID para eliminar'); return; }
+  if (!confirm('¿Eliminar esta cotización?')) return;
+  try {
+    const r = await fetch('/api/quotes/' + id, {method:'DELETE'});
+    const d = await r.json();
+    if (d.ok || d.deleted >= 0) {
+      window.__allQuotesCache = window.__allQuotesCache.filter(q => q.id !== id);
+      document.getElementById('qModal').classList.remove('open');
+      window._qSelectedId = null;
+      if (typeof loadBestPrices === 'function') loadBestPrices();
+      if (typeof showToast === 'function') showToast('✅ Cotización eliminada');
+    } else { alert('Error: ' + (d.error||'?')); }
+  } catch(e) { alert('Error: ' + e.message); }
+};
+
+function attachBestRowClicks() {
+  const bestTab = document.getElementById('tab-best');
+  if (!bestTab) return;
+  bestTab.querySelectorAll('tbody tr').forEach(row => {
+    if (row.dataset.mc) return;
+    row.dataset.mc = '1';
+    row.style.cursor = 'pointer';
+    row.addEventListener('mouseenter', () => row.style.background='#2d3748');
+    row.addEventListener('mouseleave', () => row.style.background='');
+    row.addEventListener('click', () => {
+      const cells = row.querySelectorAll('td');
+      if (!cells.length) return;
+      const product = cells[0]?.textContent?.trim()||'';
+      const model = cells[1]?.textContent?.trim()||'';
+      const capacity = cells[2]?.textContent?.trim()||'';
+      const supplier = cells[5]?.textContent?.trim()||'';
+      const q = findQuoteForRow(product, model, capacity, supplier);
+      const modal = document.getElementById('qModal');
+      if (!modal) return;
+      document.getElementById('qModalTitle').textContent = [product,model,capacity].filter(Boolean).join(' ');
+      document.getElementById('qModalMeta').textContent = 'Proveedor: '+(q?.supplier_name||supplier)+'  |  USD '+(q?.price||'')+'  |  Qty: '+(q?.qty||'-')+'  |  '+(q?new Date(q.ts).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'');
+      document.getElementById('qModalMsg').textContent = q?.raw_text||'(Sin mensaje original)';
+      window._qSelectedId = q?.id||null;
+      modal.classList.add('open');
     });
-  }
-  // Cachear quotes cuando se cargan
-  const origFetch = window.fetch;
-  window.fetch = function() {
-    return origFetch.apply(this, arguments).then(function(r) {
-      const clone = r.clone();
-      const url = arguments[0] || '';
-      if (typeof url === 'string' && url.includes('/api/quotes') && !url.includes('best')) {
-        clone.json().then(function(data) {
-          if (Array.isArray(data)) window._allQuotesCache = data;
-          else if (data.quotes) window._allQuotesCache = data.quotes;
-        }).catch(function(){});
-      }
-      return r;
-    });
-  };
-  // Observer para detectar cambios en la tabla
-  setInterval(attachBestRowClicks, 2000);
-  attachBestRowClicks();
-})();
+  });
+}
+
+refreshQuoteCache();
+setInterval(attachBestRowClicks, 2000);
+setInterval(refreshQuoteCache, 60000);
+
 </script>
 </body>
 </html>
