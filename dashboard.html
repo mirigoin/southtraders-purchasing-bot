@@ -61,7 +61,7 @@ label{font-size:12px;color:#718096;margin-bottom:4px;display:block}
 .modal-box{background:#1a202c;border-radius:10px;padding:24px;width:90%;max-width:520px;border:1px solid #2d3748}
 .modal-box h3{font-size:16px;font-weight:600;margin-bottom:16px}
 .close-btn{float:right;background:none;border:none;color:#718096;font-size:20px;cursor:pointer}
-</style>
+.modal-ov{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.75);z-index:200;display:none;align-items:center;justify-content:center}.modal-ov.open{display:flex}.modal-bx{background:#1a202c;border-radius:10px;border:1px solid #4a5568;padding:20px;max-width:580px;width:90%;max-height:80vh;overflow-y:auto}.modal-bx h3{font-size:14px;font-weight:600;margin-bottom:8px;color:#e2e8f0}.modal-msg{background:#171923;border-radius:6px;padding:10px;font-size:12px;color:#a0aec0;line-height:1.6;margin-bottom:12px;white-space:pre-wrap;word-break:break-word}.modal-meta{font-size:11px;color:#718096;margin-bottom:12px}.modal-acts{display:flex;gap:8px;justify-content:flex-end}.clickable-row{cursor:pointer}.clickable-row:hover td{background:#2d3748!important}.prod-row{display:flex;gap:8px;margin-bottom:8px}.prod-row input{background:#2d3748;border:1px solid #4a5568;border-radius:6px;color:#e2e8f0;padding:6px 10px;font-size:13px}.cost-val{color:#f6ad55;font-weight:600}</style>
 </head>
 <body>
 <header>
@@ -122,19 +122,14 @@ label{font-size:12px;color:#718096;margin-bottom:4px;display:block}
     </div>
     <div id="tab-request" class="tab-content">
       <div class="section-head" style="border:none;padding-bottom:0"><h2>📤 Pedir Cotización</h2></div>
-      <div style="max-width:500px;padding:16px 0">
-        <div class="form-row"><div><label>Producto</label><input id="rqProduct" placeholder="iPhone 16 Pro Max 256GB"></div></div>
-        <div class="form-row cols-2">
-          <div><label>Target Price (USD)</label><input id="rqPrice" type="number" placeholder="950"></div>
-          <div><label>Slots (vacío = todos)</label><input id="rqSlots" placeholder="1,3,5"></div>
+      <div style="padding:14px 18px">
+        <div id="productList" style="margin-bottom:10px"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+          <button class="action-btn" onclick="addProdRow()" style="background:#2d3748">+ Agregar producto</button>
+          <button class="action-btn" onclick="sendRequestQuote()">📤 Enviar a todos los grupos</button>
         </div>
-        <button class="btn btn-primary" onclick="sendRequest()">📤 Enviar Pedido</button>
-        <div id="rqResult" style="margin-top:12px;font-size:13px;color:#68d391"></div>
-      </div>
-      <table><thead><tr><th>Producto</th><th>Target</th><th>Enviado a</th><th>Fecha</th></tr></thead>
-      <tbody id="reqTbody"></tbody></table>
-    </div>
-    <div id="tab-messages" class="tab-content">
+        <div id="reqResult" style="font-size:12px;color:#68d391"></div>
+      </div>id="tab-messages" class="tab-content">
       <div class="section-head" style="border:none;padding-bottom:0">
         <h2>💬 Mensajes de Grupos</h2>
         <div style="display:flex;gap:8px;align-items:center">
@@ -238,5 +233,20 @@ label{font-size:12px;color:#718096;margin-bottom:4px;display:block}
   </div>
 </div>
 <script src="/dashboard.js"></script>
+
+<div class="modal-ov" id="qModal" onclick="if(event.target===this)closeQModal()"><div class="modal-bx"><h3 id="qModalTitle"></h3><div class="modal-meta" id="qModalMeta"></div><div class="modal-msg" id="qModalMsg"></div><div class="modal-acts"><button class="action-btn danger" onclick="deleteQFromModal()">🗑 Eliminar</button><button class="action-btn" onclick="closeQModal()">Cerrar</button></div></div></div>
+
+let _qId=null;window.__allQC=[];
+function normalize(s){return(s||"").toLowerCase().trim();}
+function findQ(p,m,cap,sup){return window.__allQC.find(q=>normalize(q.product)===normalize(p)&&normalize(q.model)===normalize(m)&&normalize(q.capacity)===normalize(cap)&&normalize(q.supplier_name)===normalize(sup))||window.__allQC.find(q=>normalize(q.product)===normalize(p)&&normalize(q.supplier_name)===normalize(sup));}
+async function refreshQC(){try{const r=await fetch("/api/quotes");const d=await r.json();window.__allQC=Array.isArray(d)?d:(d.quotes||[]);}catch(e){}}
+function openQModal(q){_qId=q&&q.id||null;document.getElementById("qModalTitle").textContent=[(q.product||""),(q.model||""),(q.capacity||"")].filter(Boolean).join(" ")||"Cotizacion";document.getElementById("qModalMeta").textContent="Proveedor: "+(q.supplier_name||"-")+"  USD "+(q.price||"-")+"  Qty: "+(q.qty||"-");document.getElementById("qModalMsg").textContent=q.raw_text||"(sin mensaje)";document.getElementById("qModal").classList.add("open");}
+function closeQModal(){document.getElementById("qModal").classList.remove("open");_qId=null;}
+async function deleteQFromModal(){if(!_qId){alert("Sin ID");return;}if(!confirm("Eliminar cotizacion?"))return;try{const r=await fetch("/api/quotes/"+_qId,{method:"DELETE"});const d=await r.json();if(d.ok||d.deleted>=0){window.__allQC=window.__allQC.filter(q=>q.id!==_qId);closeQModal();if(typeof loadBestPrices==="function")loadBestPrices();showToast("Eliminada");}else alert("Error: "+(d.error||"?"));}catch(e){alert("Error: "+e.message);}}
+function attachBestClicks(){const tab=document.getElementById("tab-best");if(!tab)return;tab.querySelectorAll("tbody tr").forEach(row=>{if(row.dataset.mc)return;row.dataset.mc="1";row.style.cursor="pointer";row.addEventListener("mouseenter",()=>row.style.background="#2d3748");row.addEventListener("mouseleave",()=>row.style.background="");row.addEventListener("click",()=>{const cells=row.querySelectorAll("td");if(!cells.length)return;const q=findQ(cells[0]&&cells[0].textContent.trim()||"",cells[1]&&cells[1].textContent.trim()||"",cells[2]&&cells[2].textContent.trim()||"",cells[5]&&cells[5].textContent.trim()||"");openQModal(q||{product:cells[0]&&cells[0].textContent.trim(),model:cells[1]&&cells[1].textContent.trim(),price:cells[3]&&cells[3].textContent.replace(/[^0-9.]/g,""),supplier_name:cells[5]&&cells[5].textContent.trim(),qty:cells[6]&&cells[6].textContent.trim(),ts:new Date().toISOString(),raw_text:"(Ver tab Cotizaciones para el mensaje completo)"});});});}
+refreshQC();setInterval(attachBestClicks,2000);setInterval(refreshQC,60000);
+function addProdRow(){const row=document.createElement("div");row.className="prod-row";row.innerHTML='<input class="prod-name" placeholder="Producto (ej: iPhone 16 128GB)" style="flex:3"><input class="prod-target" placeholder="Target USD" style="flex:1;max-width:150px"><button onclick="this.parentNode.remove()" style="background:#c53030;color:#fff;border:none;border-radius:6px;padding:5px 9px;cursor:pointer">x</button>';document.getElementById("productList").appendChild(row);}
+async function sendRequestQuote(){const rows=document.querySelectorAll(".prod-row");const products=[];rows.forEach(r=>{const name=r.querySelector(".prod-name")&&r.querySelector(".prod-name").value.trim();const target=r.querySelector(".prod-target")&&r.querySelector(".prod-target").value.trim();if(name)products.push({name:name,target:target||null});});if(!products.length){showToast("Agregar al menos un producto");return;}const el=document.getElementById("reqResult");el.textContent="Enviando...";try{const body=products.length===1?{product:products[0].name,target_price:products[0].target}:{products:products};const r=await fetch("/api/request-quote",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});const d=await r.json();if(d.ok||d.sent>=0){el.textContent="Enviado a "+(d.sent||d.groups_sent||"?")+" grupos";showToast("Enviado");}else el.textContent="Error: "+(d.error||"?");}catch(e){el.textContent="Error: "+e.message;}}
+addProdRow();</script>
 </body>
 </html>
