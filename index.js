@@ -822,7 +822,7 @@ app.delete('/api/quotes/:id', async function(req, res) {
 app.get('/', (req, res) => {
   res.json({
     status: 'ok',
-    service: 'Marco - South Traders Purchasing Bot',
+    service: 'Marco - South Traders Purchasing Bot v2.1',
     baileys: baileysStatus,
     timestamp: new Date().toISOString()
   });
