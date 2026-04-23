@@ -61,15 +61,6 @@ label{font-size:12px;color:#718096;margin-bottom:4px;display:block}
 .modal-box{background:#1a202c;border-radius:10px;padding:24px;width:90%;max-width:520px;border:1px solid #2d3748}
 .modal-box h3{font-size:16px;font-weight:600;margin-bottom:16px}
 .close-btn{float:right;background:none;border:none;color:#718096;font-size:20px;cursor:pointer}
-.clickable-row{cursor:pointer}
-.clickable-row:hover td{background:#2d3748!important}
-.modal-ov{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.75);z-index:200;display:none;align-items:center;justify-content:center}
-.modal-ov.open{display:flex}
-.modal-bx{background:#1a202c;border-radius:10px;border:1px solid #4a5568;padding:20px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto}
-.modal-bx h3{font-size:14px;font-weight:600;margin-bottom:8px;color:#e2e8f0}
-.modal-msg{background:#171923;border-radius:6px;padding:10px;font-size:12px;color:#a0aec0;line-height:1.6;margin-bottom:12px;white-space:pre-wrap;word-break:break-word}
-.modal-meta{font-size:11px;color:#718096;margin-bottom:12px}
-.modal-acts{display:flex;gap:8px;justify-content:flex-end}
 </style>
 </head>
 <body>
@@ -130,61 +121,122 @@ label{font-size:12px;color:#718096;margin-bottom:4px;display:block}
       <tbody id="quotesTbody"></tbody></table>
     </div>
     <div id="tab-request" class="tab-content">
-      <div class="section-head" style="border:none;padding-bottom:0"><h2>📤 Pedir Cotización a todos los grupos</h2></div>
-      <div style="padding:14px 18px">
-        <div id="productList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
-          <div class="product-row" style="display:flex;gap:8px">
-            <input class="prod-name" placeholder="Producto (ej: iPhone 16 128GB)" style="flex:3">
-            <input class="prod-target" placeholder="Target USD (opcional)" style="flex:1;max-width:180px">
-            <button onclick="this.parentNode.remove()" style="background:#c53030;color:#fff;border:none;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:12px">✕</button>
+      <div class="section-head" style="border:none;padding-bottom:0"><h2>📤 Pedir Cotización</h2></div>
+      <div style="max-width:500px;padding:16px 0">
+        <div class="form-row"><div><label>Producto</label><input id="rqProduct" placeholder="iPhone 16 Pro Max 256GB"></div></div>
+        <div class="form-row cols-2">
+          <div><label>Target Price (USD)</label><input id="rqPrice" type="number" placeholder="950"></div>
+          <div><label>Slots (vacío = todos)</label><input id="rqSlots" placeholder="1,3,5"></div>
+        </div>
+        <button class="btn btn-primary" onclick="sendRequest()">📤 Enviar Pedido</button>
+        <div id="rqResult" style="margin-top:12px;font-size:13px;color:#68d391"></div>
+      </div>
+      <table><thead><tr><th>Producto</th><th>Target</th><th>Enviado a</th><th>Fecha</th></tr></thead>
+      <tbody id="reqTbody"></tbody></table>
+    </div>
+    <div id="tab-messages" class="tab-content">
+      <div class="section-head" style="border:none;padding-bottom:0">
+        <h2>💬 Mensajes de Grupos</h2>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select id="msgHours" onchange="loadMessages()" style="width:130px">
+            <option value="24">24h</option>
+            <option value="48">48h</option>
+            <option value="168">7 días</option>
+          </select>
+          <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:#718096">
+            <input type="checkbox" id="onlyQuotes" onchange="loadMessages()"> Solo cotizaciones
+          </label>
+          <button class="btn btn-primary btn-sm" onclick="loadMessages()">↻</button>
+        </div>
+      </div>
+      <div id="msgList" style="max-height:500px;overflow-y:auto"></div>
+    </div>
+    <div id="tab-conn" class="tab-content">
+      <div class="section-head" style="border:none;padding-bottom:0"><h2>📡 WhatsApp (Baileys)</h2></div>
+      <div style="padding:16px 0">
+        <div id="baileysStatus" style="font-size:14px;margin-bottom:16px"></div>
+        <div id="qrSection" class="qr-wrap" style="display:none"></div>
+        <div style="margin-top:16px">
+          <h3 style="font-size:14px;font-weight:600;margin-bottom:12px">📱 Grupos disponibles</h3>
+          <button class="btn btn-primary btn-sm" onclick="loadGroups()" style="margin-bottom:12px">↻ Cargar grupos</button>
+          <table><thead><tr><th>Grupo</th><th>ID</th><th>Participantes</th><th>Asignar a slot</th></tr></thead>
+          <tbody id="groupsTbody"></tbody></table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    <div id="tab-compras" class="tab-content">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <h2 style="font-size:14px;font-weight:600">&#128722; Compras</h2>
+        <button class="btn btn-primary btn-sm" onclick="loadCompras()">&#8635; Actualizar stock</button>
+      </div>
+      <div id="comprasAlerts" style="margin-bottom:16px"></div>
+      <div style="border-top:1px solid #2d3748;padding-top:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <h3 style="font-size:13px;color:#718096">M&#237;nimos configurados</h3>
+          <button class="btn btn-green btn-sm" onclick="openAddMinimo()">+ Agregar</button>
+        </div>
+        <div id="addMinimoForm" style="display:none;background:#2d3748;border-radius:8px;padding:14px;margin-bottom:12px">
+          <div style="display:grid;grid-template-columns:160px 1fr 80px;gap:8px;align-items:end">
+            <div><label>C&#243;digo</label><input id="newCodigo" placeholder="IPH16256BLK-IND" list="stockList"></div>
+            <div><label>Descripci&#243;n</label><input id="newDesc" placeholder="APPLE IPHONE 16 256GB BLACK"></div>
+            <div><label>M&#237;nimo</label><input id="newMinimo" type="number" min="0" placeholder="10"></div>
+          </div>
+          <datalist id="stockList"></datalist>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <button class="btn btn-primary btn-sm" onclick="saveMinimo()">Guardar</button>
+            <button class="btn btn-sm" onclick="document.getElementById('addMinimoForm').style.display='none'" style="background:#4a5568;color:#e2e8f0">Cancelar</button>
           </div>
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-          <button class="action-btn" onclick="addProductRow()" style="background:#2d3748">+ Agregar producto</button>
-          <button class="action-btn" onclick="sendRequestQuote()">📤 Enviar a todos los grupos</button>
-        </div>
-        <div id="reqResult" style="margin-top:12px;font-size:12px;color:#68d391"></div>
+        <table><thead><tr><th>C&#243;digo</th><th>Descripci&#243;n</th><th>Stock</th><th>Tr&#225;nsito</th><th>M&#237;nimo</th><th>Falta</th><th>Mejor precio</th><th></th></tr></thead>
+        <tbody id="minimosTbody"><tr><td colspan="8" style="text-align:center;color:#718096;padding:20px">Haz click en "Actualizar stock" para cargar datos</td></tr></tbody></table>
       </div>
-function addProductRow() {
-  const row = document.createElement('div');
-  row.className = 'product-row';
-  row.style.cssText = 'display:flex;gap:8px';
-  row.innerHTML = '<input class="prod-name" placeholder="Producto (ej: Samsung S25 Ultra 512GB)" style="flex:3">' +
-    '<input class="prod-target" placeholder="Target USD (opcional)" style="flex:1;max-width:180px">' +
-    '<button onclick="this.parentNode.remove()" style="background:#c53030;color:#fff;border:none;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:12px">✕</button>';
-  document.getElementById('productList').appendChild(row);
-}
+    </div>
+    <div id="tab-missing" class="tab-content">
+      <div class="section-head" style="border:none;padding:16px 20px 8px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-size:18px;font-weight:600;">🔔 Productos sin cotización reciente</div>
+            <div id="missingSummary" style="font-size:13px;color:#666;margin-top:4px;">Cargando...</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <label style="font-size:13px;color:#555;">Días stale:
+              <input id="missingStaleDays" type="number" value="7" min="1" max="90" style="width:60px;margin-left:6px;padding:4px;border:1px solid #ccc;border-radius:4px;" />
+            </label>
+            <button class="btn" onclick="loadMissing()" style="padding:6px 12px;">↻ Refresh</button>
+          </div>
+        </div>
+      </div>
+      <div id="missingList" style="padding:8px 20px 20px;">
+        <div style="text-align:center;padding:40px;color:#999;">Cargando...</div>
+      </div>
+    </div>
 
-async function sendRequestQuote() {
-  const rows = document.querySelectorAll('.product-row');
-  const products = [];
-  rows.forEach(row => {
-    const name = row.querySelector('.prod-name')?.value?.trim();
-    const target = row.querySelector('.prod-target')?.value?.trim();
-    if (name) products.push({ name, target: target || null });
-  });
-  if (!products.length) { showToast('Agregar al menos un producto'); return; }
-  const resultEl = document.getElementById('reqResult');
-  resultEl.textContent = 'Enviando...';
-  try {
-    const body = products.length === 1
-      ? { product: products[0].name, target_price: products[0].target }
-      : { products };
-    const r = await fetch('/api/request-quote', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    const d = await r.json();
-    if (d.ok || d.sent >= 0) {
-      resultEl.textContent = '✅ Enviado a ' + (d.sent || d.groups_sent || '?') + ' grupos';
-      showToast('✅ Cotización enviada');
-    } else {
-      resultEl.textContent = '❌ Error: ' + (d.error || 'desconocido');
-    }
-  } catch(e) {
-    resultEl.textContent = '❌ Error: ' + e.message;
-  }
-}
-
-
+<div class="modal" id="supplierModal">
+  <div class="modal-box">
+    <button class="close-btn" onclick="closeModal()">×</button>
+    <h3 id="modalTitle">Slot #</h3>
+    <div class="form-row cols-2">
+      <div><label>Nombre</label><input id="mName"></div>
+      <div><label>Alias</label><input id="mAlias"></div>
+    </div>
+    <div class="form-row cols-2">
+      <div><label>Teléfono</label><input id="mPhone"></div>
+      <div><label>Contacto</label><input id="mContactName"></div>
+    </div>
+    <div class="form-row cols-2">
+      <div><label>País</label><input id="mCountry"></div>
+      <div><label>Activo</label><select id="mActive"><option value="true">Sí</option><option value="false">No</option></select></div>
+    </div>
+    <div class="form-row"><div><label>Grupo WA</label><input id="mGroupName" readonly></div></div>
+    <div class="form-row"><div><label>Notas</label><textarea id="mNotes" rows="2"></textarea></div></div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn btn-primary" onclick="saveSupplier()">💾 Guardar</button>
+      <span id="modalMsg" style="font-size:12px;color:#68d391;align-self:center"></span>
+    </div>
+  </div>
+</div>
+<script src="/dashboard.js"></script>
+</body>
+</html>
