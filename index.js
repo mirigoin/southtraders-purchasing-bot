@@ -473,7 +473,41 @@ Si NADA encaja, devuelve {"quotes":[]}.`,
 }
 
 // ============ SAVE QUOTES TO DB ============
-async function saveQuotes(quotes, supplierSlot, supplierName, rawText, source) {
+
+// ============ LANGUAGE DETECTION + ACK HELPER ============
+// Cache de idioma por chat (group_id o phone)
+const _chatLangCache = {};
+
+function detectSpanish(text) {
+  if (!text) return false;
+  const t = text.toLowerCase();
+  const esWords = ['tengo','precio','disponible','unidades','pcs','stock','hola','buenos','gracias','cuánto','cuanto','ofrezco','vendemos','manejamos','les','les ofrecemos','tenemos','pueden','favor','saludos','estimados'];
+  return esWords.some(w => t.includes(w));
+}
+
+function getChatLang(chatId, msgText) {
+  if (!_chatLangCache[chatId]) {
+    _chatLangCache[chatId] = detectSpanish(msgText || '') ? 'es' : 'en';
+  } else if (detectSpanish(msgText || '')) {
+    _chatLangCache[chatId] = 'es'; // actualizar si detecta español
+  }
+  return _chatLangCache[chatId];
+}
+
+function buildAck(lang) {
+  if (lang === 'es') {
+    const opts = ['Gracias, anotado! 👍', 'Perfecto, tomamos nota. Gracias!', 'Recibido, muchas gracias!', 'Anotado, gracias!'];
+    return opts[Math.floor(Math.random() * opts.length)];
+  } else {
+    const opts = ['Thanks, noted! 👍', 'Got it, thank you!', 'Received, thanks!', 'Noted, thanks!'];
+    return opts[Math.floor(Math.random() * opts.length)];
+  }
+}
+
+// Track de grupos donde Marco pidió cotización (para saber si responder)
+const _requestedChats = new Set();
+
+async function saveQuotes(quotes, supplierSlot, supplierName, rawText, source, chatId) {
   for (const q of quotes) {
     await pool.query(
       `INSERT INTO quotes (supplier_slot, supplier_name, source, raw_text, product, model, capacity, color, condition, price, currency, qty, incoterm) 
@@ -549,6 +583,15 @@ async function initBaileys() {
         } catch(e) {}
         return { conversation: '' };
       },
+  // Agradecimiento si Marco habia pedido cotizacion en este chat
+  if (chatId && _requestedChats.has(chatId) && baileysClient && baileysStatus === 'connected') {
+    try {
+      const lang = getChatLang(chatId, rawText);
+      const ack = buildAck(lang);
+      await baileysClient.sendMessage(chatId, { text: ack });
+    } catch(e) { console.error('ack error:', e.message); }
+  }
+
 });
 
     sock.ev.on('creds.update', saveCreds);
@@ -607,7 +650,7 @@ async function initBaileys() {
             const result = await extractQuote(text, supName);
             if (result.quotes && result.quotes.length > 0) {
               await pool.query(`UPDATE group_messages SET has_quote = TRUE, processed = TRUE WHERE wa_message_id = $1`, [msg.key.id]);
-              await saveQuotes(result.quotes, supSlot, supName, text, 'group');
+              await saveQuotes(result.quotes, supSlot, supName, text, 'group', jid);
               try { await pool.query('UPDATE quotes SET group_id = $1 WHERE raw_text = $2 AND group_id IS NULL', [groupId, text]); } catch(e) {}
             }
           } else if (isDM) {
@@ -628,7 +671,7 @@ async function initBaileys() {
             const result = await extractQuote(text, supName);
             if (result.quotes && result.quotes.length > 0) {
               await pool.query(`UPDATE group_messages SET has_quote = TRUE, processed = TRUE WHERE wa_message_id = $1`, [msg.key.id]);
-              await saveQuotes(result.quotes, supSlot, supName, text, 'dm');
+              await saveQuotes(result.quotes, supSlot, supName, text, 'dm', senderPhone + '@s.whatsapp.net');
             }
           }
         }
@@ -1049,7 +1092,27 @@ app.post('/api/request-quote', async (req, res) => {
 
     // Guardar registro
     const supplierNames = targets.map(s => s.name || 'Slot ' + s.slot).join(', ');
-    const msg = 'Cotizacion: ' + product + (target_price ? ' | Target: $' + target_price : '') + ' | Responder con precio, cantidad e incoterm';
+    const groupLang = getChatLang(groupId || '', '');
+    const isEs = groupLang === 'es';
+    const productLines = Array.isArray(products) && products.length
+      ? products.map(p => '- ' + p.name + (p.target ? ' (target USD ' + p.target + ' CIF Miami)' : '')).join('\n')
+      : '- ' + product + (target_price ? ' (target USD ' + target_price + ' CIF Miami)' : '');
+    const todayKey = (groupId || '') + '_' + new Date().toISOString().slice(0,10);
+    if (!global._firstContact) global._firstContact = {};
+    const isNewToday = !global._firstContact[todayKey];
+    global._firstContact[todayKey] = true;
+    let msg;
+    if (isEs) {
+      const greetEs = new Date().getHours() < 12 ? 'Buenos dias' : new Date().getHours() < 19 ? 'Buenas tardes' : 'Buenas';
+      msg = isNewToday
+        ? greetEs + '! Buscamos cotizacion para lo siguiente:\n' + productLines + '\n\nSi tienen disponibilidad nos pasan precio, qty e incoterm. Gracias!'
+        : 'Buscamos cotizacion para:\n' + productLines + '\n\nNos pasan precio y qty si tienen. Gracias!';
+    } else {
+      const greetEN = new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 19 ? 'Good afternoon' : 'Good evening';
+      msg = isNewToday
+        ? greetEN + '! Looking for pricing on the following:\n' + productLines + '\n\nIf available please share price, qty and incoterm. Thanks!'
+        : 'Looking for pricing on:\n' + productLines + '\n\nPlease share price and qty if available. Thanks!';
+    }
     await pool.query(
       'INSERT INTO quote_requests (product, target_price, suppliers_sent, message_sent, status) VALUES ($1,$2,$3,$4,$5)',
       [product, target_price || null, supplierNames || null, msg, 'open']
@@ -1065,6 +1128,7 @@ app.post('/api/request-quote', async (req, res) => {
           if (s.whatsapp_group_id) {
             try {
               await baileysClient.sendMessage(s.whatsapp_group_id, { text: msg });
+              _requestedChats.add(s.whatsapp_group_id);
               sentOk = true;
               console.log('Sent to group', s.name || s.slot);
             } catch(groupErr) {
@@ -1075,6 +1139,7 @@ app.post('/api/request-quote', async (req, res) => {
             try {
               const phone = s.contact_phone.replace(/\D/g, '');
               await baileysClient.sendMessage(phone + '@s.whatsapp.net', { text: msg });
+              _requestedChats.add(phone + '@s.whatsapp.net');
               sentOk = true;
               console.log('Sent direct via Baileys to', s.name || s.slot);
             } catch(dmErr) {
