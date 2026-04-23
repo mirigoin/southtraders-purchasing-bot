@@ -1,33 +1,3 @@
-app.get('/dashboard', function(req, res) {
-  const fs = require('fs');
-  const path = require('path');
-  const htmlPath = path.join(__dirname, 'dashboard.html');
-  let html = fs.readFileSync(htmlPath, 'utf8');
-  
-  // Inyectar JS actualizado antes de </body>
-  const extraJS = `<script>
-let _qId=null;window.__allQC=[];
-function normalize(s){return(s||"").toLowerCase().trim();}
-function findQ(p,m,cap,sup){return window.__allQC.find(q=>normalize(q.product)===normalize(p)&&normalize(q.model)===normalize(m)&&normalize(q.capacity)===normalize(cap)&&normalize(q.supplier_name)===normalize(sup))||window.__allQC.find(q=>normalize(q.product)===normalize(p)&&normalize(q.supplier_name)===normalize(sup));}
-async function refreshQC(){try{const r=await fetch('/api/quotes');const d=await r.json();window.__allQC=Array.isArray(d)?d:(d.quotes||[]);}catch(e){}}
-function openQModal(q){_qId=q&&q.id||null;document.getElementById("qModalTitle").textContent=[(q.product||""),(q.model||""),(q.capacity||"")].filter(Boolean).join(" ")||"Cotizacion";document.getElementById("qModalMeta").textContent="Proveedor: "+(q.supplier_name||"-")+"  USD "+(q.price||"-")+"  Qty: "+(q.qty||"-");document.getElementById("qModalMsg").textContent=q.raw_text||"(sin mensaje)";document.getElementById("qModal").classList.add("open");}
-function closeQModal(){document.getElementById("qModal").classList.remove("open");_qId=null;}
-async function deleteQFromModal(){if(!_qId){alert("Sin ID");return;}if(!confirm("Eliminar?"))return;try{const r=await fetch("/api/quotes/"+_qId,{method:"DELETE"});const d=await r.json();if(d.ok||d.deleted>=0){window.__allQC=window.__allQC.filter(q=>q.id!==_qId);closeQModal();if(typeof loadBestPrices==="function")loadBestPrices();if(typeof showToast==="function")showToast("Eliminada");}else alert("Error: "+(d.error||"?"));}catch(e){alert("Error: "+e.message);}}
-function attachBestClicks(){const tab=document.getElementById("tab-best");if(!tab)return;tab.querySelectorAll("tbody tr").forEach(row=>{if(row.dataset.mc)return;row.dataset.mc="1";row.style.cursor="pointer";row.addEventListener("mouseenter",()=>row.style.background="#2d3748");row.addEventListener("mouseleave",()=>row.style.background="");row.addEventListener("click",()=>{const cells=row.querySelectorAll("td");if(!cells.length)return;const q=findQ(cells[0]&&cells[0].textContent.trim()||"",cells[1]&&cells[1].textContent.trim()||"",cells[2]&&cells[2].textContent.trim()||"",cells[5]&&cells[5].textContent.trim()||"");openQModal(q||{product:cells[0]&&cells[0].textContent.trim(),model:cells[1]&&cells[1].textContent.trim(),price:cells[3]&&cells[3].textContent.replace(/[^0-9.]/g,""),supplier_name:cells[5]&&cells[5].textContent.trim(),qty:cells[6]&&cells[6].textContent.trim(),ts:new Date().toISOString(),raw_text:"(Ver tab Cotizaciones para mensaje completo)"});});});}
-refreshQC();setInterval(attachBestClicks,2000);setInterval(refreshQC,60000);
-function addProdRow(){const row=document.createElement("div");row.className="prod-row";row.style.cssText="display:flex;gap:8px;margin-bottom:8px";row.innerHTML='<input class="prod-name" placeholder="Producto (ej: iPhone 16 128GB)" style="flex:3;background:#2d3748;border:1px solid #4a5568;border-radius:6px;color:#e2e8f0;padding:6px 10px;font-size:13px"><input class="prod-target" placeholder="Target USD" style="flex:1;max-width:150px;background:#2d3748;border:1px solid #4a5568;border-radius:6px;color:#e2e8f0;padding:6px 10px;font-size:13px"><button onclick="this.parentNode.remove()" style="background:#c53030;color:#fff;border:none;border-radius:6px;padding:5px 9px;cursor:pointer">x</button>';document.getElementById("productList").appendChild(row);}
-async function sendRequestQuote(){const rows=document.querySelectorAll(".prod-row");const products=[];rows.forEach(r=>{const name=r.querySelector(".prod-name")&&r.querySelector(".prod-name").value.trim();const target=r.querySelector(".prod-target")&&r.querySelector(".prod-target").value.trim();if(name)products.push({name:name,target:target||null});});if(!products.length){if(typeof showToast==="function")showToast("Agregar al menos un producto");return;}const el=document.getElementById("reqResult");el.textContent="Enviando...";try{const body=products.length===1?{product:products[0].name,target_price:products[0].target}:{products:products};const r=await fetch("/api/request-quote",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});const d=await r.json();if(d.ok||d.sent>=0){el.textContent="Enviado a "+(d.sent||d.groups_sent||"?")+" grupos";if(typeof showToast==="function")showToast("Enviado");}else el.textContent="Error: "+(d.error||"?");}catch(e){el.textContent="Error: "+e.message;}}
-if(document.getElementById("productList"))addProdRow();
-</script>
-<div class="modal-ov" id="qModal" onclick="if(event.target===this)closeQModal()"><div class="modal-bx"><h3 id="qModalTitle"></h3><div style="font-size:11px;color:#718096;margin-bottom:10px" id="qModalMeta"></div><div style="background:#171923;border-radius:6px;padding:10px;font-size:12px;color:#a0aec0;line-height:1.6;margin-bottom:12px;white-space:pre-wrap;word-break:break-word" id="qModalMsg"></div><div style="display:flex;gap:8px;justify-content:flex-end"><button class="action-btn danger" onclick="deleteQFromModal()">Eliminar</button><button class="action-btn" onclick="closeQModal()">Cerrar</button></div></div></div>
-<style>.modal-ov{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.75);z-index:200;display:none;align-items:center;justify-content:center}.modal-ov.open{display:flex}.modal-bx{background:#1a202c;border-radius:10px;border:1px solid #4a5568;padding:20px;max-width:580px;width:90%;max-height:80vh;overflow-y:auto}.modal-bx h3{font-size:14px;font-weight:600;margin-bottom:8px;color:#e2e8f0}.clickable-row{cursor:pointer}.prod-row{display:flex;gap:8px;margin-bottom:8px}</style>`;
-  
-  html = html.replace('</body>', extraJS + '</body>');
-  res.setHeader('Content-Type', 'text/html');
-  res.send(html);
-});
-
-
 const express = require('express');
 const axios = require('axios');
 const { Pool } = require('pg');
@@ -53,264 +23,189 @@ const pool = new Pool({
 });
 
 async function initDB() {
-  await pool.query(`<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>🤖 Marco — Purchasing Bot</title>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f1117;color:#e2e8f0;min-height:100vh}
-header{background:#1a1a2e;padding:16px 24px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #2d3748}
-header h1{font-size:18px;font-weight:700;color:#fff}
-.dot{width:8px;height:8px;border-radius:50%;background:#22c55e;animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.ts{font-size:12px;color:#718096;margin-left:auto}
-.wrap{padding:20px 24px;max-width:1200px;margin:0 auto}
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
-.stat{background:#1a202c;border-radius:10px;padding:16px;border:1px solid #2d3748}
-.stat .n{font-size:28px;font-weight:700;color:#63b3ed}
-.stat .l{font-size:12px;color:#718096;margin-top:4px}
-.section{background:#1a202c;border-radius:10px;border:1px solid #2d3748;margin-bottom:20px;overflow:hidden}
-.section-head{padding:14px 18px;border-bottom:1px solid #2d3748;display:flex;align-items:center;gap:8px;justify-content:space-between}
-.section-head h2{font-size:14px;font-weight:600;color:#e2e8f0}
-.badge{font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500}
-.badge-green{background:#1c4532;color:#68d391}
-.badge-blue{background:#1a365d;color:#63b3ed}
-table{width:100%;border-collapse:collapse}
-th{padding:6px 10px;text-align:left;font-size:11px;font-weight:600;color:#718096;text-transform:uppercase;letter-spacing:.05em}
-td{padding:4px 10px;font-size:12px;border-bottom:1px solid #1a202c}
-tr:hover td{background:#2d3748}
-tr:last-child td{border-bottom:none}
-.tabs{display:flex;gap:4px;padding:12px 18px;border-bottom:1px solid #2d3748}
-.tab{padding:6px 14px;border-radius:6px;font-size:13px;cursor:pointer;border:none;background:none;color:#718096}
-.tab.active{background:#2d3748;color:#e2e8f0}
-.tab-content{display:none;padding:16px 18px}
-.tab-content.active{display:block}
-input,select,textarea{background:#2d3748;border:1px solid #4a5568;border-radius:6px;color:#e2e8f0;padding:8px 12px;font-size:13px;width:100%}
-input:focus,select:focus,textarea:focus{outline:none;border-color:#63b3ed}
-.form-row{display:grid;gap:10px;margin-bottom:12px}
-.form-row.cols-2{grid-template-columns:1fr 1fr}
-label{font-size:12px;color:#718096;margin-bottom:4px;display:block}
-.btn{padding:8px 16px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;border:none}
-.btn-primary{background:#3b82f6;color:#fff}
-.btn-primary:hover{background:#2563eb}
-.btn-sm{padding:4px 10px;font-size:12px}
-.btn-green{background:#166534;color:#86efac}
-.supplier-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;padding:16px 18px}
-.supplier-card{background:#2d3748;border-radius:8px;padding:12px;cursor:pointer;border:2px solid transparent}
-.supplier-card.active{border-color:#22c55e}
-.supplier-card.empty{border-color:#4a5568;opacity:.6}
-.supplier-card .slot{font-size:10px;color:#718096}
-.supplier-card .name{font-size:14px;font-weight:600;margin:4px 0}
-.supplier-card .meta{font-size:11px;color:#718096}
-.qr-wrap{text-align:center;padding:30px}
-.msg-item{padding:10px 18px;border-bottom:1px solid #2d3748;font-size:13px}
-.msg-item:last-child{border-bottom:none}
-.msg-meta{font-size:11px;color:#718096;margin-bottom:4px}
-.msg-text{color:#e2e8f0}
-.has-quote{border-left:3px solid #22c55e}
-.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center}
-.modal.open{display:flex}
-.modal-box{background:#1a202c;border-radius:10px;padding:24px;width:90%;max-width:520px;border:1px solid #2d3748}
-.modal-box h3{font-size:16px;font-weight:600;margin-bottom:16px}
-.close-btn{float:right;background:none;border:none;color:#718096;font-size:20px;cursor:pointer}
-.modal-ov{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.8);z-index:200;display:none;align-items:center;justify-content:center}.modal-ov.open{display:flex}.modal-bx{background:#1a202c;border-radius:10px;border:1px solid #4a5568;padding:20px;max-width:580px;width:90%;max-height:80vh;overflow-y:auto}.modal-bx h3{font-size:14px;font-weight:600;margin-bottom:8px;color:#e2e8f0}.modal-msg{background:#171923;border-radius:6px;padding:10px;font-size:12px;color:#a0aec0;line-height:1.6;margin-bottom:12px;white-space:pre-wrap;word-break:break-word}.modal-meta{font-size:11px;color:#718096;margin-bottom:12px}.modal-acts{display:flex;gap:8px;justify-content:flex-end}.clickable-row{cursor:pointer!important}.clickable-row:hover td{background:#2d3748!important}.prod-row{display:flex;gap:6px;margin-bottom:8px}.prod-row input{flex:1;background:#2d3748;border:1px solid #4a5568;border-radius:6px;color:#e2e8f0;padding:6px 10px;font-size:13px}</style>
-</head>
-<body>
-<header>
-  <div class="dot" id="statusDot"></div>
-  <h1>🤖 Marco — Purchasing Bot</h1>
-  <span class="ts" id="statusText">⏳ Checking...</span>
-</header>
-<div class="wrap">
-  <div class="stats">
-    <div class="stat"><div class="n" id="statConn">-</div><div class="l">Conexión</div></div>
-    <div class="stat"><div class="n" id="statSuppliers">-</div><div class="l">Proveedores activos</div></div>
-    <div class="stat"><div class="n" id="statQuotes24">-</div><div class="l">Cotizaciones 24h</div></div>
-    <div class="stat"><div class="n" id="statQuotes7d">-</div><div class="l">Cotizaciones 7d</div></div>
-    <div class="stat"><div class="n" id="statRequests">-</div><div class="l">Pedidos enviados</div></div>
-  </div>
-  <div class="section">
-    <div class="tabs">
-      <button class="tab active" onclick="showTab('tab-best',this)">🏆 Best Prices</button>
-      <button class="tab" onclick="showTab('tab-suppliers',this)">🏭 Proveedores</button>
-      <button class="tab" onclick="showTab('tab-quotes',this)">💰 Cotizaciones</button>
-      <button class="tab" onclick="showTab('tab-request',this)">📤 Pedir Cotización</button>
-      <button class="tab" onclick="showTab('tab-messages',this)">💬 Mensajes</button>
-      <button class="tab" onclick="showTab('tab-conn',this)">📡 Conexión</button>
-      <button class="tab" onclick="showTab('tab-compras',this)">&#128722; Compras</button>
-      <button class="tab" onclick="showTab('tab-missing',this)">🔔 Faltantes</button>
-    </div>
-    <div id="tab-best" class="tab-content active">
-      <div class="section-head" style="border:none;padding-bottom:0">
-        <h2>🏆 Mejores precios (últimos 7 días)</h2>
-        <button class="btn btn-primary btn-sm" onclick="loadBest()">↻ Refresh</button>
-      </div>
-      <table><thead><tr><th>Producto</th><th>Modelo</th><th>Capacidad</th><th>Precio</th><th>Costo</th><th>Proveedor</th><th>Qty</th><th>Incoterm</th><th>Fecha</th></tr></thead>
-      <tbody id="bestTbody"><tr><td colspan="8" style="text-align:center;color:#718096;padding:20px">Cargando...</td></tr></tbody></table>
-    </div>
-    <div id="tab-suppliers" class="tab-content">
-      <div class="section-head" style="border:none;padding-bottom:0">
-        <h2>🏭 Proveedores (50 slots)</h2>
-        <button class="btn btn-primary btn-sm" onclick="loadSuppliers()">↻ Refresh</button>
-      </div>
-      <div class="supplier-grid" id="supplierGrid">Cargando...</div>
-    </div>
-    <div id="tab-quotes" class="tab-content">
-      <div class="section-head" style="border:none;padding-bottom:0">
-        <h2>💰 Cotizaciones</h2>
-        <div style="display:flex;gap:8px;align-items:center">
-          <input style="width:160px" placeholder="Filtrar producto..." id="filterProduct" oninput="loadQuotes()">
-          <input style="width:160px" placeholder="Filtrar proveedor..." id="filterSupplier" oninput="loadQuotes()">
-          <select id="filterHours" onchange="loadQuotes()" style="width:130px">
-            <option value="">Todas</option>
-            <option value="24">24h</option>
-            <option value="168">7 días</option>
-          </select>
-          <button class="btn btn-primary btn-sm" onclick="loadQuotes()">↻</button>
-        </div>
-      </div>
-      <table><thead><tr><th>Producto</th><th>Modelo</th><th>Cap</th><th>Color</th><th>Precio</th><th>Costo</th><th>Qty</th><th>Incoterm</th><th>Proveedor</th><th>Fecha</th></tr></thead>
-      <tbody id="quotesTbody"></tbody></table>
-    </div>
-    <div id="tab-request" class="tab-content">
-      <div style="padding:14px 18px">
-        <p style="font-size:12px;color:#718096;margin-bottom:12px">Agregá uno o más productos y enviá la cotización a todos los grupos.</p>
-        <div id="productList" style="margin-bottom:12px"></div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-          <button class="action-btn" onclick="addProdRow()" style="background:#2d3748;border:1px solid #4a5568">+ Agregar producto</button>
-          <button class="action-btn" onclick="sendRequestQuote()">📤 Enviar a todos los grupos</button>
-        </div>
-        <div id="reqResult" style="font-size:12px;color:#68d391;min-height:20px"></div>
-      </div>id="tab-messages" class="tab-content">
-      <div class="section-head" style="border:none;padding-bottom:0">
-        <h2>💬 Mensajes de Grupos</h2>
-        <div style="display:flex;gap:8px;align-items:center">
-          <select id="msgHours" onchange="loadMessages()" style="width:130px">
-            <option value="24">24h</option>
-            <option value="48">48h</option>
-            <option value="168">7 días</option>
-          </select>
-          <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:#718096">
-            <input type="checkbox" id="onlyQuotes" onchange="loadMessages()"> Solo cotizaciones
-          </label>
-          <button class="btn btn-primary btn-sm" onclick="loadMessages()">↻</button>
-        </div>
-      </div>
-      <div id="msgList" style="max-height:500px;overflow-y:auto"></div>
-    </div>
-    <div id="tab-conn" class="tab-content">
-      <div class="section-head" style="border:none;padding-bottom:0"><h2>📡 WhatsApp (Baileys)</h2></div>
-      <div style="padding:16px 0">
-        <div id="baileysStatus" style="font-size:14px;margin-bottom:16px"></div>
-        <div id="qrSection" class="qr-wrap" style="display:none"></div>
-        <div style="margin-top:16px">
-          <h3 style="font-size:14px;font-weight:600;margin-bottom:12px">📱 Grupos disponibles</h3>
-          <button class="btn btn-primary btn-sm" onclick="loadGroups()" style="margin-bottom:12px">↻ Cargar grupos</button>
-          <table><thead><tr><th>Grupo</th><th>ID</th><th>Participantes</th><th>Asignar a slot</th></tr></thead>
-          <tbody id="groupsTbody"></tbody></table>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-    <div id="tab-compras" class="tab-content">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-        <h2 style="font-size:14px;font-weight:600">&#128722; Compras</h2>
-        <button class="btn btn-primary btn-sm" onclick="loadCompras()">&#8635; Actualizar stock</button>
-      </div>
-      <div id="comprasAlerts" style="margin-bottom:16px"></div>
-      <div style="border-top:1px solid #2d3748;padding-top:16px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-          <h3 style="font-size:13px;color:#718096">M&#237;nimos configurados</h3>
-          <button class="btn btn-green btn-sm" onclick="openAddMinimo()">+ Agregar</button>
-        </div>
-        <div id="addMinimoForm" style="display:none;background:#2d3748;border-radius:8px;padding:14px;margin-bottom:12px">
-          <div style="display:grid;grid-template-columns:160px 1fr 80px;gap:8px;align-items:end">
-            <div><label>C&#243;digo</label><input id="newCodigo" placeholder="IPH16256BLK-IND" list="stockList"></div>
-            <div><label>Descripci&#243;n</label><input id="newDesc" placeholder="APPLE IPHONE 16 256GB BLACK"></div>
-            <div><label>M&#237;nimo</label><input id="newMinimo" type="number" min="0" placeholder="10"></div>
-          </div>
-          <datalist id="stockList"></datalist>
-          <div style="display:flex;gap:8px;margin-top:10px">
-            <button class="btn btn-primary btn-sm" onclick="saveMinimo()">Guardar</button>
-            <button class="btn btn-sm" onclick="document.getElementById('addMinimoForm').style.display='none'" style="background:#4a5568;color:#e2e8f0">Cancelar</button>
-          </div>
-        </div>
-        <table><thead><tr><th>C&#243;digo</th><th>Descripci&#243;n</th><th>Stock</th><th>Tr&#225;nsito</th><th>M&#237;nimo</th><th>Falta</th><th>Mejor precio</th><th></th></tr></thead>
-        <tbody id="minimosTbody"><tr><td colspan="8" style="text-align:center;color:#718096;padding:20px">Haz click en "Actualizar stock" para cargar datos</td></tr></tbody></table>
-      </div>
-    </div>
-    <div id="tab-missing" class="tab-content">
-      <div class="section-head" style="border:none;padding:16px 20px 8px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <div>
-            <div style="font-size:18px;font-weight:600;">🔔 Productos sin cotización reciente</div>
-            <div id="missingSummary" style="font-size:13px;color:#666;margin-top:4px;">Cargando...</div>
-          </div>
-          <div style="display:flex;gap:8px;align-items:center;">
-            <label style="font-size:13px;color:#555;">Días stale:
-              <input id="missingStaleDays" type="number" value="7" min="1" max="90" style="width:60px;margin-left:6px;padding:4px;border:1px solid #ccc;border-radius:4px;" />
-            </label>
-            <button class="btn" onclick="loadMissing()" style="padding:6px 12px;">↻ Refresh</button>
-          </div>
-        </div>
-      </div>
-      <div id="missingList" style="padding:8px 20px 20px;">
-        <div style="text-align:center;padding:40px;color:#999;">Cargando...</div>
-      </div>
-    </div>
+  await pool.query(`CREATE TABLE IF NOT EXISTS suppliers (
+    id SERIAL PRIMARY KEY,
+    slot INTEGER UNIQUE NOT NULL,
+    name TEXT,
+    alias TEXT,
+    whatsapp_group_id TEXT,
+    whatsapp_group_name TEXT,
+    contact_phone TEXT,
+    contact_name TEXT,
+    country TEXT,
+    notes TEXT,
+    active BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
 
-<div class="modal" id="supplierModal">
-  <div class="modal-box">
-    <button class="close-btn" onclick="closeModal()">×</button>
-    <h3 id="modalTitle">Slot #</h3>
-    <div class="form-row cols-2">
-      <div><label>Nombre</label><input id="mName"></div>
-      <div><label>Alias</label><input id="mAlias"></div>
-    </div>
-    <div class="form-row cols-2">
-      <div><label>Teléfono</label><input id="mPhone"></div>
-      <div><label>Contacto</label><input id="mContactName"></div>
-    </div>
-    <div class="form-row cols-2">
-      <div><label>País</label><input id="mCountry"></div>
-      <div><label>Activo</label><select id="mActive"><option value="true">Sí</option><option value="false">No</option></select></div>
-    </div>
-    <div class="form-row"><div><label>Grupo WA</label><input id="mGroupName" readonly></div></div>
-    <div class="form-row"><div><label>Notas</label><textarea id="mNotes" rows="2"></textarea></div></div>
-    <div style="display:flex;gap:8px;margin-top:8px">
-      <button class="btn btn-primary" onclick="saveSupplier()">💾 Guardar</button>
-      <span id="modalMsg" style="font-size:12px;color:#68d391;align-self:center"></span>
-    </div>
-  </div>
-</div>
-<script src="/dashboard.js">
-// === QUOTES CACHE ===
-window.__QC=[];
-function norm(s){return(s||"").toLowerCase().trim();}
-function findQ(p,m,cap,sup){return window.__QC.find(q=>norm(q.product)===norm(p)&&norm(q.model)===norm(m)&&norm(q.capacity)===norm(cap)&&norm(q.supplier_name)===norm(sup))||window.__QC.find(q=>norm(q.product)===norm(p)&&norm(q.supplier_name)===norm(sup));}
-async function refreshQC(){try{const r=await fetch("/api/quotes");const d=await r.json();window.__QC=Array.isArray(d)?d:(d.quotes||[]);}catch(e){}}
-// === MODAL ===
-let _qId=null;
-function openQModal(q){_qId=(q&&q.id)||null;var m=[(q.product||""),(q.model||""),(q.capacity||"")].filter(Boolean).join(" ");document.getElementById("qModalTitle").textContent=m||"Cotización";document.getElementById("qModalMeta").textContent="Proveedor: "+(q.supplier_name||"-")+"  |  USD "+(q.price||"-")+"  |  Qty: "+(q.qty||"-");document.getElementById("qModalMsg").textContent=q.raw_text||"(sin mensaje original)";document.getElementById("qModal").classList.add("open");}
-function closeQModal(){document.getElementById("qModal").classList.remove("open");_qId=null;}
-async function deleteQFromModal(){if(!_qId){alert("Sin ID para eliminar");return;}if(!confirm("Eliminar esta cotización?"))return;try{var r=await fetch("/api/quotes/"+_qId,{method:"DELETE"});var d=await r.json();if(d.ok||d.deleted>=0){window.__QC=window.__QC.filter(function(q){return q.id!==_qId;});closeQModal();if(typeof loadBestPrices==="function")loadBestPrices();showToast("Cotización eliminada");}else alert("Error: "+(d.error||"desconocido"));}catch(e){alert("Error: "+e.message);}}
-// === CLICK EN BEST PRICES ===
-function attachBestClicks(){var tab=document.getElementById("tab-best");if(!tab)return;tab.querySelectorAll("tbody tr").forEach(function(row){if(row.dataset.mc)return;row.dataset.mc="1";row.classList.add("clickable-row");row.addEventListener("click",function(){var cells=row.querySelectorAll("td");if(!cells.length)return;var p=cells[0]?cells[0].textContent.trim():"";var m=cells[1]?cells[1].textContent.trim():"";var cap=cells[2]?cells[2].textContent.trim():"";var sup=cells[5]?cells[5].textContent.trim():"";var q=findQ(p,m,cap,sup);if(!q)q={product:p,model:m,capacity:cap,supplier_name:sup,price:cells[3]?cells[3].textContent.replace(/[^0-9.]/g,""):"",qty:cells[6]?cells[6].textContent.trim():"",ts:new Date().toISOString(),raw_text:"(Sin mensaje - buscalo en el tab Cotizaciones)"};openQModal(q);});});}
-refreshQC();setInterval(function(){attachBestClicks();},2000);setInterval(refreshQC,60000);
-// === MULTI-PRODUCTO ===
-function addProdRow(){var row=document.createElement("div");row.className="prod-row";row.innerHTML="<input class=\\"prod-name\\" placeholder=\\"Ej: iPhone 16 128GB\\" style=\\"flex:3\\">"+"<input class=\\"prod-target\\" placeholder=\\"Target USD (opc)\\" style=\\"flex:1;max-width:160px\\">"+"<button onclick=\\"this.parentNode.remove()\\" style=\\"background:#c53030;color:#fff;border:none;border-radius:6px;padding:5px 9px;cursor:pointer;flex-shrink:0\\">x</button>";document.getElementById("productList").appendChild(row);}
-async function sendRequestQuote(){var rows=document.querySelectorAll(".prod-row");var products=[];rows.forEach(function(row){var n=row.querySelector(".prod-name");var t=row.querySelector(".prod-target");if(n&&n.value.trim())products.push({name:n.value.trim(),target:t&&t.value.trim()||null});});if(!products.length){showToast("Agregá al menos un producto");return;}var el=document.getElementById("reqResult");el.textContent="Enviando...";try{var body=products.length===1?{product:products[0].name,target_price:products[0].target}:{products:products};var r=await fetch("/api/request-quote",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});var d=await r.json();if(d.ok||d.sent>=0){el.textContent="✅ Enviado a "+(d.sent||d.groups_sent||"?")+" grupos";showToast("Cotización enviada");}else el.textContent="❌ "+(d.error||"error al enviar");}catch(e){el.textContent="❌ "+e.message;}}
-addProdRow();</script>
+  const count = await pool.query('SELECT COUNT(*) FROM suppliers');
+  if (parseInt(count.rows[0].count) === 0) {
+    const values = [];
+    for (let i = 1; i <= 50; i++) { values.push(`(${i})`); }
+    await pool.query(`INSERT INTO suppliers (slot) VALUES ${values.join(',')}`);
+    console.log('Seeded 50 supplier slots');
+  }
 
-<div class="modal-ov" id="qModal" onclick="if(event.target===this)closeQModal()"><div class="modal-bx"><h3 id="qModalTitle"></h3><div class="modal-meta" id="qModalMeta"></div><div class="modal-msg" id="qModalMsg"></div><div class="modal-acts"><button class="action-btn danger" onclick="deleteQFromModal()">🗑 Eliminar cotización</button><button class="action-btn" onclick="closeQModal()">Cerrar</button></div></div></div></body>
-</html>
+  await pool.query(`CREATE TABLE IF NOT EXISTS quotes (
+    id SERIAL PRIMARY KEY,
+    supplier_slot INTEGER REFERENCES suppliers(slot),
+    supplier_name TEXT,
+    source TEXT DEFAULT 'group',
+    raw_text TEXT,
+    product TEXT,
+    model TEXT,
+    capacity TEXT,
+    color TEXT,
+    condition TEXT DEFAULT 'new',
+    price NUMERIC,
+    currency TEXT DEFAULT 'USD',
+    qty INTEGER,
+    incoterm TEXT DEFAULT 'CIF Miami',
+    ts TIMESTAMPTZ DEFAULT NOW()
+  )`);
 
-<!-- v 2026-04-23T21:18 -->
-`;
+  await pool.query(`CREATE TABLE IF NOT EXISTS quote_requests (
+    id SERIAL PRIMARY KEY,
+    product TEXT,
+    target_price NUMERIC,
+    suppliers_sent TEXT,
+    message_sent TEXT,
+    responses INTEGER DEFAULT 0,
+    status TEXT DEFAULT 'open',
+    ts TIMESTAMPTZ DEFAULT NOW()
+  )`);
+
+  await pool.query(`CREATE TABLE IF NOT EXISTS group_messages (
+    id SERIAL PRIMARY KEY,
+    group_id TEXT,
+    group_name TEXT,
+    sender_phone TEXT,
+    sender_name TEXT,
+    message_text TEXT,
+    has_quote BOOLEAN DEFAULT FALSE,
+    processed BOOLEAN DEFAULT FALSE,
+    ts TIMESTAMPTZ DEFAULT NOW(),
+    media_type TEXT,
+    media_id TEXT,
+    media_caption TEXT,
+    media_filename TEXT,
+    media_mime TEXT,
+    wa_message_id TEXT
+  )`);
+// Migrations: agregar columnas nuevas si no existen (idempotente)
+await pool.query(`
+  ALTER TABLE group_messages ADD COLUMN IF NOT EXISTS media_type TEXT;
+  ALTER TABLE group_messages ADD COLUMN IF NOT EXISTS media_id TEXT;
+  ALTER TABLE group_messages ADD COLUMN IF NOT EXISTS media_caption TEXT;
+  ALTER TABLE group_messages ADD COLUMN IF NOT EXISTS media_filename TEXT;
+  ALTER TABLE group_messages ADD COLUMN IF NOT EXISTS media_mime TEXT;
+  ALTER TABLE group_messages ADD COLUMN IF NOT EXISTS wa_message_id TEXT;
+`);
+
+// Tabla de log de requests de precio (para rate limiting)
+await pool.query(`
+  CREATE TABLE IF NOT EXISTS price_request_log (
+    id SERIAL PRIMARY KEY,
+    supplier_phone TEXT NOT NULL,
+    product_key TEXT NOT NULL,
+    requested_at TIMESTAMPTZ DEFAULT NOW(),
+    notified_owner BOOLEAN DEFAULT FALSE
+  );
+  CREATE INDEX IF NOT EXISTS idx_prl_phone_prod ON price_request_log(supplier_phone, product_key, requested_at DESC);
+`);
+
+// Tabla de introducciones: tracking de a qué supplier/grupo ya se presentó Marco
+await pool.query(`
+  CREATE TABLE IF NOT EXISTS marco_introductions (
+    id SERIAL PRIMARY KEY,
+    supplier_phone TEXT UNIQUE NOT NULL,
+    introduced_at TIMESTAMPTZ DEFAULT NOW()
+  );
+`);
+
+// Re-sincronizar secuencias de SERIAL (importante después de seed de datos externos)
+try {
+  await pool.query(`SELECT setval(pg_get_serial_sequence('group_messages', 'id'), COALESCE((SELECT MAX(id) FROM group_messages), 1))`);
+  await pool.query(`SELECT setval(pg_get_serial_sequence('quotes', 'id'), COALESCE((SELECT MAX(id) FROM quotes), 1))`);
+  console.log('[init] serial sequences re-synced');
+} catch (e) {
+  console.error('[init] setval failed (non-fatal):', e.message);
+}
+
+  await pool.query(`CREATE TABLE IF NOT EXISTS purchase_minimums (
+    id SERIAL PRIMARY KEY,
+    codigo TEXT UNIQUE NOT NULL,
+    descripcion TEXT,
+    minimo INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+
+  // Migrations - agregar columnas si no existen
+  await pool.query(`ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS target_price NUMERIC`);
+  await pool.query(`ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS suppliers_sent TEXT`);
+  await pool.query(`ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS message_sent TEXT`);
+  await pool.query(`ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS responses INTEGER DEFAULT 0`);
+  await pool.query(`ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'open'`);
+  await pool.query(`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS group_id TEXT`);
+  await pool.query(`ALTER TABLE group_messages ADD COLUMN IF NOT EXISTS wa_message_id TEXT`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_group_messages_wa_id ON group_messages(wa_message_id)`);
+
+  console.log('DB OK');
+}
+
+// ============ CLAUDE - EXTRACT QUOTES ============
+// ============ STOCK-WITHOUT-PRICE DETECTION (Nivel 2 — pedir precio) ============
+// Cuando un proveedor anuncia stock sin precio, notifica al owner con mensaje sugerido en ingles.
+// Rate limit: max 1 notificacion por producto+proveedor cada 6 horas.
+async function notifyOwnerStockNoPrice(quotes, msgInfo) {
+  if (!quotes || !Array.isArray(quotes) || quotes.length === 0) return;
+  const noPriceQuotes = quotes.filter(q => q.price === null || q.price === undefined);
+  if (noPriceQuotes.length === 0) return;
+
+  const supplierPhone = msgInfo.supplierPhone || msgInfo.from || 'unknown';
+  const supplierName = msgInfo.supplierName || msgInfo.senderName || supplierPhone;
+
+  // Generar product_key de cada quote (canonical)
+  const productKeys = noPriceQuotes.map(q => {
+    return [q.product, q.model, q.capacity, q.color, q.spec].filter(Boolean).join('|').toLowerCase();
+  });
+
+  // Rate limit check: descartar productos ya notificados en las últimas 6h
+  const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000);
+  const allowedKeys = [];
+  for (const key of productKeys) {
+    try {
+      const recent = await pool.query(
+        'SELECT 1 FROM price_request_log WHERE supplier_phone = $1 AND product_key = $2 AND requested_at > $3 LIMIT 1',
+        [supplierPhone, key, sixHoursAgo]
+      );
+      if (recent.rows.length === 0) allowedKeys.push(key);
+    } catch (e) {
+      console.error('[notifyOwnerStockNoPrice] rate-limit query failed:', e.message);
+    }
+  }
+  if (allowedKeys.length === 0) return; // todos rate-limited
+
+  // Logear las nuevas requests
+  for (let i = 0; i < productKeys.length; i++) {
+    if (!allowedKeys.includes(productKeys[i])) continue;
+    try {
+      await pool.query(
+        'INSERT INTO price_request_log (supplier_phone, product_key, notified_owner) VALUES ($1, $2, TRUE)',
+        [supplierPhone, productKeys[i]]
+      );
+    } catch(e) { /* duplicate ok */ }
+  }
+
+  // Armar lista de productos en formato amigable
+  const productLines = noPriceQuotes
+    .filter((q, i) => allowedKeys.includes(productKeys[i]))
+    .map(q => {
+      const desc = [q.product, q.model, q.capacity, q.color, q.spec ? '(' + q.spec + ' spec)' : null].filter(Boolean).join(' ');
+      const qtyStr = q.qty ? ` (qty: ${q.qty})` : '';
+      return `• ${desc}${qtyStr}`;
     });
 
   // Check si Marco ya se presentó a este supplier. Si no, incluir intro.
@@ -578,41 +473,7 @@ Si NADA encaja, devuelve {"quotes":[]}.`,
 }
 
 // ============ SAVE QUOTES TO DB ============
-
-// ============ LANGUAGE DETECTION + ACK HELPER v2 ============
-// Cache de idioma por chat (group_id o phone)
-const _chatLangCache = {};
-
-function detectSpanish(text) {
-  if (!text) return false;
-  const t = text.toLowerCase();
-  const esWords = ['tengo','precio','disponible','unidades','pcs','stock','hola','buenos','gracias','cuánto','cuanto','ofrezco','vendemos','manejamos','les','les ofrecemos','tenemos','pueden','favor','saludos','estimados'];
-  return esWords.some(w => t.includes(w));
-}
-
-function getChatLang(chatId, msgText) {
-  if (!_chatLangCache[chatId]) {
-    _chatLangCache[chatId] = detectSpanish(msgText || '') ? 'es' : 'en';
-  } else if (detectSpanish(msgText || '')) {
-    _chatLangCache[chatId] = 'es'; // actualizar si detecta español
-  }
-  return _chatLangCache[chatId];
-}
-
-function buildAck(lang) {
-  if (lang === 'es') {
-    const opts = ['Gracias, anotado! 👍', 'Perfecto, tomamos nota. Gracias!', 'Recibido, muchas gracias!', 'Anotado, gracias!'];
-    return opts[Math.floor(Math.random() * opts.length)];
-  } else {
-    const opts = ['Thanks, noted! 👍', 'Got it, thank you!', 'Received, thanks!', 'Noted, thanks!'];
-    return opts[Math.floor(Math.random() * opts.length)];
-  }
-}
-
-// Track de grupos donde Marco pidió cotización (para saber si responder)
-const _requestedChats = new Set();
-
-async function saveQuotes(quotes, supplierSlot, supplierName, rawText, source, chatId) {
+async function saveQuotes(quotes, supplierSlot, supplierName, rawText, source) {
   for (const q of quotes) {
     await pool.query(
       `INSERT INTO quotes (supplier_slot, supplier_name, source, raw_text, product, model, capacity, color, condition, price, currency, qty, incoterm) 
@@ -688,15 +549,6 @@ async function initBaileys() {
         } catch(e) {}
         return { conversation: '' };
       },
-  // Agradecimiento si Marco habia pedido cotizacion en este chat
-  if (chatId && _requestedChats.has(chatId) && baileysClient && baileysStatus === 'connected') {
-    try {
-      const lang = getChatLang(chatId, rawText);
-      const ack = buildAck(lang);
-      await baileysClient.sendMessage(chatId, { text: ack });
-    } catch(e) { console.error('ack error:', e.message); }
-  }
-
 });
 
     sock.ev.on('creds.update', saveCreds);
@@ -755,7 +607,7 @@ async function initBaileys() {
             const result = await extractQuote(text, supName);
             if (result.quotes && result.quotes.length > 0) {
               await pool.query(`UPDATE group_messages SET has_quote = TRUE, processed = TRUE WHERE wa_message_id = $1`, [msg.key.id]);
-              await saveQuotes(result.quotes, supSlot, supName, text, 'group', jid);
+              await saveQuotes(result.quotes, supSlot, supName, text, 'group');
               try { await pool.query('UPDATE quotes SET group_id = $1 WHERE raw_text = $2 AND group_id IS NULL', [groupId, text]); } catch(e) {}
             }
           } else if (isDM) {
@@ -776,7 +628,7 @@ async function initBaileys() {
             const result = await extractQuote(text, supName);
             if (result.quotes && result.quotes.length > 0) {
               await pool.query(`UPDATE group_messages SET has_quote = TRUE, processed = TRUE WHERE wa_message_id = $1`, [msg.key.id]);
-              await saveQuotes(result.quotes, supSlot, supName, text, 'dm', senderPhone + '@s.whatsapp.net');
+              await saveQuotes(result.quotes, supSlot, supName, text, 'dm');
             }
           }
         }
@@ -917,7 +769,7 @@ app.get('/api/costos', async (req, res) => {
 
 
 // Health
-app.delete('/api/quotes/:id', async function(req, res) {
+app.delete('/quotes/:id', async function(req, res) {
   try {
     const r = await pool.query('DELETE FROM quotes WHERE id=$1', [req.params.id]);
     res.json({ ok: true, deleted: r.rowCount });
@@ -927,7 +779,7 @@ app.delete('/api/quotes/:id', async function(req, res) {
 app.get('/', (req, res) => {
   res.json({
     status: 'ok',
-    service: 'Marco - South Traders Purchasing Bot v2.1',
+    service: 'Marco - South Traders Purchasing Bot',
     baileys: baileysStatus,
     timestamp: new Date().toISOString()
   });
@@ -935,7 +787,7 @@ app.get('/', (req, res) => {
 
 // Dashboard
 app.get('/dashboard', (req, res) => {
-  res.send(DASHBOARD_HTML);
+  res.sendFile(path.join(__dirname, 'dashboard.html'));
 });
 
 // Baileys QR code
@@ -1197,27 +1049,7 @@ app.post('/api/request-quote', async (req, res) => {
 
     // Guardar registro
     const supplierNames = targets.map(s => s.name || 'Slot ' + s.slot).join(', ');
-    const groupLang = getChatLang(groupId || '', '');
-    const isEs = groupLang === 'es';
-    const productLines = Array.isArray(products) && products.length
-      ? products.map(p => '- ' + p.name + (p.target ? ' (target USD ' + p.target + ' CIF Miami)' : '')).join('\n')
-      : '- ' + product + (target_price ? ' (target USD ' + target_price + ' CIF Miami)' : '');
-    const todayKey = (groupId || '') + '_' + new Date().toISOString().slice(0,10);
-    if (!global._firstContact) global._firstContact = {};
-    const isNewToday = !global._firstContact[todayKey];
-    global._firstContact[todayKey] = true;
-    let msg;
-    if (isEs) {
-      const greetEs = new Date().getHours() < 12 ? 'Buenos dias' : new Date().getHours() < 19 ? 'Buenas tardes' : 'Buenas';
-      msg = isNewToday
-        ? greetEs + '! Buscamos cotizacion para lo siguiente:\n' + productLines + '\n\nSi tienen disponibilidad nos pasan precio, qty e incoterm. Gracias!'
-        : 'Buscamos cotizacion para:\n' + productLines + '\n\nNos pasan precio y qty si tienen. Gracias!';
-    } else {
-      const greetEN = new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 19 ? 'Good afternoon' : 'Good evening';
-      msg = isNewToday
-        ? greetEN + '! Looking for pricing on the following:\n' + productLines + '\n\nIf available please share price, qty and incoterm. Thanks!'
-        : 'Looking for pricing on:\n' + productLines + '\n\nPlease share price and qty if available. Thanks!';
-    }
+    const msg = 'Cotizacion: ' + product + (target_price ? ' | Target: $' + target_price : '') + ' | Responder con precio, cantidad e incoterm';
     await pool.query(
       'INSERT INTO quote_requests (product, target_price, suppliers_sent, message_sent, status) VALUES ($1,$2,$3,$4,$5)',
       [product, target_price || null, supplierNames || null, msg, 'open']
@@ -1233,7 +1065,6 @@ app.post('/api/request-quote', async (req, res) => {
           if (s.whatsapp_group_id) {
             try {
               await baileysClient.sendMessage(s.whatsapp_group_id, { text: msg });
-              _requestedChats.add(s.whatsapp_group_id);
               sentOk = true;
               console.log('Sent to group', s.name || s.slot);
             } catch(groupErr) {
@@ -1244,7 +1075,6 @@ app.post('/api/request-quote', async (req, res) => {
             try {
               const phone = s.contact_phone.replace(/\D/g, '');
               await baileysClient.sendMessage(phone + '@s.whatsapp.net', { text: msg });
-              _requestedChats.add(phone + '@s.whatsapp.net');
               sentOk = true;
               console.log('Sent direct via Baileys to', s.name || s.slot);
             } catch(dmErr) {
