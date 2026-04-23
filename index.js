@@ -474,7 +474,7 @@ Si NADA encaja, devuelve {"quotes":[]}.`,
 
 // ============ SAVE QUOTES TO DB ============
 
-// ============ LANGUAGE DETECTION + ACK HELPER ============
+// ============ LANGUAGE DETECTION + ACK HELPER v2 ============
 // Cache de idioma por chat (group_id o phone)
 const _chatLangCache = {};
 
