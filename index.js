@@ -115,7 +115,7 @@ await pool.query(`
   CREATE INDEX IF NOT EXISTS idx_prl_phone_prod ON price_request_log(supplier_phone, product_key, requested_at DESC);
 `);
 
-// Tabla de introducciones: tracking de a quÃ© supplier/grupo ya se presentÃ³ Marco
+// Tabla de introducciones: tracking de a quÃÂ© supplier/grupo ya se presentÃÂ³ Marco
 await pool.query(`
   CREATE TABLE IF NOT EXISTS marco_introductions (
     id SERIAL PRIMARY KEY,
@@ -124,7 +124,7 @@ await pool.query(`
   );
 `);
 
-// Re-sincronizar secuencias de SERIAL (importante despuÃ©s de seed de datos externos)
+// Re-sincronizar secuencias de SERIAL (importante despuÃÂ©s de seed de datos externos)
 try {
   await pool.query(`SELECT setval(pg_get_serial_sequence('group_messages', 'id'), COALESCE((SELECT MAX(id) FROM group_messages), 1))`);
   await pool.query(`SELECT setval(pg_get_serial_sequence('quotes', 'id'), COALESCE((SELECT MAX(id) FROM quotes), 1))`);
@@ -156,7 +156,7 @@ try {
 }
 
 // ============ CLAUDE - EXTRACT QUOTES ============
-// ============ STOCK-WITHOUT-PRICE DETECTION (Nivel 2 â pedir precio) ============
+// ============ STOCK-WITHOUT-PRICE DETECTION (Nivel 2 Ã¢ÂÂ pedir precio) ============
 // Cuando un proveedor anuncia stock sin precio, notifica al owner con mensaje sugerido en ingles.
 // Rate limit: max 1 notificacion por producto+proveedor cada 6 horas.
 async function notifyOwnerStockNoPrice(quotes, msgInfo) {
@@ -172,7 +172,7 @@ async function notifyOwnerStockNoPrice(quotes, msgInfo) {
     return [q.product, q.model, q.capacity, q.color, q.spec].filter(Boolean).join('|').toLowerCase();
   });
 
-  // Rate limit check: descartar productos ya notificados en las Ãºltimas 6h
+  // Rate limit check: descartar productos ya notificados en las ÃÂºltimas 6h
   const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000);
   const allowedKeys = [];
   for (const key of productKeys) {
@@ -205,10 +205,10 @@ async function notifyOwnerStockNoPrice(quotes, msgInfo) {
     .map(q => {
       const desc = [q.product, q.model, q.capacity, q.color, q.spec ? '(' + q.spec + ' spec)' : null].filter(Boolean).join(' ');
       const qtyStr = q.qty ? ` (qty: ${q.qty})` : '';
-      return `â¢ ${desc}${qtyStr}`;
+      return `Ã¢ÂÂ¢ ${desc}${qtyStr}`;
     });
 
-  // Check si Marco ya se presentÃ³ a este supplier. Si no, incluir intro.
+  // Check si Marco ya se presentÃÂ³ a este supplier. Si no, incluir intro.
   let alreadyIntroduced = false;
   try {
     const introRes = await pool.query(
@@ -220,8 +220,8 @@ async function notifyOwnerStockNoPrice(quotes, msgInfo) {
     console.error('[notifyOwnerStockNoPrice] intro check failed:', e.message);
   }
 
-  // Mensaje sugerido en INGLES (sin firma â ya saben quiÃ©n es)
-  // Primera vez: presentaciÃ³n completa. Despues: directo al grano.
+  // Mensaje sugerido en INGLES (sin firma Ã¢ÂÂ ya saben quiÃÂ©n es)
+  // Primera vez: presentaciÃÂ³n completa. Despues: directo al grano.
   const intro = !alreadyIntroduced
     ? `Hi! I'm Marco, the purchasing assistant from South Traders. `
     : '';
@@ -232,9 +232,9 @@ async function notifyOwnerStockNoPrice(quotes, msgInfo) {
   const suggestedReply = intro + body;
 
   const alertMsg = [
-    `ð Stock without price detected`,
+    `Ã°ÂÂÂ Stock without price detected`,
     `From: ${supplierName} (${supplierPhone})`,
-    alreadyIntroduced ? '(Marco already introduced to this supplier)' : '(First contact â message includes intro)',
+    alreadyIntroduced ? '(Marco already introduced to this supplier)' : '(First contact Ã¢ÂÂ message includes intro)',
     ``,
     `Items:`,
     productLines.join('\n'),
@@ -723,7 +723,7 @@ function findCosto(productSearchStr) {
   if (!productSearchStr || !costosCache.map) return null;
   var key = normalizeDesc(productSearchStr);
   if (!key) return null;
-  // 1) Match exacto (la forma mÃ¡s confiable)
+  // 1) Match exacto (la forma mÃÂ¡s confiable)
   if (costosCache.map[key]) return costosCache.map[key];
 
   // 2) Match por palabras exactas (NO substring) para evitar falsos positivos
@@ -733,7 +733,7 @@ function findCosto(productSearchStr) {
 
   var bestScore = 0;
   var best = null;
-  var bestKeyLen = Infinity; // en empate, preferir la entry con MENOS palabras (mÃ¡s especÃ­fica al match)
+  var bestKeyLen = Infinity; // en empate, preferir la entry con MENOS palabras (mÃÂ¡s especÃÂ­fica al match)
 
   for (var k in costosCache.map) {
     var entryWords = k.split(' ').filter(function(w) { return w.length >= 1; });
@@ -744,7 +744,7 @@ function findCosto(productSearchStr) {
     }
     if (!allMatch) continue;
 
-    // Score = cuÃ¡ntas palabras del search matchearon (siempre = searchWords.length aquÃ­)
+    // Score = cuÃÂ¡ntas palabras del search matchearon (siempre = searchWords.length aquÃÂ­)
     // Criterio de desempate: entry con menos palabras extras = mejor match
     var score = searchWords.length;
     if (score > bestScore || (score === bestScore && entryWords.length < bestKeyLen)) {
@@ -770,7 +770,7 @@ app.get('/api/costos', async (req, res) => {
 
 // Health
 
-// GET /api/best-prices - Mejor precio por producto/modelo/capacidad (últimos N días)
+// GET /api/best-prices - Mejor precio por producto/modelo/capacidad (Ãºltimos N dÃ­as)
 app.get('/api/best-prices', async (req, res) => {
   const days = parseInt(req.query.days) || 7;
   try {
@@ -785,6 +785,20 @@ app.get('/api/best-prices', async (req, res) => {
     res.json(result.rows);
   } catch(e) {
     res.status(500).json({ error: e.message });
+
+// DELETE /api/quotes/:id - Eliminar una cotización por ID
+app.delete('/api/quotes/:id', async (req, res) => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) return res.status(400).json({ error: 'ID inválido' });
+  try {
+    const result = await pool.query('DELETE FROM quotes WHERE id = $1 RETURNING id', [id]);
+    if (result.rowCount === 0) return res.status(404).json({ error: 'No encontrada' });
+    res.json({ ok: true, deleted: result.rows[0].id });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
   }
 });
 
@@ -835,7 +849,7 @@ app.post('/api/baileys/logout', async (req, res) => {
     if (fs.existsSync(authDir)) fs.rmSync(authDir, { recursive: true, force: true });
     baileysStatus = 'disconnected';
     baileysClient = null;
-    res.json({ ok: true, message: 'Sesion cerrada. LlamÃ¡ a /api/baileys/restart para generar QR.' });
+    res.json({ ok: true, message: 'Sesion cerrada. LlamÃÂ¡ a /api/baileys/restart para generar QR.' });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -866,7 +880,7 @@ app.post('/api/baileys/register', async (req, res) => {
       console.log('SMS de registro enviado a', phone);
       res.json({ ok: true, message: 'SMS enviado a +' + phone + '. Llama a este endpoint con el code recibido.' });
     } else {
-      // Paso 2: Confirmar con el cÃ³digo SMS
+      // Paso 2: Confirmar con el cÃÂ³digo SMS
       if (!registrationSocket) {
         const socket = makeRegistrationSocket({ auth: state });
         socket.ev.on('creds.update', saveCreds);
@@ -1118,8 +1132,8 @@ app.post('/api/request-quote', async (req, res) => {
     }
     // Notificar al owner SIEMPRE - con resultado
     const ownerMsg = sent > 0
-      ? 'ð¤ Pedido enviado a ' + sent + ' proveedor(es): ' + supplierNames + '\n' + msg
-      : 'ð Pedido registrado (envÃ­o manual requerido):\n' + supplierNames + '\n' + msg;
+      ? 'Ã°ÂÂÂ¤ Pedido enviado a ' + sent + ' proveedor(es): ' + supplierNames + '\n' + msg
+      : 'Ã°ÂÂÂ Pedido registrado (envÃÂ­o manual requerido):\n' + supplierNames + '\n' + msg;
     await alertOwner(ownerMsg);
 
     res.json({ ok: true, sent, suppliers: targets.map(s => s.name || 'Slot'+s.slot) });
@@ -1440,7 +1454,7 @@ app.get('/api/admin/reparse-missed', async (req, res) => {
   }
 });
 
-// ============ RECENT MESSAGES (debug â incluye media cols) ============
+// ============ RECENT MESSAGES (debug Ã¢ÂÂ incluye media cols) ============
 // READ-ONLY: buscar DMs y stats de group_messages (requiere token)
 app.get('/api/admin/dm-stats', async (req, res) => {
   try {
@@ -1734,7 +1748,7 @@ app.post('/webhook', async (req, res) => {
           const summary = result.quotes.map(q =>
             `${q.product} ${q.model} ${q.capacity}: $${q.price} x${q.qty || '?'}`
           ).join('\n');
-          await alertOwner(`ð CotizaciÃ³n directa de ${s.name}:\n${summary}`);
+          await alertOwner(`Ã°ÂÂÂ CotizaciÃÂ³n directa de ${s.name}:\n${summary}`);
         }
       }
     }
@@ -1866,7 +1880,7 @@ async function start() {
 
   // Try to start Baileys (won't crash if not installed)
   if (process.env.BAILEYS_DISABLED === 'true') {
-    console.log('[BAILEYS] Disabled via BAILEYS_DISABLED env var â skipping init');
+    console.log('[BAILEYS] Disabled via BAILEYS_DISABLED env var Ã¢ÂÂ skipping init');
   } else {
     await initBaileys();
   }
