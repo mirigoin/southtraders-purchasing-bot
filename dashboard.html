@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>🤖 Marco — Purchasing Bot</title>
+<title>Ã°ÂÂ¤Â Marco Ã¢ÂÂ Purchasing Bot</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f1117;color:#e2e8f0;min-height:100vh}
@@ -24,8 +24,8 @@ header h1{font-size:18px;font-weight:700;color:#fff}
 .badge-green{background:#1c4532;color:#68d391}
 .badge-blue{background:#1a365d;color:#63b3ed}
 table{width:100%;border-collapse:collapse}
-th{padding:6px 10px;text-align:left;font-size:11px;font-weight:600;color:#718096;text-transform:uppercase;letter-spacing:.05em}
-td{padding:4px 10px;font-size:12px;border-bottom:1px solid #1a202c}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:600;color:#718096;text-transform:uppercase;letter-spacing:.05em}
+td{padding:10px 16px;font-size:13px;border-bottom:1px solid #1a202c}
 tr:hover td{background:#2d3748}
 tr:last-child td{border-bottom:none}
 .tabs{display:flex;gap:4px;padding:12px 18px;border-bottom:1px solid #2d3748}
@@ -61,17 +61,33 @@ label{font-size:12px;color:#718096;margin-bottom:4px;display:block}
 .modal-box{background:#1a202c;border-radius:10px;padding:24px;width:90%;max-width:520px;border:1px solid #2d3748}
 .modal-box h3{font-size:16px;font-weight:600;margin-bottom:16px}
 .close-btn{float:right;background:none;border:none;color:#718096;font-size:20px;cursor:pointer}
-.modal-ov{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.8);z-index:200;display:none;align-items:center;justify-content:center}.modal-ov.open{display:flex}.modal-bx{background:#1a202c;border-radius:10px;border:1px solid #4a5568;padding:20px;max-width:580px;width:90%;max-height:80vh;overflow-y:auto}.modal-bx h3{font-size:14px;font-weight:600;margin-bottom:8px;color:#e2e8f0}.modal-msg{background:#171923;border-radius:6px;padding:10px;font-size:12px;color:#a0aec0;line-height:1.6;margin-bottom:12px;white-space:pre-wrap;word-break:break-word}.modal-meta{font-size:11px;color:#718096;margin-bottom:12px}.modal-acts{display:flex;gap:8px;justify-content:flex-end}.clickable-row{cursor:pointer!important}.clickable-row:hover td{background:#2d3748!important}.prod-row{display:flex;gap:6px;margin-bottom:8px}.prod-row input{flex:1;background:#2d3748;border:1px solid #4a5568;border-radius:6px;color:#e2e8f0;padding:6px 10px;font-size:13px}</style>
+
+.modal-ov{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.8);z-index:200;display:none;align-items:center;justify-content:center}
+.modal-ov.open{display:flex}
+.modal-bx{background:#1a202c;border-radius:10px;border:1px solid #4a5568;padding:20px;max-width:580px;width:90%;max-height:80vh;overflow-y:auto}
+.modal-bx h3{font-size:14px;font-weight:600;margin-bottom:8px;color:#e2e8f0}
+.modal-msg{background:#171923;border-radius:6px;padding:10px;font-size:12px;color:#a0aec0;line-height:1.6;margin-bottom:12px;white-space:pre-wrap;word-break:break-word}
+.modal-meta{font-size:11px;color:#718096;margin-bottom:12px}
+.modal-acts{display:flex;gap:8px;justify-content:flex-end}
+.clickable-row{cursor:pointer!important}
+.clickable-row:hover td{background:#2d3748!important}
+.prod-row{display:flex;gap:6px;margin-bottom:8px}
+.prod-row input{flex:1;background:#2d3748;border:1px solid #4a5568;border-radius:6px;color:#e2e8f0;padding:6px 10px;font-size:13px}
+.action-btn{padding:6px 14px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid #4a5568;background:#2d3748;color:#e2e8f0}
+.action-btn:hover{background:#4a5568}
+.action-btn.danger{background:#742a2a;border-color:#9b2c2c;color:#fed7d7}
+.action-btn.danger:hover{background:#9b2c2c}
+</style>
 </head>
 <body>
 <header>
   <div class="dot" id="statusDot"></div>
-  <h1>🤖 Marco — Purchasing Bot</h1>
-  <span class="ts" id="statusText">⏳ Checking...</span>
+  <h1>Ã°ÂÂ¤Â Marco Ã¢ÂÂ Purchasing Bot</h1>
+  <span class="ts" id="statusText">Ã¢ÂÂ³ Checking...</span>
 </header>
 <div class="wrap">
   <div class="stats">
-    <div class="stat"><div class="n" id="statConn">-</div><div class="l">Conexión</div></div>
+    <div class="stat"><div class="n" id="statConn">-</div><div class="l">ConexiÃÂ³n</div></div>
     <div class="stat"><div class="n" id="statSuppliers">-</div><div class="l">Proveedores activos</div></div>
     <div class="stat"><div class="n" id="statQuotes24">-</div><div class="l">Cotizaciones 24h</div></div>
     <div class="stat"><div class="n" id="statQuotes7d">-</div><div class="l">Cotizaciones 7d</div></div>
@@ -79,81 +95,81 @@ label{font-size:12px;color:#718096;margin-bottom:4px;display:block}
   </div>
   <div class="section">
     <div class="tabs">
-      <button class="tab active" onclick="showTab('tab-best',this)">🏆 Best Prices</button>
-      <button class="tab" onclick="showTab('tab-suppliers',this)">🏭 Proveedores</button>
-      <button class="tab" onclick="showTab('tab-quotes',this)">💰 Cotizaciones</button>
-      <button class="tab" onclick="showTab('tab-request',this)">📤 Pedir Cotización</button>
-      <button class="tab" onclick="showTab('tab-messages',this)">💬 Mensajes</button>
-      <button class="tab" onclick="showTab('tab-conn',this)">📡 Conexión</button>
+      <button class="tab active" onclick="showTab('tab-best',this)">Ã°ÂÂÂ Best Prices</button>
+      <button class="tab" onclick="showTab('tab-suppliers',this)">Ã°ÂÂÂ­ Proveedores</button>
+      <button class="tab" onclick="showTab('tab-quotes',this)">Ã°ÂÂÂ° Cotizaciones</button>
+      <button class="tab" onclick="showTab('tab-request',this)">Ã°ÂÂÂ¤ Pedir CotizaciÃÂ³n</button>
+      <button class="tab" onclick="showTab('tab-messages',this)">Ã°ÂÂÂ¬ Mensajes</button>
+      <button class="tab" onclick="showTab('tab-conn',this)">Ã°ÂÂÂ¡ ConexiÃÂ³n</button>
       <button class="tab" onclick="showTab('tab-compras',this)">&#128722; Compras</button>
-      <button class="tab" onclick="showTab('tab-missing',this)">🔔 Faltantes</button>
+      <button class="tab" onclick="showTab('tab-missing',this)">Ã°ÂÂÂ Faltantes</button>
     </div>
     <div id="tab-best" class="tab-content active">
       <div class="section-head" style="border:none;padding-bottom:0">
-        <h2>🏆 Mejores precios (últimos 7 días)</h2>
-        <button class="btn btn-primary btn-sm" onclick="loadBest()">↻ Refresh</button>
+        <h2>Ã°ÂÂÂ Mejores precios (ÃÂºltimos 7 dÃÂ­as)</h2>
+        <button class="btn btn-primary btn-sm" onclick="loadBest()">Ã¢ÂÂ» Refresh</button>
       </div>
-      <table><thead><tr><th>Producto</th><th>Modelo</th><th>Capacidad</th><th>Precio</th><th>Costo</th><th>Proveedor</th><th>Qty</th><th>Incoterm</th><th>Fecha</th></tr></thead>
+      <table><thead><tr><th>Producto</th><th>Modelo</th><th>Capacidad</th><th>Precio</th><th>Proveedor</th><th>Qty</th><th>Incoterm</th><th>Fecha</th></tr></thead>
       <tbody id="bestTbody"><tr><td colspan="8" style="text-align:center;color:#718096;padding:20px">Cargando...</td></tr></tbody></table>
     </div>
     <div id="tab-suppliers" class="tab-content">
       <div class="section-head" style="border:none;padding-bottom:0">
-        <h2>🏭 Proveedores (50 slots)</h2>
-        <button class="btn btn-primary btn-sm" onclick="loadSuppliers()">↻ Refresh</button>
+        <h2>Ã°ÂÂÂ­ Proveedores (50 slots)</h2>
+        <button class="btn btn-primary btn-sm" onclick="loadSuppliers()">Ã¢ÂÂ» Refresh</button>
       </div>
       <div class="supplier-grid" id="supplierGrid">Cargando...</div>
     </div>
     <div id="tab-quotes" class="tab-content">
       <div class="section-head" style="border:none;padding-bottom:0">
-        <h2>💰 Cotizaciones</h2>
+        <h2>Ã°ÂÂÂ° Cotizaciones</h2>
         <div style="display:flex;gap:8px;align-items:center">
           <input style="width:160px" placeholder="Filtrar producto..." id="filterProduct" oninput="loadQuotes()">
-          <input style="width:160px" placeholder="Filtrar proveedor..." id="filterSupplier" oninput="loadQuotes()">
           <select id="filterHours" onchange="loadQuotes()" style="width:130px">
             <option value="">Todas</option>
             <option value="24">24h</option>
-            <option value="168">7 días</option>
+            <option value="168">7 dÃÂ­as</option>
           </select>
-          <button class="btn btn-primary btn-sm" onclick="loadQuotes()">↻</button>
+          <button class="btn btn-primary btn-sm" onclick="loadQuotes()">Ã¢ÂÂ»</button>
         </div>
       </div>
-      <table><thead><tr><th>Producto</th><th>Modelo</th><th>Cap</th><th>Color</th><th>Precio</th><th>Costo</th><th>Qty</th><th>Incoterm</th><th>Proveedor</th><th>Fecha</th></tr></thead>
+      <table><thead><tr><th>Producto</th><th>Modelo</th><th>Cap</th><th>Color</th><th>Precio</th><th>Qty</th><th>Incoterm</th><th>Proveedor</th><th>Fecha</th></tr></thead>
       <tbody id="quotesTbody"></tbody></table>
     </div>
     <div id="tab-request" class="tab-content">
       <div style="padding:14px 18px">
-        <p style="font-size:12px;color:#718096;margin-bottom:12px">Agregá uno o más productos y enviá la cotización a todos los grupos.</p>
+        <p style="font-size:12px;color:#718096;margin-bottom:12px">AgregÃ¡ uno o mÃ¡s productos y enviÃ¡ la cotizaciÃ³n a todos los grupos.</p>
         <div id="productList" style="margin-bottom:12px"></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
           <button class="action-btn" onclick="addProdRow()" style="background:#2d3748;border:1px solid #4a5568">+ Agregar producto</button>
-          <button class="action-btn" onclick="sendRequestQuote()">📤 Enviar a todos los grupos</button>
+          <button class="action-btn" onclick="sendRequestQuote()">ð¤ Enviar a todos los grupos</button>
         </div>
         <div id="reqResult" style="font-size:12px;color:#68d391;min-height:20px"></div>
-      </div>id="tab-messages" class="tab-content">
+      </div>
+    <div id="tab-messages" class="tab-content">
       <div class="section-head" style="border:none;padding-bottom:0">
-        <h2>💬 Mensajes de Grupos</h2>
+        <h2>Ã°ÂÂÂ¬ Mensajes de Grupos</h2>
         <div style="display:flex;gap:8px;align-items:center">
           <select id="msgHours" onchange="loadMessages()" style="width:130px">
             <option value="24">24h</option>
             <option value="48">48h</option>
-            <option value="168">7 días</option>
+            <option value="168">7 dÃÂ­as</option>
           </select>
           <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:#718096">
             <input type="checkbox" id="onlyQuotes" onchange="loadMessages()"> Solo cotizaciones
           </label>
-          <button class="btn btn-primary btn-sm" onclick="loadMessages()">↻</button>
+          <button class="btn btn-primary btn-sm" onclick="loadMessages()">Ã¢ÂÂ»</button>
         </div>
       </div>
       <div id="msgList" style="max-height:500px;overflow-y:auto"></div>
     </div>
     <div id="tab-conn" class="tab-content">
-      <div class="section-head" style="border:none;padding-bottom:0"><h2>📡 WhatsApp (Baileys)</h2></div>
+      <div class="section-head" style="border:none;padding-bottom:0"><h2>Ã°ÂÂÂ¡ WhatsApp (Baileys)</h2></div>
       <div style="padding:16px 0">
         <div id="baileysStatus" style="font-size:14px;margin-bottom:16px"></div>
         <div id="qrSection" class="qr-wrap" style="display:none"></div>
         <div style="margin-top:16px">
-          <h3 style="font-size:14px;font-weight:600;margin-bottom:12px">📱 Grupos disponibles</h3>
-          <button class="btn btn-primary btn-sm" onclick="loadGroups()" style="margin-bottom:12px">↻ Cargar grupos</button>
+          <h3 style="font-size:14px;font-weight:600;margin-bottom:12px">Ã°ÂÂÂ± Grupos disponibles</h3>
+          <button class="btn btn-primary btn-sm" onclick="loadGroups()" style="margin-bottom:12px">Ã¢ÂÂ» Cargar grupos</button>
           <table><thead><tr><th>Grupo</th><th>ID</th><th>Participantes</th><th>Asignar a slot</th></tr></thead>
           <tbody id="groupsTbody"></tbody></table>
         </div>
@@ -192,14 +208,14 @@ label{font-size:12px;color:#718096;margin-bottom:4px;display:block}
       <div class="section-head" style="border:none;padding:16px 20px 8px;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <div>
-            <div style="font-size:18px;font-weight:600;">🔔 Productos sin cotización reciente</div>
+            <div style="font-size:18px;font-weight:600;">Ã°ÂÂÂ Productos sin cotizaciÃÂ³n reciente</div>
             <div id="missingSummary" style="font-size:13px;color:#666;margin-top:4px;">Cargando...</div>
           </div>
           <div style="display:flex;gap:8px;align-items:center;">
-            <label style="font-size:13px;color:#555;">Días stale:
+            <label style="font-size:13px;color:#555;">DÃÂ­as stale:
               <input id="missingStaleDays" type="number" value="7" min="1" max="90" style="width:60px;margin-left:6px;padding:4px;border:1px solid #ccc;border-radius:4px;" />
             </label>
-            <button class="btn" onclick="loadMissing()" style="padding:6px 12px;">↻ Refresh</button>
+            <button class="btn" onclick="loadMissing()" style="padding:6px 12px;">Ã¢ÂÂ» Refresh</button>
           </div>
         </div>
       </div>
@@ -210,48 +226,40 @@ label{font-size:12px;color:#718096;margin-bottom:4px;display:block}
 
 <div class="modal" id="supplierModal">
   <div class="modal-box">
-    <button class="close-btn" onclick="closeModal()">×</button>
+    <button class="close-btn" onclick="closeModal()">ÃÂ</button>
     <h3 id="modalTitle">Slot #</h3>
     <div class="form-row cols-2">
       <div><label>Nombre</label><input id="mName"></div>
       <div><label>Alias</label><input id="mAlias"></div>
     </div>
     <div class="form-row cols-2">
-      <div><label>Teléfono</label><input id="mPhone"></div>
+      <div><label>TelÃÂ©fono</label><input id="mPhone"></div>
       <div><label>Contacto</label><input id="mContactName"></div>
     </div>
     <div class="form-row cols-2">
-      <div><label>País</label><input id="mCountry"></div>
-      <div><label>Activo</label><select id="mActive"><option value="true">Sí</option><option value="false">No</option></select></div>
+      <div><label>PaÃÂ­s</label><input id="mCountry"></div>
+      <div><label>Activo</label><select id="mActive"><option value="true">SÃÂ­</option><option value="false">No</option></select></div>
     </div>
     <div class="form-row"><div><label>Grupo WA</label><input id="mGroupName" readonly></div></div>
     <div class="form-row"><div><label>Notas</label><textarea id="mNotes" rows="2"></textarea></div></div>
     <div style="display:flex;gap:8px;margin-top:8px">
-      <button class="btn btn-primary" onclick="saveSupplier()">💾 Guardar</button>
+      <button class="btn btn-primary" onclick="saveSupplier()">Ã°ÂÂÂ¾ Guardar</button>
       <span id="modalMsg" style="font-size:12px;color:#68d391;align-self:center"></span>
     </div>
   </div>
 </div>
-<script src="/dashboard.js">
-// === QUOTES CACHE ===
-window.__QC=[];
-function norm(s){return(s||"").toLowerCase().trim();}
-function findQ(p,m,cap,sup){return window.__QC.find(q=>norm(q.product)===norm(p)&&norm(q.model)===norm(m)&&norm(q.capacity)===norm(cap)&&norm(q.supplier_name)===norm(sup))||window.__QC.find(q=>norm(q.product)===norm(p)&&norm(q.supplier_name)===norm(sup));}
-async function refreshQC(){try{const r=await fetch("/api/quotes");const d=await r.json();window.__QC=Array.isArray(d)?d:(d.quotes||[]);}catch(e){}}
-// === MODAL ===
-let _qId=null;
-function openQModal(q){_qId=(q&&q.id)||null;var m=[(q.product||""),(q.model||""),(q.capacity||"")].filter(Boolean).join(" ");document.getElementById("qModalTitle").textContent=m||"Cotización";document.getElementById("qModalMeta").textContent="Proveedor: "+(q.supplier_name||"-")+"  |  USD "+(q.price||"-")+"  |  Qty: "+(q.qty||"-");document.getElementById("qModalMsg").textContent=q.raw_text||"(sin mensaje original)";document.getElementById("qModal").classList.add("open");}
-function closeQModal(){document.getElementById("qModal").classList.remove("open");_qId=null;}
-async function deleteQFromModal(){if(!_qId){alert("Sin ID para eliminar");return;}if(!confirm("Eliminar esta cotización?"))return;try{var r=await fetch("/api/quotes/"+_qId,{method:"DELETE"});var d=await r.json();if(d.ok||d.deleted>=0){window.__QC=window.__QC.filter(function(q){return q.id!==_qId;});closeQModal();if(typeof loadBestPrices==="function")loadBestPrices();showToast("Cotización eliminada");}else alert("Error: "+(d.error||"desconocido"));}catch(e){alert("Error: "+e.message);}}
-// === CLICK EN BEST PRICES ===
-function attachBestClicks(){var tab=document.getElementById("tab-best");if(!tab)return;tab.querySelectorAll("tbody tr").forEach(function(row){if(row.dataset.mc)return;row.dataset.mc="1";row.classList.add("clickable-row");row.addEventListener("click",function(){var cells=row.querySelectorAll("td");if(!cells.length)return;var p=cells[0]?cells[0].textContent.trim():"";var m=cells[1]?cells[1].textContent.trim():"";var cap=cells[2]?cells[2].textContent.trim():"";var sup=cells[5]?cells[5].textContent.trim():"";var q=findQ(p,m,cap,sup);if(!q)q={product:p,model:m,capacity:cap,supplier_name:sup,price:cells[3]?cells[3].textContent.replace(/[^0-9.]/g,""):"",qty:cells[6]?cells[6].textContent.trim():"",ts:new Date().toISOString(),raw_text:"(Sin mensaje - buscalo en el tab Cotizaciones)"};openQModal(q);});});}
-refreshQC();setInterval(function(){attachBestClicks();},2000);setInterval(refreshQC,60000);
-// === MULTI-PRODUCTO ===
-function addProdRow(){var row=document.createElement("div");row.className="prod-row";row.innerHTML="<input class=\"prod-name\" placeholder=\"Ej: iPhone 16 128GB\" style=\"flex:3\">"+"<input class=\"prod-target\" placeholder=\"Target USD (opc)\" style=\"flex:1;max-width:160px\">"+"<button onclick=\"this.parentNode.remove()\" style=\"background:#c53030;color:#fff;border:none;border-radius:6px;padding:5px 9px;cursor:pointer;flex-shrink:0\">x</button>";document.getElementById("productList").appendChild(row);}
-async function sendRequestQuote(){var rows=document.querySelectorAll(".prod-row");var products=[];rows.forEach(function(row){var n=row.querySelector(".prod-name");var t=row.querySelector(".prod-target");if(n&&n.value.trim())products.push({name:n.value.trim(),target:t&&t.value.trim()||null});});if(!products.length){showToast("Agregá al menos un producto");return;}var el=document.getElementById("reqResult");el.textContent="Enviando...";try{var body=products.length===1?{product:products[0].name,target_price:products[0].target}:{products:products};var r=await fetch("/api/request-quote",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});var d=await r.json();if(d.ok||d.sent>=0){el.textContent="✅ Enviado a "+(d.sent||d.groups_sent||"?")+" grupos";showToast("Cotización enviada");}else el.textContent="❌ "+(d.error||"error al enviar");}catch(e){el.textContent="❌ "+e.message;}}
-addProdRow();</script>
+<script src="/dashboard.js"></script>
 
-<div class="modal-ov" id="qModal" onclick="if(event.target===this)closeQModal()"><div class="modal-bx"><h3 id="qModalTitle"></h3><div class="modal-meta" id="qModalMeta"></div><div class="modal-msg" id="qModalMsg"></div><div class="modal-acts"><button class="action-btn danger" onclick="deleteQFromModal()">🗑 Eliminar cotización</button><button class="action-btn" onclick="closeQModal()">Cerrar</button></div></div></div></body>
+<div class="modal-ov" id="qModal" onclick="if(event.target===this)closeQModal()">
+  <div class="modal-bx">
+    <h3 id="qModalTitle"></h3>
+    <div class="modal-meta" id="qModalMeta"></div>
+    <div class="modal-msg" id="qModalMsg"></div>
+    <div class="modal-acts">
+      <button class="action-btn danger" onclick="deleteQFromModal()">ð Eliminar cotizaciÃ³n</button>
+      <button class="action-btn" onclick="closeQModal()">Cerrar</button>
+    </div>
+  </div>
+</div>
+</body>
 </html>
-
-<!-- v 2026-04-23T21:18 -->
