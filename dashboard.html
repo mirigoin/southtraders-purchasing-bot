@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>🤖 Marco — Purchasing Bot</title>
+<title>ð¤ Marco â Purchasing Bot</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f1117;color:#e2e8f0;min-height:100vh}
@@ -61,17 +61,33 @@ label{font-size:12px;color:#718096;margin-bottom:4px;display:block}
 .modal-box{background:#1a202c;border-radius:10px;padding:24px;width:90%;max-width:520px;border:1px solid #2d3748}
 .modal-box h3{font-size:16px;font-weight:600;margin-bottom:16px}
 .close-btn{float:right;background:none;border:none;color:#718096;font-size:20px;cursor:pointer}
+
+.modal-ov{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.8);z-index:200;display:none;align-items:center;justify-content:center}
+.modal-ov.open{display:flex}
+.modal-bx{background:#1a202c;border-radius:10px;border:1px solid #4a5568;padding:20px;max-width:580px;width:90%;max-height:80vh;overflow-y:auto}
+.modal-bx h3{font-size:14px;font-weight:600;margin-bottom:8px;color:#e2e8f0}
+.modal-msg{background:#171923;border-radius:6px;padding:10px;font-size:12px;color:#a0aec0;line-height:1.6;margin-bottom:12px;white-space:pre-wrap;word-break:break-word}
+.modal-meta{font-size:11px;color:#718096;margin-bottom:12px}
+.modal-acts{display:flex;gap:8px;justify-content:flex-end}
+.clickable-row{cursor:pointer!important}
+.clickable-row:hover td{background:#2d3748!important}
+.prod-row{display:flex;gap:6px;margin-bottom:8px}
+.prod-row input{flex:1;background:#2d3748;border:1px solid #4a5568;border-radius:6px;color:#e2e8f0;padding:6px 10px;font-size:13px}
+.action-btn{padding:6px 14px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid #4a5568;background:#2d3748;color:#e2e8f0}
+.action-btn:hover{background:#4a5568}
+.action-btn.danger{background:#742a2a;border-color:#9b2c2c;color:#fed7d7}
+.action-btn.danger:hover{background:#9b2c2c}
 </style>
 </head>
 <body>
 <header>
   <div class="dot" id="statusDot"></div>
-  <h1>🤖 Marco — Purchasing Bot</h1>
-  <span class="ts" id="statusText">⏳ Checking...</span>
+  <h1>ð¤ Marco â Purchasing Bot</h1>
+  <span class="ts" id="statusText">â³ Checking...</span>
 </header>
 <div class="wrap">
   <div class="stats">
-    <div class="stat"><div class="n" id="statConn">-</div><div class="l">Conexión</div></div>
+    <div class="stat"><div class="n" id="statConn">-</div><div class="l">ConexiÃ³n</div></div>
     <div class="stat"><div class="n" id="statSuppliers">-</div><div class="l">Proveedores activos</div></div>
     <div class="stat"><div class="n" id="statQuotes24">-</div><div class="l">Cotizaciones 24h</div></div>
     <div class="stat"><div class="n" id="statQuotes7d">-</div><div class="l">Cotizaciones 7d</div></div>
@@ -79,85 +95,81 @@ label{font-size:12px;color:#718096;margin-bottom:4px;display:block}
   </div>
   <div class="section">
     <div class="tabs">
-      <button class="tab active" onclick="showTab('tab-best',this)">🏆 Best Prices</button>
-      <button class="tab" onclick="showTab('tab-suppliers',this)">🏭 Proveedores</button>
-      <button class="tab" onclick="showTab('tab-quotes',this)">💰 Cotizaciones</button>
-      <button class="tab" onclick="showTab('tab-request',this)">📤 Pedir Cotización</button>
-      <button class="tab" onclick="showTab('tab-messages',this)">💬 Mensajes</button>
-      <button class="tab" onclick="showTab('tab-conn',this)">📡 Conexión</button>
+      <button class="tab active" onclick="showTab('tab-best',this)">ð Best Prices</button>
+      <button class="tab" onclick="showTab('tab-suppliers',this)">ð­ Proveedores</button>
+      <button class="tab" onclick="showTab('tab-quotes',this)">ð° Cotizaciones</button>
+      <button class="tab" onclick="showTab('tab-request',this)">ð¤ Pedir CotizaciÃ³n</button>
+      <button class="tab" onclick="showTab('tab-messages',this)">ð¬ Mensajes</button>
+      <button class="tab" onclick="showTab('tab-conn',this)">ð¡ ConexiÃ³n</button>
       <button class="tab" onclick="showTab('tab-compras',this)">&#128722; Compras</button>
-      <button class="tab" onclick="showTab('tab-missing',this)">🔔 Faltantes</button>
+      <button class="tab" onclick="showTab('tab-missing',this)">ð Faltantes</button>
     </div>
     <div id="tab-best" class="tab-content active">
       <div class="section-head" style="border:none;padding-bottom:0">
-        <h2>🏆 Mejores precios (últimos 7 días)</h2>
-        <button class="btn btn-primary btn-sm" onclick="loadBest()">↻ Refresh</button>
+        <h2>ð Mejores precios (Ãºltimos 7 dÃ­as)</h2>
+        <button class="btn btn-primary btn-sm" onclick="loadBest()">â» Refresh</button>
       </div>
       <table><thead><tr><th>Producto</th><th>Modelo</th><th>Capacidad</th><th>Precio</th><th>Proveedor</th><th>Qty</th><th>Incoterm</th><th>Fecha</th></tr></thead>
       <tbody id="bestTbody"><tr><td colspan="8" style="text-align:center;color:#718096;padding:20px">Cargando...</td></tr></tbody></table>
     </div>
     <div id="tab-suppliers" class="tab-content">
       <div class="section-head" style="border:none;padding-bottom:0">
-        <h2>🏭 Proveedores (50 slots)</h2>
-        <button class="btn btn-primary btn-sm" onclick="loadSuppliers()">↻ Refresh</button>
+        <h2>ð­ Proveedores (50 slots)</h2>
+        <button class="btn btn-primary btn-sm" onclick="loadSuppliers()">â» Refresh</button>
       </div>
       <div class="supplier-grid" id="supplierGrid">Cargando...</div>
     </div>
     <div id="tab-quotes" class="tab-content">
       <div class="section-head" style="border:none;padding-bottom:0">
-        <h2>💰 Cotizaciones</h2>
+        <h2>ð° Cotizaciones</h2>
         <div style="display:flex;gap:8px;align-items:center">
           <input style="width:160px" placeholder="Filtrar producto..." id="filterProduct" oninput="loadQuotes()">
           <select id="filterHours" onchange="loadQuotes()" style="width:130px">
             <option value="">Todas</option>
             <option value="24">24h</option>
-            <option value="168">7 días</option>
+            <option value="168">7 dÃ­as</option>
           </select>
-          <button class="btn btn-primary btn-sm" onclick="loadQuotes()">↻</button>
+          <button class="btn btn-primary btn-sm" onclick="loadQuotes()">â»</button>
         </div>
       </div>
       <table><thead><tr><th>Producto</th><th>Modelo</th><th>Cap</th><th>Color</th><th>Precio</th><th>Qty</th><th>Incoterm</th><th>Proveedor</th><th>Fecha</th></tr></thead>
       <tbody id="quotesTbody"></tbody></table>
     </div>
     <div id="tab-request" class="tab-content">
-      <div class="section-head" style="border:none;padding-bottom:0"><h2>📤 Pedir Cotización</h2></div>
-      <div style="max-width:500px;padding:16px 0">
-        <div class="form-row"><div><label>Producto</label><input id="rqProduct" placeholder="iPhone 16 Pro Max 256GB"></div></div>
-        <div class="form-row cols-2">
-          <div><label>Target Price (USD)</label><input id="rqPrice" type="number" placeholder="950"></div>
-          <div><label>Slots (vacío = todos)</label><input id="rqSlots" placeholder="1,3,5"></div>
+      <div style="padding:14px 18px">
+        <p style="font-size:12px;color:#718096;margin-bottom:12px">Agregá uno o más productos y enviá la cotización a todos los grupos.</p>
+        <div id="productList" style="margin-bottom:12px"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+          <button class="action-btn" onclick="addProdRow()" style="background:#2d3748;border:1px solid #4a5568">+ Agregar producto</button>
+          <button class="action-btn" onclick="sendRequestQuote()">🤖 Enviar a todos los grupos</button>
         </div>
-        <button class="btn btn-primary" onclick="sendRequest()">📤 Enviar Pedido</button>
-        <div id="rqResult" style="margin-top:12px;font-size:13px;color:#68d391"></div>
+        <div id="reqResult" style="font-size:12px;color:#68d391;min-height:20px"></div>
       </div>
-      <table><thead><tr><th>Producto</th><th>Target</th><th>Enviado a</th><th>Fecha</th></tr></thead>
-      <tbody id="reqTbody"></tbody></table>
-    </div>
     <div id="tab-messages" class="tab-content">
       <div class="section-head" style="border:none;padding-bottom:0">
-        <h2>💬 Mensajes de Grupos</h2>
+        <h2>ð¬ Mensajes de Grupos</h2>
         <div style="display:flex;gap:8px;align-items:center">
           <select id="msgHours" onchange="loadMessages()" style="width:130px">
             <option value="24">24h</option>
             <option value="48">48h</option>
-            <option value="168">7 días</option>
+            <option value="168">7 dÃ­as</option>
           </select>
           <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:#718096">
             <input type="checkbox" id="onlyQuotes" onchange="loadMessages()"> Solo cotizaciones
           </label>
-          <button class="btn btn-primary btn-sm" onclick="loadMessages()">↻</button>
+          <button class="btn btn-primary btn-sm" onclick="loadMessages()">â»</button>
         </div>
       </div>
       <div id="msgList" style="max-height:500px;overflow-y:auto"></div>
     </div>
     <div id="tab-conn" class="tab-content">
-      <div class="section-head" style="border:none;padding-bottom:0"><h2>📡 WhatsApp (Baileys)</h2></div>
+      <div class="section-head" style="border:none;padding-bottom:0"><h2>ð¡ WhatsApp (Baileys)</h2></div>
       <div style="padding:16px 0">
         <div id="baileysStatus" style="font-size:14px;margin-bottom:16px"></div>
         <div id="qrSection" class="qr-wrap" style="display:none"></div>
         <div style="margin-top:16px">
-          <h3 style="font-size:14px;font-weight:600;margin-bottom:12px">📱 Grupos disponibles</h3>
-          <button class="btn btn-primary btn-sm" onclick="loadGroups()" style="margin-bottom:12px">↻ Cargar grupos</button>
+          <h3 style="font-size:14px;font-weight:600;margin-bottom:12px">ð± Grupos disponibles</h3>
+          <button class="btn btn-primary btn-sm" onclick="loadGroups()" style="margin-bottom:12px">â» Cargar grupos</button>
           <table><thead><tr><th>Grupo</th><th>ID</th><th>Participantes</th><th>Asignar a slot</th></tr></thead>
           <tbody id="groupsTbody"></tbody></table>
         </div>
@@ -196,14 +208,14 @@ label{font-size:12px;color:#718096;margin-bottom:4px;display:block}
       <div class="section-head" style="border:none;padding:16px 20px 8px;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <div>
-            <div style="font-size:18px;font-weight:600;">🔔 Productos sin cotización reciente</div>
+            <div style="font-size:18px;font-weight:600;">ð Productos sin cotizaciÃ³n reciente</div>
             <div id="missingSummary" style="font-size:13px;color:#666;margin-top:4px;">Cargando...</div>
           </div>
           <div style="display:flex;gap:8px;align-items:center;">
-            <label style="font-size:13px;color:#555;">Días stale:
+            <label style="font-size:13px;color:#555;">DÃ­as stale:
               <input id="missingStaleDays" type="number" value="7" min="1" max="90" style="width:60px;margin-left:6px;padding:4px;border:1px solid #ccc;border-radius:4px;" />
             </label>
-            <button class="btn" onclick="loadMissing()" style="padding:6px 12px;">↻ Refresh</button>
+            <button class="btn" onclick="loadMissing()" style="padding:6px 12px;">â» Refresh</button>
           </div>
         </div>
       </div>
@@ -214,28 +226,40 @@ label{font-size:12px;color:#718096;margin-bottom:4px;display:block}
 
 <div class="modal" id="supplierModal">
   <div class="modal-box">
-    <button class="close-btn" onclick="closeModal()">×</button>
+    <button class="close-btn" onclick="closeModal()">Ã</button>
     <h3 id="modalTitle">Slot #</h3>
     <div class="form-row cols-2">
       <div><label>Nombre</label><input id="mName"></div>
       <div><label>Alias</label><input id="mAlias"></div>
     </div>
     <div class="form-row cols-2">
-      <div><label>Teléfono</label><input id="mPhone"></div>
+      <div><label>TelÃ©fono</label><input id="mPhone"></div>
       <div><label>Contacto</label><input id="mContactName"></div>
     </div>
     <div class="form-row cols-2">
-      <div><label>País</label><input id="mCountry"></div>
-      <div><label>Activo</label><select id="mActive"><option value="true">Sí</option><option value="false">No</option></select></div>
+      <div><label>PaÃ­s</label><input id="mCountry"></div>
+      <div><label>Activo</label><select id="mActive"><option value="true">SÃ­</option><option value="false">No</option></select></div>
     </div>
     <div class="form-row"><div><label>Grupo WA</label><input id="mGroupName" readonly></div></div>
     <div class="form-row"><div><label>Notas</label><textarea id="mNotes" rows="2"></textarea></div></div>
     <div style="display:flex;gap:8px;margin-top:8px">
-      <button class="btn btn-primary" onclick="saveSupplier()">💾 Guardar</button>
+      <button class="btn btn-primary" onclick="saveSupplier()">ð¾ Guardar</button>
       <span id="modalMsg" style="font-size:12px;color:#68d391;align-self:center"></span>
     </div>
   </div>
 </div>
 <script src="/dashboard.js"></script>
+
+<div class="modal-ov" id="qModal" onclick="if(event.target===this)closeQModal()">
+  <div class="modal-bx">
+    <h3 id="qModalTitle"></h3>
+    <div class="modal-meta" id="qModalMeta"></div>
+    <div class="modal-msg" id="qModalMsg"></div>
+    <div class="modal-acts">
+      <button class="action-btn danger" onclick="deleteQFromModal()">🗑 Eliminar cotización</button>
+      <button class="action-btn" onclick="closeQModal()">Cerrar</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
