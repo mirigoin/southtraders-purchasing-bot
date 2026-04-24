@@ -279,14 +279,14 @@ async function loadMissing() {
     if (!resp.ok) throw new Error(resp.status);
     var data = await resp.json();
     var s = data.summary;
-    if (summaryEl) summaryEl.textContent = s.never + ' nunca · ' + s.stale + ' stale · ' + s.fresh + ' fresh · ' + s.total + ' total';
+    if (summaryEl) summaryEl.textContent = s.never + ' nunca Â· ' + s.stale + ' stale Â· ' + s.fresh + ' fresh Â· ' + s.total + ' total';
     if (!listEl) return;
     if (!data.items || !data.items.length) { listEl.innerHTML = '<div style="text-align:center;padding:40px;color:#999;">Sin datos</div>'; return; }
     var html = data.items.map(function(item) {
       var color = item.status === 'never' ? '#e74c3c' : (item.status === 'stale' ? '#f39c12' : '#27ae60');
-      var badge = item.status === 'never' ? '🔴 NUNCA' : (item.status === 'stale' ? '🟡 STALE (' + item.days_since + 'd)' : '🟢 FRESH (' + item.days_since + 'd)');
-      var lastLine = item.last_quote ? ('Último: ' + item.last_quote.supplier_name + ' · $' + item.last_quote.price + ' ' + (item.last_quote.currency || '') + ' · ' + (item.last_quote.incoterm || '')) : 'Sin cotización previa';
-      var costoLine = item.ultimo_costo ? (' · Costo planilla: $' + item.ultimo_costo) : '';
+      var badge = item.status === 'never' ? 'ð´ NUNCA' : (item.status === 'stale' ? 'ð¡ STALE (' + item.days_since + 'd)' : 'ð¢ FRESH (' + item.days_since + 'd)');
+      var lastLine = item.last_quote ? ('Ãltimo: ' + item.last_quote.supplier_name + ' Â· $' + item.last_quote.price + ' ' + (item.last_quote.currency || '') + ' Â· ' + (item.last_quote.incoterm || '')) : 'Sin cotizaciÃ³n previa';
+      var costoLine = item.ultimo_costo ? (' Â· Costo planilla: $' + item.ultimo_costo) : '';
       return '<div style="padding:12px 14px;margin-bottom:8px;background:white;border-left:4px solid ' + color + ';border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">' +
         '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
           '<div style="font-weight:600;font-size:14px;">' + item.desc + '</div>' +
@@ -301,3 +301,54 @@ async function loadMissing() {
     if (listEl) listEl.innerHTML = '<div style="text-align:center;padding:40px;color:#c00;">Error: ' + e.message + '</div>';
   }
 }
+
+
+// ================================================================
+// FUNCIONES NUEVAS - 2026-04-23
+// ================================================================
+
+window.__QC = [];
+function norm(s) { return (s || "").toLowerCase().trim(); }
+function findQ(p, m, cap, sup) {
+  return window.__QC.find(q => norm(q.product)===norm(p)&&norm(q.model)===norm(m)&&norm(q.capacity)===norm(cap)&&norm(q.supplier_name)===norm(sup))
+      || window.__QC.find(q => norm(q.product)===norm(p)&&norm(q.supplier_name)===norm(sup));
+}
+async function refreshQC() {
+  try { const r=await fetch("/api/quotes"); const d=await r.json(); window.__QC=Array.isArray(d)?d:(d.quotes||[]); } catch(e) {}
+}
+
+function showToast(msg) {
+  var t=document.getElementById('__toast');
+  if(!t){t=document.createElement('div');t.id='__toast';t.style.cssText='position:fixed;bottom:24px;right:24px;background:#22543d;color:#c6f6d5;padding:10px 18px;border-radius:8px;font-size:13px;z-index:9999;opacity:0;transition:opacity .3s';document.body.appendChild(t);}
+  t.textContent=msg;t.style.opacity='1';clearTimeout(t.__timer);t.__timer=setTimeout(function(){t.style.opacity='0';},3000);
+}
+
+async function loadBestPrices() {
+  var tbody=document.getElementById('bestTbody');
+  if(!tbody)return;
+  tbody.innerHTML='<tr><td colspan="9" style="text-align:center;color:#718096;padding:20px">Cargando...</td></tr>';
+  try {
+    var r=await fetch('/api/best-prices?days=7');
+    var d=await r.json();
+    var rows=Array.isArray(d)?d:(d.prices||d.quotes||[]);
+    if(!rows.length){tbody.innerHTML='<tr><td colspan="9" style="text-align:center;color:#718096;padding:20px">Sin cotizaciones en los últimos 7 días</td></tr>';return;}
+    tbody.innerHTML=rows.map(function(q){var date=q.ts?new Date(q.ts).toLocaleDateString('es-AR'):'-';return '<tr><td>'+(q.product||'-')+'</td><td>'+(q.model||'-')+'</td><td>'+(q.capacity||'-')+'</td><td>USD '+(q.price||'-')+'</td><td>'+(q.cost||'-')+'</td><td>'+(q.supplier_name||'-')+'</td><td>'+(q.qty||'-')+'</td><td>'+(q.incoterm||'-')+'</td><td>'+date+'</td></tr>';}).join('');
+    attachBestClicks();
+  } catch(e) { tbody.innerHTML='<tr><td colspan="9" style="text-align:center;color:#e53e3e;padding:20px">Error: '+e.message+'</td></tr>'; }
+}
+var loadBest = loadBestPrices;
+
+var _qId=null;
+function openQModal(q){_qId=(q&&q.id)||null;var m=[(q.product||""),(q.model||""),(q.capacity||"")].filter(Boolean).join(" ");document.getElementById("qModalTitle").textContent=m||"Cotización";document.getElementById("qModalMeta").textContent="Proveedor: "+(q.supplier_name||"-")+"  |  USD "+(q.price||"-")+"  |  Qty: "+(q.qty||"-");document.getElementById("qModalMsg").textContent=q.raw_text||"(sin mensaje original)";document.getElementById("qModal").classList.add("open");}
+function closeQModal(){document.getElementById("qModal").classList.remove("open");_qId=null;}
+async function deleteQFromModal(){if(!_qId){alert("Sin ID");return;}if(!confirm("¿Eliminar esta cotización?"))return;try{var r=await fetch("/api/quotes/"+_qId,{method:"DELETE"});var d=await r.json();if(d.ok||d.deleted>=0){window.__QC=window.__QC.filter(function(q){return q.id!==_qId;});closeQModal();if(typeof loadBestPrices==="function")loadBestPrices();showToast("Cotización eliminada");}else alert("Error: "+(d.error||"desconocido"));}catch(e){alert("Error: "+e.message);}}
+
+function attachBestClicks(){var tab=document.getElementById("tab-best");if(!tab)return;tab.querySelectorAll("tbody tr").forEach(function(row){if(row.dataset.mc)return;row.dataset.mc="1";row.classList.add("clickable-row");row.addEventListener("click",function(){var cells=row.querySelectorAll("td");if(!cells.length)return;var p=cells[0]?cells[0].textContent.trim():"";var m=cells[1]?cells[1].textContent.trim():"";var cap=cells[2]?cells[2].textContent.trim():"";var sup=cells[5]?cells[5].textContent.trim():"";var q=findQ(p,m,cap,sup);if(!q)q={product:p,model:m,capacity:cap,supplier_name:sup,price:cells[3]?cells[3].textContent.replace(/[^0-9.]/g,""):"",qty:cells[6]?cells[6].textContent.trim():"",ts:new Date().toISOString(),raw_text:"(Sin mensaje - buscalo en tab Cotizaciones)"};openQModal(q);});});}
+
+function addProdRow(){var row=document.createElement("div");row.className="prod-row";row.innerHTML='<input class="prod-name" placeholder="Ej: iPhone 16 128GB" style="flex:3"><input class="prod-target" placeholder="Target USD (opc)" style="flex:1;max-width:160px"><button onclick="this.parentNode.remove()" style="background:#c53030;color:#fff;border:none;border-radius:6px;padding:5px 9px;cursor:pointer;flex-shrink:0">×</button>';document.getElementById("productList").appendChild(row);}
+async function sendRequestQuote(){var rows=document.querySelectorAll(".prod-row");var products=[];rows.forEach(function(row){var n=row.querySelector(".prod-name");var t=row.querySelector(".prod-target");if(n&&n.value.trim())products.push({name:n.value.trim(),target:t&&t.value.trim()||null});});if(!products.length){showToast("Agregá al menos un producto");return;}var el=document.getElementById("reqResult");el.textContent="Enviando...";try{var body=products.length===1?{product:products[0].name,target_price:products[0].target}:{products:products};var r=await fetch("/api/request-quote",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});var d=await r.json();if(d.ok||d.sent>=0){el.textContent="✅ Enviado a "+(d.sent||d.groups_sent||"?")+" grupos";showToast("Cotización enviada");}else el.textContent="❌ "+(d.error||"error al enviar");}catch(e){el.textContent="❌ "+e.message;}}
+
+refreshQC();
+setInterval(function(){attachBestClicks();},2000);
+setInterval(refreshQC,60000);
+if(document.getElementById("productList"))addProdRow();
