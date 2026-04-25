@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ÃÂ°ÃÂÃÂ¤ÃÂ Marco ÃÂ¢ÃÂÃÂ Purchasing Bot</title>
+<title>🤖 Marco — Purchasing Bot</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f1117;color:#e2e8f0;min-height:100vh}
@@ -82,12 +82,12 @@ label{font-size:12px;color:#718096;margin-bottom:4px;display:block}
 <body>
 <header>
   <div class="dot" id="statusDot"></div>
-  <h1>ÃÂ°ÃÂÃÂ¤ÃÂ Marco ÃÂ¢ÃÂÃÂ Purchasing Bot</h1>
-  <span class="ts" id="statusText">ÃÂ¢ÃÂÃÂ³ Checking...</span>
+  <h1>🤖 Marco — Purchasing Bot</h1>
+  <span class="ts" id="statusText">⏳ Checking...</span>
 </header>
 <div class="wrap">
   <div class="stats">
-    <div class="stat"><div class="n" id="statConn">-</div><div class="l">ConexiÃÂÃÂ³n</div></div>
+    <div class="stat"><div class="n" id="statConn">-</div><div class="l">Conexión</div></div>
     <div class="stat"><div class="n" id="statSuppliers">-</div><div class="l">Proveedores activos</div></div>
     <div class="stat"><div class="n" id="statQuotes24">-</div><div class="l">Cotizaciones 24h</div></div>
     <div class="stat"><div class="n" id="statQuotes7d">-</div><div class="l">Cotizaciones 7d</div></div>
@@ -95,41 +95,41 @@ label{font-size:12px;color:#718096;margin-bottom:4px;display:block}
   </div>
   <div class="section">
     <div class="tabs">
-      <button class="tab active" onclick="showTab('tab-best',this)">ÃÂ°ÃÂÃÂÃÂ Best Prices</button>
-      <button class="tab" onclick="showTab('tab-suppliers',this)">ÃÂ°ÃÂÃÂÃÂ­ Proveedores</button>
-      <button class="tab" onclick="showTab('tab-quotes',this)">ÃÂ°ÃÂÃÂÃÂ° Cotizaciones</button>
-      <button class="tab" onclick="showTab('tab-request',this)">ÃÂ°ÃÂÃÂÃÂ¤ Pedir CotizaciÃÂÃÂ³n</button>
-      <button class="tab" onclick="showTab('tab-messages',this)">ÃÂ°ÃÂÃÂÃÂ¬ Mensajes</button>
-      <button class="tab" onclick="showTab('tab-conn',this)">ÃÂ°ÃÂÃÂÃÂ¡ ConexiÃÂÃÂ³n</button>
+      <button class="tab active" onclick="showTab('tab-best',this)">🏆 Best Prices</button>
+      <button class="tab" onclick="showTab('tab-suppliers',this)">🏭 Proveedores</button>
+      <button class="tab" onclick="showTab('tab-quotes',this)">💰 Cotizaciones</button>
+      <button class="tab" onclick="showTab('tab-request',this)">📤 Pedir Cotización</button>
+      <button class="tab" onclick="showTab('tab-messages',this)">💬 Mensajes</button>
+      <button class="tab" onclick="showTab('tab-conn',this)">📡 Conexión</button>
       <button class="tab" onclick="showTab('tab-compras',this)">&#128722; Compras</button>
-      <button class="tab" onclick="showTab('tab-missing',this)">ÃÂ°ÃÂÃÂÃÂ Faltantes</button>
+      <button class="tab" onclick="showTab('tab-missing',this)">🔔 Faltantes</button>
     </div>
     <div id="tab-best" class="tab-content active">
       <div class="section-head" style="border:none;padding-bottom:0">
-        <h2>ÃÂ°ÃÂÃÂÃÂ Mejores precios (ÃÂÃÂºltimos 7 dÃÂÃÂ­as)</h2>
-        <button class="btn btn-primary btn-sm" onclick="loadBest()">ÃÂ¢ÃÂÃÂ» Refresh</button>
+        <h2>🏆 Mejores precios (últimos 7 días)</h2>
+        <button class="btn btn-primary btn-sm" onclick="loadBest()">↻ Refresh</button>
       </div>
       <table><thead><tr><th>Producto</th><th>Modelo</th><th>Capacidad</th><th>Precio</th><th>Proveedor</th><th>Qty</th><th>Incoterm</th><th>Fecha</th></tr></thead>
       <tbody id="bestTbody"><tr><td colspan="8" style="text-align:center;color:#718096;padding:20px">Cargando...</td></tr></tbody></table>
     </div>
     <div id="tab-suppliers" class="tab-content">
       <div class="section-head" style="border:none;padding-bottom:0">
-        <h2>ÃÂ°ÃÂÃÂÃÂ­ Proveedores (50 slots)</h2>
-        <button class="btn btn-primary btn-sm" onclick="loadSuppliers()">ÃÂ¢ÃÂÃÂ» Refresh</button>
+        <h2>🏭 Proveedores (50 slots)</h2>
+        <button class="btn btn-primary btn-sm" onclick="loadSuppliers()">↻ Refresh</button>
       </div>
       <div class="supplier-grid" id="supplierGrid">Cargando...</div>
     </div>
     <div id="tab-quotes" class="tab-content">
       <div class="section-head" style="border:none;padding-bottom:0">
-        <h2>ÃÂ°ÃÂÃÂÃÂ° Cotizaciones</h2>
+        <h2>💰 Cotizaciones</h2>
         <div style="display:flex;gap:8px;align-items:center">
           <input style="width:160px" placeholder="Filtrar producto..." id="filterProduct" oninput="loadQuotes()">
           <select id="filterHours" onchange="loadQuotes()" style="width:130px">
             <option value="">Todas</option>
             <option value="24">24h</option>
-            <option value="168">7 dÃÂÃÂ­as</option>
+            <option value="168">7 días</option>
           </select>
-          <button class="btn btn-primary btn-sm" onclick="loadQuotes()">ÃÂ¢ÃÂÃÂ»</button>
+          <button class="btn btn-primary btn-sm" onclick="loadQuotes()">↻</button>
         </div>
       </div>
       <table><thead><tr><th>Producto</th><th>Modelo</th><th>Cap</th><th>Color</th><th>Precio</th><th>Qty</th><th>Incoterm</th><th>Proveedor</th><th>Fecha</th></tr></thead>
@@ -137,40 +137,40 @@ label{font-size:12px;color:#718096;margin-bottom:4px;display:block}
     </div>
     <div id="tab-request" class="tab-content">
       <div style="padding:14px 18px">
-        <p style="font-size:12px;color:#718096;margin-bottom:12px"><p style="color:#718096;font-size:13px;margin-bottom:12px">Seleccioná proveedor (o "Todos") y los productos a cotizar.</p>
+        <p style="font-size:12px;color:#718096;margin-bottom:12px"><p style="color:#718096;font-size:13px;margin-bottom:12px">Seleccion� proveedor (o "Todos") y los productos a cotizar.</p>
         <div style="margin-bottom:12px"><label style="font-size:12px;color:#718096;display:block;margin-bottom:4px">Proveedor</label><select id="supplierSelect" style="width:100%;background:#1a202c;color:#e2e8f0;border:1px solid #2d3748;border-radius:6px;padding:7px 10px;font-size:13px"><option value="">Todos los grupos</option></select></div>
         <div id="productList" style="margin-bottom:12px"></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
           <button class="action-btn" onclick="addProdRow()" style="background:#2d3748;border:1px solid #4a5568">+ Agregar producto</button>
-          <button class="action-btn" onclick="sendRequestQuote()">Ã°ÂÂ¤Â Enviar a todos los grupos</button>
+          <button class="action-btn" onclick="sendRequestQuote()">> Enviar a todos los grupos</button>
         </div>
         <div id="reqResult" style="font-size:12px;color:#68d391;min-height:20px"></div>
       </div>
     <div id="tab-messages" class="tab-content">
       <div class="section-head" style="border:none;padding-bottom:0">
-        <h2>ÃÂ°ÃÂÃÂÃÂ¬ Mensajes de Grupos</h2>
+        <h2>💬 Mensajes de Grupos</h2>
         <div style="display:flex;gap:8px;align-items:center">
           <select id="msgHours" onchange="loadMessages()" style="width:130px">
             <option value="24">24h</option>
             <option value="48">48h</option>
-            <option value="168">7 dÃÂÃÂ­as</option>
+            <option value="168">7 días</option>
           </select>
           <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:#718096">
             <input type="checkbox" id="onlyQuotes" onchange="loadMessages()"> Solo cotizaciones
           </label>
-          <button class="btn btn-primary btn-sm" onclick="loadMessages()">ÃÂ¢ÃÂÃÂ»</button>
+          <button class="btn btn-primary btn-sm" onclick="loadMessages()">↻</button>
         </div>
       </div>
       <div id="msgList" style="max-height:500px;overflow-y:auto"></div>
     </div>
     <div id="tab-conn" class="tab-content">
-      <div class="section-head" style="border:none;padding-bottom:0"><h2>ÃÂ°ÃÂÃÂÃÂ¡ WhatsApp (Baileys)</h2></div>
+      <div class="section-head" style="border:none;padding-bottom:0"><h2>📡 WhatsApp (Baileys)</h2></div>
       <div style="padding:16px 0">
         <div id="baileysStatus" style="font-size:14px;margin-bottom:16px"></div>
         <div id="qrSection" class="qr-wrap" style="display:none"></div>
         <div style="margin-top:16px">
-          <h3 style="font-size:14px;font-weight:600;margin-bottom:12px">ÃÂ°ÃÂÃÂÃÂ± Grupos disponibles</h3>
-          <button class="btn btn-primary btn-sm" onclick="loadGroups()" style="margin-bottom:12px">ÃÂ¢ÃÂÃÂ» Cargar grupos</button>
+          <h3 style="font-size:14px;font-weight:600;margin-bottom:12px">📱 Grupos disponibles</h3>
+          <button class="btn btn-primary btn-sm" onclick="loadGroups()" style="margin-bottom:12px">↻ Cargar grupos</button>
           <table><thead><tr><th>Grupo</th><th>ID</th><th>Participantes</th><th>Asignar a slot</th></tr></thead>
           <tbody id="groupsTbody"></tbody></table>
         </div>
@@ -209,14 +209,14 @@ label{font-size:12px;color:#718096;margin-bottom:4px;display:block}
       <div class="section-head" style="border:none;padding:16px 20px 8px;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <div>
-            <div style="font-size:18px;font-weight:600;">ÃÂ°ÃÂÃÂÃÂ Productos sin cotizaciÃÂÃÂ³n reciente</div>
+            <div style="font-size:18px;font-weight:600;">🔔 Productos sin cotización reciente</div>
             <div id="missingSummary" style="font-size:13px;color:#666;margin-top:4px;">Cargando...</div>
           </div>
           <div style="display:flex;gap:8px;align-items:center;">
-            <label style="font-size:13px;color:#555;">DÃÂÃÂ­as stale:
+            <label style="font-size:13px;color:#555;">Días stale:
               <input id="missingStaleDays" type="number" value="7" min="1" max="90" style="width:60px;margin-left:6px;padding:4px;border:1px solid #ccc;border-radius:4px;" />
             </label>
-            <button class="btn" onclick="loadMissing()" style="padding:6px 12px;">ÃÂ¢ÃÂÃÂ» Refresh</button>
+            <button class="btn" onclick="loadMissing()" style="padding:6px 12px;">↻ Refresh</button>
           </div>
         </div>
       </div>
@@ -227,24 +227,24 @@ label{font-size:12px;color:#718096;margin-bottom:4px;display:block}
 
 <div class="modal" id="supplierModal">
   <div class="modal-box">
-    <button class="close-btn" onclick="closeModal()">ÃÂÃÂ</button>
+    <button class="close-btn" onclick="closeModal()">×</button>
     <h3 id="modalTitle">Slot #</h3>
     <div class="form-row cols-2">
       <div><label>Nombre</label><input id="mName"></div>
       <div><label>Alias</label><input id="mAlias"></div>
     </div>
     <div class="form-row cols-2">
-      <div><label>TelÃÂÃÂ©fono</label><input id="mPhone"></div>
+      <div><label>Teléfono</label><input id="mPhone"></div>
       <div><label>Contacto</label><input id="mContactName"></div>
     </div>
     <div class="form-row cols-2">
-      <div><label>PaÃÂÃÂ­s</label><input id="mCountry"></div>
-      <div><label>Activo</label><select id="mActive"><option value="true">SÃÂÃÂ­</option><option value="false">No</option></select></div>
+      <div><label>País</label><input id="mCountry"></div>
+      <div><label>Activo</label><select id="mActive"><option value="true">Sí</option><option value="false">No</option></select></div>
     </div>
     <div class="form-row"><div><label>Grupo WA</label><input id="mGroupName" readonly></div></div>
     <div class="form-row"><div><label>Notas</label><textarea id="mNotes" rows="2"></textarea></div></div>
     <div style="display:flex;gap:8px;margin-top:8px">
-      <button class="btn btn-primary" onclick="saveSupplier()">ÃÂ°ÃÂÃÂÃÂ¾ Guardar</button>
+      <button class="btn btn-primary" onclick="saveSupplier()">💾 Guardar</button>
       <span id="modalMsg" style="font-size:12px;color:#68d391;align-self:center"></span>
     </div>
   </div>
@@ -257,7 +257,7 @@ label{font-size:12px;color:#718096;margin-bottom:4px;display:block}
     <div class="modal-meta" id="qModalMeta"></div>
     <div class="modal-msg" id="qModalMsg"></div>
     <div class="modal-acts">
-      <button class="action-btn danger" onclick="deleteQFromModal()">Ã°ÂÂÂ Eliminar cotizaciÃÂ³n</button>
+      <button class="action-btn danger" onclick="deleteQFromModal()">=� Eliminar cotizaci�n</button>
       <button class="action-btn" onclick="closeQModal()">Cerrar</button>
     </div>
   </div>
