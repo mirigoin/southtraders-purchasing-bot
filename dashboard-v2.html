@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Marco Dashboard v2</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f1117;color:#e2e8f0;min-height:100vh}
+header{background:#1a1a2e;padding:16px 24px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #2d3748}
+header h1{font-size:18px;font-weight:700;color:#fff}
+.dot{width:8px;height:8px;border-radius:50%;background:#22c55e;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.ts{font-size:12px;color:#718096;margin-left:auto}
+.wrap{padding:20px 24px;max-width:1200px;margin:0 auto}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+.stat{background:#1a202c;border-radius:10px;padding:16px;border:1px solid #2d3748}
+.stat .n{font-size:28px;font-weight:700;color:#63b3ed}
+.stat .l{font-size:12px;color:#718096;margin-top:4px}
+.section{background:#1a202c;border-radius:10px;border:1px solid #2d3748;margin-bottom:20px;overflow:hidden}
+.section-head{padding:14px 18px;border-bottom:1px solid #2d3748;display:flex;align-items:center;gap:8px;justify-content:space-between}
+.section-head h2{font-size:14px;font-weight:600;color:#e2e8f0}
+.btn{background:#2563eb;color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:13px;cursor:pointer}
+.btn:hover{background:#1d4ed8}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:600;color:#718096;text-transform:uppercase;letter-spacing:.05em;background:#161922}
+td{padding:10px 16px;font-size:13px;border-bottom:1px solid #1a202c}
+tr:hover td{background:#2d3748}
+tr:last-child td{border-bottom:none}
+.muted{color:#718096}
+.empty{padding:40px;text-align:center;color:#718096;font-size:14px}
+.error{color:#ef4444;padding:14px 18px;font-size:13px}
+</style>
+</head>
+<body>
+<header>
+<div class="dot" id="dot"></div>
+<h1>Marco Dashboard v2</h1>
+<span class="ts" id="ts">--</span>
+</header>
+<div class="wrap">
+<div class="stats">
+<div class="stat"><div class="n" id="s-conn">--</div><div class="l">Conexion</div></div>
+<div class="stat"><div class="n" id="s-sup">--</div><div class="l">Proveedores</div></div>
+<div class="stat"><div class="n" id="s-q24">--</div><div class="l">Cotizaciones 24h</div></div>
+<div class="stat"><div class="n" id="s-q7">--</div><div class="l">Cotizaciones 7d</div></div>
+</div>
+<div class="section">
+<div class="section-head">
+<h2>Best Prices (ultimos 7 dias)</h2>
+<button class="btn" onclick="loadBest()">Refresh</button>
+</div>
+<div id="best-content">
+<div class="empty">Cargando...</div>
+</div>
+</div>
+</div>
+<script>
+var API='https://southtraders-purchasing-bot.onrender.com';
+
+function fmtDate(d){
+  if(!d) return '-';
+  var dt = new Date(d);
+  return dt.getDate()+'/'+(dt.getMonth()+1)+'/'+dt.getFullYear();
+}
+
+async function loadStats(){
+  try {
+    var r1 = await fetch(API+'/api/suppliers');
+    var sups = await r1.json();
+    document.getElementById('s-sup').textContent = sups.length || 0;
+    document.getElementById('s-conn').textContent = 'OK';
+    
+    var r2 = await fetch(API+'/api/quotes?hours=24&limit=200');
+    var q24 = await r2.json();
+    document.getElementById('s-q24').textContent = q24.length || 0;
+    
+    var r3 = await fetch(API+'/api/quotes?hours=168&limit=500');
+    var q7 = await r3.json();
+    document.getElementById('s-q7').textContent = q7.length || 0;
+  } catch(e) {
+    document.getElementById('s-conn').textContent = 'ERR';
+    document.getElementById('dot').style.background = '#ef4444';
+  }
+}
+
+async function loadBest(){
+  var c = document.getElementById('best-content');
+  c.innerHTML = '<div class="empty">Cargando...</div>';
+  try {
+    var r = await fetch(API+'/api/best-prices?days=7');
+    var data = await r.json();
+    if (!data || !data.length) {
+      c.innerHTML = '<div class="empty">Sin datos</div>';
+      return;
+    }
+    var html = '<table><thead><tr><th>Producto</th><th>Modelo</th><th>Capacidad</th><th>Precio</th><th>Proveedor</th><th>Qty</th><th>Incoterm</th><th>Fecha</th></tr></thead><tbody>';
+    for (var i=0; i<data.length; i++) {
+      var q = data[i];
+      html += '<tr>'+
+        '<td>'+(q.product||'-')+'</td>'+
+        '<td>'+(q.model||'-')+'</td>'+
+        '<td>'+(q.capacity||'-')+'</td>'+
+        '<td><b>USD '+(q.price||'-')+'</b></td>'+
+        '<td>'+(q.supplier_name||q.supplier||'-')+'</td>'+
+        '<td>'+(q.quantity||'-')+'</td>'+
+        '<td>'+(q.incoterm||'-')+'</td>'+
+        '<td class="muted">'+fmtDate(q.created_at)+'</td>'+
+      '</tr>';
+    }
+    html += '</tbody></table>';
+    c.innerHTML = html;
+  } catch(e) {
+    c.innerHTML = '<div class="error">Error: '+e.message+'</div>';
+  }
+}
+
+function updateTs(){
+  var d = new Date();
+  var h = String(d.getHours()).padStart(2,'0');
+  var m = String(d.getMinutes()).padStart(2,'0');
+  document.getElementById('ts').textContent = 'Updated '+h+':'+m;
+}
+
+function refresh(){
+  loadStats();
+  loadBest();
+  updateTs();
+}
+
+refresh();
+setInterval(refresh, 60000);
+</script>
+</body>
+</html>
