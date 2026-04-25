@@ -12,24 +12,34 @@ header h1{font-size:18px;font-weight:700;color:#fff}
 .dot{width:8px;height:8px;border-radius:50%;background:#22c55e;animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 .ts{font-size:12px;color:#718096;margin-left:auto}
-.wrap{padding:20px 24px;max-width:1200px;margin:0 auto}
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+.wrap{padding:20px 24px;max-width:1300px;margin:0 auto}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
 .stat{background:#1a202c;border-radius:10px;padding:16px;border:1px solid #2d3748}
 .stat .n{font-size:28px;font-weight:700;color:#63b3ed}
 .stat .l{font-size:12px;color:#718096;margin-top:4px}
+.tabs{display:flex;gap:4px;margin-bottom:14px;border-bottom:1px solid #2d3748}
+.tab{padding:10px 18px;font-size:13px;font-weight:500;color:#718096;cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;transition:all .15s}
+.tab:hover{color:#cbd5e0}
+.tab.active{color:#63b3ed;border-bottom-color:#63b3ed}
 .section{background:#1a202c;border-radius:10px;border:1px solid #2d3748;margin-bottom:20px;overflow:hidden}
-.section-head{padding:14px 18px;border-bottom:1px solid #2d3748;display:flex;align-items:center;gap:8px;justify-content:space-between}
+.section-head{padding:14px 18px;border-bottom:1px solid #2d3748;display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap}
 .section-head h2{font-size:14px;font-weight:600;color:#e2e8f0}
+.controls{display:flex;gap:8px;align-items:center}
 .btn{background:#2563eb;color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:13px;cursor:pointer}
 .btn:hover{background:#1d4ed8}
+.btn-danger{background:#dc2626;padding:4px 10px;font-size:12px}
+.btn-danger:hover{background:#b91c1c}
+.select{background:#0f1117;color:#e2e8f0;border:1px solid #2d3748;padding:6px 10px;border-radius:6px;font-size:13px;cursor:pointer}
 table{width:100%;border-collapse:collapse}
-th{padding:10px 16px;text-align:left;font-size:11px;font-weight:600;color:#718096;text-transform:uppercase;letter-spacing:.05em;background:#161922}
-td{padding:10px 16px;font-size:13px;border-bottom:1px solid #1a202c}
+th{padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:#718096;text-transform:uppercase;letter-spacing:.05em;background:#161922;white-space:nowrap}
+td{padding:10px 14px;font-size:13px;border-bottom:1px solid #1a202c;vertical-align:top}
 tr:hover td{background:#2d3748}
 tr:last-child td{border-bottom:none}
 .muted{color:#718096}
 .empty{padding:40px;text-align:center;color:#718096;font-size:14px}
 .error{color:#ef4444;padding:14px 18px;font-size:13px}
+.raw{max-width:280px;font-size:11px;color:#94a3b8;line-height:1.4;font-family:monospace;white-space:pre-wrap;word-break:break-word}
+.scroll{overflow-x:auto}
 </style>
 </head>
 <body>
@@ -45,37 +55,67 @@ tr:last-child td{border-bottom:none}
 <div class="stat"><div class="n" id="s-q24">--</div><div class="l">Cotizaciones 24h</div></div>
 <div class="stat"><div class="n" id="s-q7">--</div><div class="l">Cotizaciones 7d</div></div>
 </div>
-<div class="section">
+
+<div class="tabs">
+<button class="tab active" data-tab="best" onclick="setTab('best')">Best Prices</button>
+<button class="tab" data-tab="quotes" onclick="setTab('quotes')">Cotizaciones</button>
+</div>
+
+<div id="tab-best" class="section">
 <div class="section-head">
 <h2>Best Prices (ultimos 7 dias)</h2>
 <button class="btn" onclick="loadBest()">Refresh</button>
 </div>
-<div id="best-content">
-<div class="empty">Cargando...</div>
+<div id="best-content"><div class="empty">Cargando...</div></div>
+</div>
+
+<div id="tab-quotes" class="section" style="display:none">
+<div class="section-head">
+<h2>Cotizaciones</h2>
+<div class="controls">
+<select class="select" id="q-range" onchange="loadQuotes()">
+<option value="24">Ultimas 24h</option>
+<option value="168" selected>Ultimos 7 dias</option>
+<option value="720">Ultimos 30 dias</option>
+</select>
+<button class="btn" onclick="loadQuotes()">Refresh</button>
 </div>
 </div>
+<div id="quotes-content"><div class="empty">Cargando...</div></div>
+</div>
+
 </div>
 <script>
-var API='https://southtraders-purchasing-bot.onrender.com';
-
 function fmtDate(d){
   if(!d) return '-';
   var dt = new Date(d);
-  return dt.getDate()+'/'+(dt.getMonth()+1)+'/'+dt.getFullYear();
+  var dd = String(dt.getDate()).padStart(2,'0');
+  var mm = String(dt.getMonth()+1).padStart(2,'0');
+  var hh = String(dt.getHours()).padStart(2,'0');
+  var mi = String(dt.getMinutes()).padStart(2,'0');
+  return dd+'/'+mm+' '+hh+':'+mi;
+}
+
+function esc(s){
+  if (s == null) return '-';
+  return String(s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
 }
 
 async function loadStats(){
   try {
-    var r1 = await fetch(API+'/api/suppliers');
+    var r1 = await fetch('/api/suppliers');
     var sups = await r1.json();
     document.getElementById('s-sup').textContent = sups.length || 0;
     document.getElementById('s-conn').textContent = 'OK';
+    document.getElementById('dot').style.background = '#22c55e';
     
-    var r2 = await fetch(API+'/api/quotes?hours=24&limit=200');
+    var r2 = await fetch('/api/quotes?hours=24&limit=500');
     var q24 = await r2.json();
     document.getElementById('s-q24').textContent = q24.length || 0;
     
-    var r3 = await fetch(API+'/api/quotes?hours=168&limit=500');
+    var r3 = await fetch('/api/quotes?hours=168&limit=2000');
     var q7 = await r3.json();
     document.getElementById('s-q7').textContent = q7.length || 0;
   } catch(e) {
@@ -88,31 +128,101 @@ async function loadBest(){
   var c = document.getElementById('best-content');
   c.innerHTML = '<div class="empty">Cargando...</div>';
   try {
-    var r = await fetch(API+'/api/best-prices?days=7');
+    var r = await fetch('/api/best-prices?days=7');
     var data = await r.json();
     if (!data || !data.length) {
       c.innerHTML = '<div class="empty">Sin datos</div>';
       return;
     }
-    var html = '<table><thead><tr><th>Producto</th><th>Modelo</th><th>Capacidad</th><th>Precio</th><th>Proveedor</th><th>Qty</th><th>Incoterm</th><th>Fecha</th></tr></thead><tbody>';
+    var html = '<div class="scroll"><table><thead><tr><th>Producto</th><th>Modelo</th><th>Capacidad</th><th>Precio</th><th>Proveedor</th><th>Qty</th><th>Incoterm</th><th>Fecha</th></tr></thead><tbody>';
     for (var i=0; i<data.length; i++) {
       var q = data[i];
       html += '<tr>'+
-        '<td>'+(q.product||'-')+'</td>'+
-        '<td>'+(q.model||'-')+'</td>'+
-        '<td>'+(q.capacity||'-')+'</td>'+
-        '<td><b>USD '+(q.price||'-')+'</b></td>'+
-        '<td>'+(q.supplier_name||q.supplier||'-')+'</td>'+
-        '<td>'+(q.quantity||'-')+'</td>'+
-        '<td>'+(q.incoterm||'-')+'</td>'+
-        '<td class="muted">'+fmtDate(q.created_at)+'</td>'+
+        '<td>'+esc(q.product)+'</td>'+
+        '<td>'+esc(q.model)+'</td>'+
+        '<td>'+esc(q.capacity)+'</td>'+
+        '<td><b>'+(q.currency||'USD')+' '+esc(q.price)+'</b></td>'+
+        '<td>'+esc(q.supplier_name||q.supplier)+'</td>'+
+        '<td>'+esc(q.qty||q.quantity)+'</td>'+
+        '<td>'+esc(q.incoterm)+'</td>'+
+        '<td class="muted">'+fmtDate(q.ts||q.created_at)+'</td>'+
       '</tr>';
     }
-    html += '</tbody></table>';
+    html += '</tbody></table></div>';
     c.innerHTML = html;
   } catch(e) {
     c.innerHTML = '<div class="error">Error: '+e.message+'</div>';
   }
+}
+
+async function loadQuotes(){
+  var c = document.getElementById('quotes-content');
+  c.innerHTML = '<div class="empty">Cargando...</div>';
+  var hours = document.getElementById('q-range').value;
+  try {
+    var r = await fetch('/api/quotes?hours='+hours+'&limit=500');
+    var data = await r.json();
+    if (!data || !data.length) {
+      c.innerHTML = '<div class="empty">Sin cotizaciones en este rango</div>';
+      return;
+    }
+    var html = '<div class="scroll"><table><thead><tr>'+
+      '<th>Fecha</th><th>Proveedor</th><th>Producto</th><th>Modelo</th><th>Cap</th>'+
+      '<th>Precio</th><th>Qty</th><th>Cond</th><th>Incoterm</th><th>Mensaje</th><th></th>'+
+      '</tr></thead><tbody>';
+    for (var i=0; i<data.length; i++) {
+      var q = data[i];
+      html += '<tr id="row-'+q.id+'">'+
+        '<td class="muted">'+fmtDate(q.ts)+'</td>'+
+        '<td>'+esc(q.supplier_name)+'</td>'+
+        '<td>'+esc(q.product)+'</td>'+
+        '<td>'+esc(q.model)+'</td>'+
+        '<td>'+esc(q.capacity)+'</td>'+
+        '<td><b>'+(q.currency||'USD')+' '+esc(q.price)+'</b></td>'+
+        '<td>'+esc(q.qty)+'</td>'+
+        '<td>'+esc(q.condition)+'</td>'+
+        '<td>'+esc(q.incoterm)+'</td>'+
+        '<td class="raw">'+esc(q.raw_text||'').substring(0,200)+'</td>'+
+        '<td><button class="btn btn-danger" onclick="delQuote('+q.id+')">Borrar</button></td>'+
+      '</tr>';
+    }
+    html += '</tbody></table></div>';
+    c.innerHTML = html;
+  } catch(e) {
+    c.innerHTML = '<div class="error">Error: '+e.message+'</div>';
+  }
+}
+
+async function delQuote(id){
+  if (!confirm('Borrar cotizacion #'+id+'? Esta accion no se puede deshacer.')) return;
+  try {
+    var r = await fetch('/api/quotes/'+id+'/delete', {method:'POST'});
+    var data = await r.json();
+    if (data.error) {
+      alert('Error: '+data.error);
+      return;
+    }
+    var row = document.getElementById('row-'+id);
+    if (row) {
+      row.style.transition = 'opacity .3s';
+      row.style.opacity = '0';
+      setTimeout(function(){ row.remove(); }, 300);
+    }
+    loadStats();
+  } catch(e) {
+    alert('Error: '+e.message);
+  }
+}
+
+function setTab(name){
+  var tabs = document.querySelectorAll('.tab');
+  for (var i=0; i<tabs.length; i++) {
+    tabs[i].classList.toggle('active', tabs[i].dataset.tab === name);
+  }
+  document.getElementById('tab-best').style.display = (name === 'best') ? 'block' : 'none';
+  document.getElementById('tab-quotes').style.display = (name === 'quotes') ? 'block' : 'none';
+  if (name === 'quotes') loadQuotes();
+  if (name === 'best') loadBest();
 }
 
 function updateTs(){
@@ -124,7 +234,9 @@ function updateTs(){
 
 function refresh(){
   loadStats();
-  loadBest();
+  var activeTab = document.querySelector('.tab.active').dataset.tab;
+  if (activeTab === 'best') loadBest();
+  else if (activeTab === 'quotes') loadQuotes();
   updateTs();
 }
 
