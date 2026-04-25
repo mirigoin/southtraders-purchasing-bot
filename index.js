@@ -1,4 +1,4 @@
-// v2
+// v3 - encoding fix
 const express = require('express');
 const axios = require('axios');
 const { Pool } = require('pg');
