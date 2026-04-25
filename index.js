@@ -774,7 +774,6 @@ app.post('/api/quotes/:id/delete', async (req, res) => {
   }
 });
 
-});
 
 
 app.get('/api/costos', async (req, res) => {
