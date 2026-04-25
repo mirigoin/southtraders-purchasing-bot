@@ -279,14 +279,14 @@ async function loadMissing() {
     if (!resp.ok) throw new Error(resp.status);
     var data = await resp.json();
     var s = data.summary;
-    if (summaryEl) summaryEl.textContent = s.never + ' nunca ÃÂÃÂ· ' + s.stale + ' stale ÃÂÃÂ· ' + s.fresh + ' fresh ÃÂÃÂ· ' + s.total + ' total';
+    if (summaryEl) summaryEl.textContent = s.never + ' nunca ÃÂÃÂÃÂÃÂ· ' + s.stale + ' stale ÃÂÃÂÃÂÃÂ· ' + s.fresh + ' fresh ÃÂÃÂÃÂÃÂ· ' + s.total + ' total';
     if (!listEl) return;
     if (!data.items || !data.items.length) { listEl.innerHTML = '<div style="text-align:center;padding:40px;color:#999;">Sin datos</div>'; return; }
     var html = data.items.map(function(item) {
       var color = item.status === 'never' ? '#e74c3c' : (item.status === 'stale' ? '#f39c12' : '#27ae60');
-      var badge = item.status === 'never' ? 'ÃÂ°ÃÂÃÂÃÂ´ NUNCA' : (item.status === 'stale' ? 'ÃÂ°ÃÂÃÂÃÂ¡ STALE (' + item.days_since + 'd)' : 'ÃÂ°ÃÂÃÂÃÂ¢ FRESH (' + item.days_since + 'd)');
-      var lastLine = item.last_quote ? ('ÃÂÃÂltimo: ' + item.last_quote.supplier_name + ' ÃÂÃÂ· $' + item.last_quote.price + ' ' + (item.last_quote.currency || '') + ' ÃÂÃÂ· ' + (item.last_quote.incoterm || '')) : 'Sin cotizaciÃÂÃÂ³n previa';
-      var costoLine = item.ultimo_costo ? (' ÃÂÃÂ· Costo planilla: $' + item.ultimo_costo) : '';
+      var badge = item.status === 'never' ? 'ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ´ NUNCA' : (item.status === 'stale' ? 'ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ¡ STALE (' + item.days_since + 'd)' : 'ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ¢ FRESH (' + item.days_since + 'd)');
+      var lastLine = item.last_quote ? ('ÃÂÃÂÃÂÃÂltimo: ' + item.last_quote.supplier_name + ' ÃÂÃÂÃÂÃÂ· $' + item.last_quote.price + ' ' + (item.last_quote.currency || '') + ' ÃÂÃÂÃÂÃÂ· ' + (item.last_quote.incoterm || '')) : 'Sin cotizaciÃÂÃÂÃÂÃÂ³n previa';
+      var costoLine = item.ultimo_costo ? (' ÃÂÃÂÃÂÃÂ· Costo planilla: $' + item.ultimo_costo) : '';
       return '<div style="padding:12px 14px;margin-bottom:8px;background:white;border-left:4px solid ' + color + ';border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">' +
         '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
           '<div style="font-weight:600;font-size:14px;">' + item.desc + '</div>' +
@@ -331,7 +331,7 @@ async function loadBestPrices() {
     var r=await fetch('/api/best-prices?days=7');
     var d=await r.json();
     var rows=Array.isArray(d)?d:(d.prices||d.quotes||[]);
-    if(!rows.length){tbody.innerHTML='<tr><td colspan="9" style="text-align:center;color:#718096;padding:20px">Sin cotizaciones en los ÃÂºltimos 7 dÃÂ­as</td></tr>';return;}
+    if(!rows.length){tbody.innerHTML='<tr><td colspan="9" style="text-align:center;color:#718096;padding:20px">Sin cotizaciones en los ÃÂÃÂºltimos 7 dÃÂÃÂ­as</td></tr>';return;}
     tbody.innerHTML=rows.map(function(q){var date=q.ts?new Date(q.ts).toLocaleDateString('es-AR'):'-';return '<tr><td>'+(q.product||'-')+'</td><td>'+(q.model||'-')+'</td><td>'+(q.capacity||'-')+'</td><td>USD '+(q.price||'-')+'</td><td>'+(q.cost||'-')+'</td><td>'+(q.supplier_name||'-')+'</td><td>'+(q.qty||'-')+'</td><td>'+(q.incoterm||'-')+'</td><td>'+date+'</td></tr>';}).join('');
     attachBestClicks();
   } catch(e) { tbody.innerHTML='<tr><td colspan="9" style="text-align:center;color:#e53e3e;padding:20px">Error: '+e.message+'</td></tr>'; }
@@ -339,13 +339,13 @@ async function loadBestPrices() {
 var loadBest = loadBestPrices;
 
 var _qId=null;
-function openQModal(q){_qId=(q&&q.id)||null;var m=[(q.product||""),(q.model||""),(q.capacity||"")].filter(Boolean).join(" ");document.getElementById("qModalTitle").textContent=m||"CotizaciÃÂ³n";document.getElementById("qModalMeta").textContent="Proveedor: "+(q.supplier_name||"-")+"  |  USD "+(q.price||"-")+"  |  Qty: "+(q.qty||"-");document.getElementById("qModalMsg").textContent=q.raw_text||"(sin mensaje original)";document.getElementById("qModal").classList.add("open");}
+function openQModal(q){_qId=(q&&q.id)||null;var m=[(q.product||""),(q.model||""),(q.capacity||"")].filter(Boolean).join(" ");document.getElementById("qModalTitle").textContent=m||"CotizaciÃÂÃÂ³n";document.getElementById("qModalMeta").textContent="Proveedor: "+(q.supplier_name||"-")+"  |  USD "+(q.price||"-")+"  |  Qty: "+(q.qty||"-");document.getElementById("qModalMsg").textContent=q.raw_text||"(sin mensaje original)";document.getElementById("qModal").classList.add("open");}
 function closeQModal(){document.getElementById("qModal").classList.remove("open");_qId=null;}
-async function deleteQFromModal(){if(!_qId){alert("Sin ID");return;}if(!confirm("ÃÂ¿Eliminar esta cotizaciÃÂ³n?"))return;try{var r=await fetch("/api/quotes/"+_qId,{method:"DELETE"});var d=await r.json();if(d.ok||d.deleted>=0){window.__QC=window.__QC.filter(function(q){return q.id!==_qId;});closeQModal();if(typeof loadBestPrices==="function")loadBestPrices();showToast("CotizaciÃÂ³n eliminada");}else alert("Error: "+(d.error||"desconocido"));}catch(e){alert("Error: "+e.message);}}
+async function deleteQFromModal(){if(!_qId){alert("Sin ID");return;}if(!confirm("ÃÂÃÂ¿Eliminar esta cotizaciÃÂÃÂ³n?"))return;try{var r=await fetch("/api/quotes/"+_qId+"/delete",{method:"POST"});var d=await r.json();if(d.ok||d.deleted>=0){window.__QC=window.__QC.filter(function(q){return q.id!==_qId;});closeQModal();if(typeof loadBestPrices==="function")loadBestPrices();showToast("CotizaciÃÂÃÂ³n eliminada");}else alert("Error: "+(d.error||"desconocido"));}catch(e){alert("Error: "+e.message);}}
 
 function attachBestClicks(){var tab=document.getElementById("tab-best");if(!tab)return;tab.querySelectorAll("tbody tr").forEach(function(row){if(row.dataset.mc)return;row.dataset.mc="1";row.classList.add("clickable-row");row.addEventListener("click",function(){var cells=row.querySelectorAll("td");if(!cells.length)return;var p=cells[0]?cells[0].textContent.trim():"";var m=cells[1]?cells[1].textContent.trim():"";var cap=cells[2]?cells[2].textContent.trim():"";var sup=cells[5]?cells[5].textContent.trim():"";var q=findQ(p,m,cap,sup);if(!q)q={product:p,model:m,capacity:cap,supplier_name:sup,price:cells[3]?cells[3].textContent.replace(/[^0-9.]/g,""):"",qty:cells[6]?cells[6].textContent.trim():"",ts:new Date().toISOString(),raw_text:"(Sin mensaje - buscalo en tab Cotizaciones)"};openQModal(q);});});}
 
-function addProdRow(){var row=document.createElement("div");row.className="prod-row";row.innerHTML='<input class="prod-name" placeholder="Ej: iPhone 16 128GB" style="flex:3"><input class="prod-target" placeholder="Target USD (opc)" style="flex:1;max-width:160px"><button onclick="this.parentNode.remove()" style="background:#c53030;color:#fff;border:none;border-radius:6px;padding:5px 9px;cursor:pointer;flex-shrink:0">ÃÂ</button>';document.getElementById("productList").appendChild(row);}
+function addProdRow(){var row=document.createElement("div");row.className="prod-row";row.innerHTML='<input class="prod-name" placeholder="Ej: iPhone 16 128GB" style="flex:3"><input class="prod-target" placeholder="Target USD (opc)" style="flex:1;max-width:160px"><button onclick="this.parentNode.remove()" style="background:#c53030;color:#fff;border:none;border-radius:6px;padding:5px 9px;cursor:pointer;flex-shrink:0">ÃÂÃÂ</button>';document.getElementById("productList").appendChild(row);}
 async function sendRequestQuote(){
   var rows=document.querySelectorAll(".prod-row");
   var products=[];
@@ -354,7 +354,7 @@ async function sendRequestQuote(){
     var t=row.querySelector(".prod-target");
     if(n&&n.value.trim())products.push({name:n.value.trim(),target:t&&t.value.trim()||null});
   });
-  if(!products.length){showToast("Agregá al menos un producto");return;}
+  if(!products.length){showToast("AgregÃ¡ al menos un producto");return;}
   var sel=document.getElementById("supplierSelect");
   var supplierId=sel?parseInt(sel.value)||null:null;
   var el=document.getElementById("reqResult");
@@ -367,10 +367,10 @@ async function sendRequestQuote(){
     var d=await r.json();
     if(d.ok||d.sent>=0){
       var dest=supplierId?"1 proveedor":(d.sent||d.groups_sent||"?")+" grupos";
-      el.textContent="✅ Enviado a "+dest;
-      showToast("Cotización enviada");
-    }else el.textContent="❌ "+(d.error||"error al enviar");
-  }catch(e){el.textContent="❌ "+e.message;}
+      el.textContent="â Enviado a "+dest;
+      showToast("CotizaciÃ³n enviada");
+    }else el.textContent="â "+(d.error||"error al enviar");
+  }catch(e){el.textContent="â "+e.message;}
 }var currentSlot=null;
 var suppliers=[];
 
@@ -652,14 +652,14 @@ async function loadMissing() {
     if (!resp.ok) throw new Error(resp.status);
     var data = await resp.json();
     var s = data.summary;
-    if (summaryEl) summaryEl.textContent = s.never + ' nunca ÃÂÃÂ· ' + s.stale + ' stale ÃÂÃÂ· ' + s.fresh + ' fresh ÃÂÃÂ· ' + s.total + ' total';
+    if (summaryEl) summaryEl.textContent = s.never + ' nunca ÃÂÃÂÃÂÃÂ· ' + s.stale + ' stale ÃÂÃÂÃÂÃÂ· ' + s.fresh + ' fresh ÃÂÃÂÃÂÃÂ· ' + s.total + ' total';
     if (!listEl) return;
     if (!data.items || !data.items.length) { listEl.innerHTML = '<div style="text-align:center;padding:40px;color:#999;">Sin datos</div>'; return; }
     var html = data.items.map(function(item) {
       var color = item.status === 'never' ? '#e74c3c' : (item.status === 'stale' ? '#f39c12' : '#27ae60');
-      var badge = item.status === 'never' ? 'ÃÂ°ÃÂÃÂÃÂ´ NUNCA' : (item.status === 'stale' ? 'ÃÂ°ÃÂÃÂÃÂ¡ STALE (' + item.days_since + 'd)' : 'ÃÂ°ÃÂÃÂÃÂ¢ FRESH (' + item.days_since + 'd)');
-      var lastLine = item.last_quote ? ('ÃÂÃÂltimo: ' + item.last_quote.supplier_name + ' ÃÂÃÂ· $' + item.last_quote.price + ' ' + (item.last_quote.currency || '') + ' ÃÂÃÂ· ' + (item.last_quote.incoterm || '')) : 'Sin cotizaciÃÂÃÂ³n previa';
-      var costoLine = item.ultimo_costo ? (' ÃÂÃÂ· Costo planilla: $' + item.ultimo_costo) : '';
+      var badge = item.status === 'never' ? 'ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ´ NUNCA' : (item.status === 'stale' ? 'ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ¡ STALE (' + item.days_since + 'd)' : 'ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ¢ FRESH (' + item.days_since + 'd)');
+      var lastLine = item.last_quote ? ('ÃÂÃÂÃÂÃÂltimo: ' + item.last_quote.supplier_name + ' ÃÂÃÂÃÂÃÂ· $' + item.last_quote.price + ' ' + (item.last_quote.currency || '') + ' ÃÂÃÂÃÂÃÂ· ' + (item.last_quote.incoterm || '')) : 'Sin cotizaciÃÂÃÂÃÂÃÂ³n previa';
+      var costoLine = item.ultimo_costo ? (' ÃÂÃÂÃÂÃÂ· Costo planilla: $' + item.ultimo_costo) : '';
       return '<div style="padding:12px 14px;margin-bottom:8px;background:white;border-left:4px solid ' + color + ';border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">' +
         '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
           '<div style="font-weight:600;font-size:14px;">' + item.desc + '</div>' +
@@ -704,7 +704,7 @@ async function loadBestPrices() {
     var r=await fetch('/api/best-prices?days=7');
     var d=await r.json();
     var rows=Array.isArray(d)?d:(d.prices||d.quotes||[]);
-    if(!rows.length){tbody.innerHTML='<tr><td colspan="9" style="text-align:center;color:#718096;padding:20px">Sin cotizaciones en los ÃÂºltimos 7 dÃÂ­as</td></tr>';return;}
+    if(!rows.length){tbody.innerHTML='<tr><td colspan="9" style="text-align:center;color:#718096;padding:20px">Sin cotizaciones en los ÃÂÃÂºltimos 7 dÃÂÃÂ­as</td></tr>';return;}
     tbody.innerHTML=rows.map(function(q){var date=q.ts?new Date(q.ts).toLocaleDateString('es-AR'):'-';return '<tr><td>'+(q.product||'-')+'</td><td>'+(q.model||'-')+'</td><td>'+(q.capacity||'-')+'</td><td>USD '+(q.price||'-')+'</td><td>'+(q.cost||'-')+'</td><td>'+(q.supplier_name||'-')+'</td><td>'+(q.qty||'-')+'</td><td>'+(q.incoterm||'-')+'</td><td>'+date+'</td></tr>';}).join('');
     attachBestClicks();
   } catch(e) { tbody.innerHTML='<tr><td colspan="9" style="text-align:center;color:#e53e3e;padding:20px">Error: '+e.message+'</td></tr>'; }
@@ -712,14 +712,14 @@ async function loadBestPrices() {
 var loadBest = loadBestPrices;
 
 var _qId=null;
-function openQModal(q){_qId=(q&&q.id)||null;var m=[(q.product||""),(q.model||""),(q.capacity||"")].filter(Boolean).join(" ");document.getElementById("qModalTitle").textContent=m||"CotizaciÃÂ³n";document.getElementById("qModalMeta").textContent="Proveedor: "+(q.supplier_name||"-")+"  |  USD "+(q.price||"-")+"  |  Qty: "+(q.qty||"-");document.getElementById("qModalMsg").textContent=q.raw_text||"(sin mensaje original)";document.getElementById("qModal").classList.add("open");}
+function openQModal(q){_qId=(q&&q.id)||null;var m=[(q.product||""),(q.model||""),(q.capacity||"")].filter(Boolean).join(" ");document.getElementById("qModalTitle").textContent=m||"CotizaciÃÂÃÂ³n";document.getElementById("qModalMeta").textContent="Proveedor: "+(q.supplier_name||"-")+"  |  USD "+(q.price||"-")+"  |  Qty: "+(q.qty||"-");document.getElementById("qModalMsg").textContent=q.raw_text||"(sin mensaje original)";document.getElementById("qModal").classList.add("open");}
 function closeQModal(){document.getElementById("qModal").classList.remove("open");_qId=null;}
-async function deleteQFromModal(){if(!_qId){alert("Sin ID");return;}if(!confirm("ÃÂ¿Eliminar esta cotizaciÃÂ³n?"))return;try{var r=await fetch("/api/quotes/"+_qId,{method:"DELETE"});var d=await r.json();if(d.ok||d.deleted>=0){window.__QC=window.__QC.filter(function(q){return q.id!==_qId;});closeQModal();if(typeof loadBestPrices==="function")loadBestPrices();showToast("CotizaciÃÂ³n eliminada");}else alert("Error: "+(d.error||"desconocido"));}catch(e){alert("Error: "+e.message);}}
+async function deleteQFromModal(){if(!_qId){alert("Sin ID");return;}if(!confirm("ÃÂÃÂ¿Eliminar esta cotizaciÃÂÃÂ³n?"))return;try{var r=await fetch("/api/quotes/"+_qId,{method:"DELETE"});var d=await r.json();if(d.ok||d.deleted>=0){window.__QC=window.__QC.filter(function(q){return q.id!==_qId;});closeQModal();if(typeof loadBestPrices==="function")loadBestPrices();showToast("CotizaciÃÂÃÂ³n eliminada");}else alert("Error: "+(d.error||"desconocido"));}catch(e){alert("Error: "+e.message);}}
 
 function attachBestClicks(){var tab=document.getElementById("tab-best");if(!tab)return;tab.querySelectorAll("tbody tr").forEach(function(row){if(row.dataset.mc)return;row.dataset.mc="1";row.classList.add("clickable-row");row.addEventListener("click",function(){var cells=row.querySelectorAll("td");if(!cells.length)return;var p=cells[0]?cells[0].textContent.trim():"";var m=cells[1]?cells[1].textContent.trim():"";var cap=cells[2]?cells[2].textContent.trim():"";var sup=cells[5]?cells[5].textContent.trim():"";var q=findQ(p,m,cap,sup);if(!q)q={product:p,model:m,capacity:cap,supplier_name:sup,price:cells[3]?cells[3].textContent.replace(/[^0-9.]/g,""):"",qty:cells[6]?cells[6].textContent.trim():"",ts:new Date().toISOString(),raw_text:"(Sin mensaje - buscalo en tab Cotizaciones)"};openQModal(q);});});}
 
-function addProdRow(){var row=document.createElement("div");row.className="prod-row";row.innerHTML='<input class="prod-name" placeholder="Ej: iPhone 16 128GB" style="flex:3"><input class="prod-target" placeholder="Target USD (opc)" style="flex:1;max-width:160px"><button onclick="this.parentNode.remove()" style="background:#c53030;color:#fff;border:none;border-radius:6px;padding:5px 9px;cursor:pointer;flex-shrink:0">ÃÂ</button>';document.getElementById("productList").appendChild(row);}
-async function sendRequestQuote(){var rows=document.querySelectorAll(".prod-row");var products=[];rows.forEach(function(row){var n=row.querySelector(".prod-name");var t=row.querySelector(".prod-target");if(n&&n.value.trim())products.push({name:n.value.trim(),target:t&&t.value.trim()||null});});if(!products.length){showToast("AgregÃÂ¡ al menos un producto");return;}var el=document.getElementById("reqResult");el.textContent="Enviando...";try{var body=products.length===1?{product:products[0].name,target_price:products[0].target}:{products:products};var r=await fetch("/api/request-quote",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});var d=await r.json();if(d.ok||d.sent>=0){el.textContent="Ã¢ÂÂ Enviado a "+(d.sent||d.groups_sent||"?")+" grupos";showToast("CotizaciÃÂ³n enviada");}else el.textContent="Ã¢ÂÂ "+(d.error||"error al enviar");}catch(e){el.textContent="Ã¢ÂÂ "+e.message;}}
+function addProdRow(){var row=document.createElement("div");row.className="prod-row";row.innerHTML='<input class="prod-name" placeholder="Ej: iPhone 16 128GB" style="flex:3"><input class="prod-target" placeholder="Target USD (opc)" style="flex:1;max-width:160px"><button onclick="this.parentNode.remove()" style="background:#c53030;color:#fff;border:none;border-radius:6px;padding:5px 9px;cursor:pointer;flex-shrink:0">ÃÂÃÂ</button>';document.getElementById("productList").appendChild(row);}
+async function sendRequestQuote(){var rows=document.querySelectorAll(".prod-row");var products=[];rows.forEach(function(row){var n=row.querySelector(".prod-name");var t=row.querySelector(".prod-target");if(n&&n.value.trim())products.push({name:n.value.trim(),target:t&&t.value.trim()||null});});if(!products.length){showToast("AgregÃÂÃÂ¡ al menos un producto");return;}var el=document.getElementById("reqResult");el.textContent="Enviando...";try{var body=products.length===1?{product:products[0].name,target_price:products[0].target}:{products:products};var r=await fetch("/api/request-quote",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});var d=await r.json();if(d.ok||d.sent>=0){el.textContent="ÃÂ¢ÃÂÃÂ Enviado a "+(d.sent||d.groups_sent||"?")+" grupos";showToast("CotizaciÃÂÃÂ³n enviada");}else el.textContent="ÃÂ¢ÃÂÃÂ "+(d.error||"error al enviar");}catch(e){el.textContent="ÃÂ¢ÃÂÃÂ "+e.message;}}
 
 // --- Poblar selector de proveedor ---
 function loadSupplierSelect(){
