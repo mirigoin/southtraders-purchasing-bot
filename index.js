@@ -1104,7 +1104,7 @@ app.get('/api/quotes/best', async (req, res) => {
 // Request quote from suppliers (sends via Baileys to groups)
 app.post('/api/request-quote', async (req, res) => {
   try {
-    const { product, target_price, supplier_slots } = req.body;
+    const { product, target_price, supplier_slots , supplier_id } = req.body;
     if (!product) return res.status(400).json({ error: 'product required' });
 
     // Obtener proveedores activos con grupo de WA
@@ -1116,6 +1116,7 @@ app.post('/api/request-quote', async (req, res) => {
       const slotsNum = supplier_slots.map(s => parseInt(s));
       targets = targets.filter(s => slotsNum.includes(parseInt(s.slot)));
     }
+    if (supplier_id) { for (var __i = targets.length - 1; __i >= 0; __i--) { if (targets[__i].id !== parseInt(supplier_id) && targets[__i].slot !== parseInt(supplier_id)) targets.splice(__i, 1); } }
 
     // Guardar registro
     const supplierNames = targets.map(s => s.name || 'Slot ' + s.slot).join(', ');
