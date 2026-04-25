@@ -17,7 +17,7 @@ header h1{font-size:18px;font-weight:700;color:#fff}
 .stat{background:#1a202c;border-radius:10px;padding:16px;border:1px solid #2d3748}
 .stat .n{font-size:28px;font-weight:700;color:#63b3ed}
 .stat .l{font-size:12px;color:#718096;margin-top:4px}
-.tabs{display:flex;gap:4px;margin-bottom:14px;border-bottom:1px solid #2d3748}
+.tabs{display:flex;gap:4px;margin-bottom:14px;border-bottom:1px solid #2d3748;flex-wrap:wrap}
 .tab{padding:10px 18px;font-size:13px;font-weight:500;color:#718096;cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;transition:all .15s}
 .tab:hover{color:#cbd5e0}
 .tab.active{color:#63b3ed;border-bottom-color:#63b3ed}
@@ -25,11 +25,16 @@ header h1{font-size:18px;font-weight:700;color:#fff}
 .section-head{padding:14px 18px;border-bottom:1px solid #2d3748;display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap}
 .section-head h2{font-size:14px;font-weight:600;color:#e2e8f0}
 .controls{display:flex;gap:8px;align-items:center}
-.btn{background:#2563eb;color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:13px;cursor:pointer}
+.btn{background:#2563eb;color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:13px;cursor:pointer;font-weight:500}
 .btn:hover{background:#1d4ed8}
+.btn:disabled{background:#475569;cursor:not-allowed}
 .btn-danger{background:#dc2626;padding:4px 10px;font-size:12px}
 .btn-danger:hover{background:#b91c1c}
-.select{background:#0f1117;color:#e2e8f0;border:1px solid #2d3748;padding:6px 10px;border-radius:6px;font-size:13px;cursor:pointer}
+.btn-primary{background:#16a34a;padding:10px 20px;font-size:14px}
+.btn-primary:hover{background:#15803d}
+.select,.inp,.txt{background:#0f1117;color:#e2e8f0;border:1px solid #2d3748;padding:8px 12px;border-radius:6px;font-size:13px;width:100%;font-family:inherit}
+.select:focus,.inp:focus,.txt:focus{outline:none;border-color:#63b3ed}
+.txt{resize:vertical;min-height:80px}
 table{width:100%;border-collapse:collapse}
 th{padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:#718096;text-transform:uppercase;letter-spacing:.05em;background:#161922;white-space:nowrap}
 td{padding:10px 14px;font-size:13px;border-bottom:1px solid #1a202c;vertical-align:top}
@@ -38,8 +43,16 @@ tr:last-child td{border-bottom:none}
 .muted{color:#718096}
 .empty{padding:40px;text-align:center;color:#718096;font-size:14px}
 .error{color:#ef4444;padding:14px 18px;font-size:13px}
+.success{color:#22c55e;padding:14px 18px;font-size:13px}
 .raw{max-width:280px;font-size:11px;color:#94a3b8;line-height:1.4;font-family:monospace;white-space:pre-wrap;word-break:break-word}
 .scroll{overflow-x:auto}
+.form{padding:20px;display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.form-row{display:flex;flex-direction:column;gap:6px}
+.form-row label{font-size:12px;color:#94a3b8;font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+.form-row.full{grid-column:1/-1}
+.form-actions{padding:0 20px 20px;display:flex;gap:10px;justify-content:flex-end}
+.preview{background:#0f1117;border:1px solid #2d3748;border-radius:6px;padding:12px;font-family:monospace;font-size:12px;color:#cbd5e0;white-space:pre-wrap;line-height:1.5;margin:0 20px 20px}
+.preview-label{font-size:11px;color:#718096;margin:0 20px 6px;text-transform:uppercase;letter-spacing:.05em}
 </style>
 </head>
 <body>
@@ -59,6 +72,7 @@ tr:last-child td{border-bottom:none}
 <div class="tabs">
 <button class="tab active" data-tab="best" onclick="setTab('best')">Best Prices</button>
 <button class="tab" data-tab="quotes" onclick="setTab('quotes')">Cotizaciones</button>
+<button class="tab" data-tab="request" onclick="setTab('request')">Pedir Cotizacion</button>
 </div>
 
 <div id="tab-best" class="section">
@@ -73,7 +87,7 @@ tr:last-child td{border-bottom:none}
 <div class="section-head">
 <h2>Cotizaciones</h2>
 <div class="controls">
-<select class="select" id="q-range" onchange="loadQuotes()">
+<select class="select" id="q-range" onchange="loadQuotes()" style="width:auto">
 <option value="24">Ultimas 24h</option>
 <option value="168" selected>Ultimos 7 dias</option>
 <option value="720">Ultimos 30 dias</option>
@@ -82,6 +96,48 @@ tr:last-child td{border-bottom:none}
 </div>
 </div>
 <div id="quotes-content"><div class="empty">Cargando...</div></div>
+</div>
+
+<div id="tab-request" class="section" style="display:none">
+<div class="section-head">
+<h2>Pedir Cotizacion</h2>
+</div>
+<div class="form">
+<div class="form-row">
+<label>Proveedor *</label>
+<select class="select" id="rq-supplier"><option value="">Cargando proveedores...</option></select>
+</div>
+<div class="form-row">
+<label>Producto *</label>
+<input class="inp" id="rq-product" placeholder="Ej: iPhone 15 Pro Max" />
+</div>
+<div class="form-row">
+<label>Modelo / Capacidad</label>
+<input class="inp" id="rq-model" placeholder="Ej: 256GB Natural Titanium" />
+</div>
+<div class="form-row">
+<label>Cantidad</label>
+<input class="inp" id="rq-qty" type="number" placeholder="Ej: 50" />
+</div>
+<div class="form-row">
+<label>Target Price (USD)</label>
+<input class="inp" id="rq-target" type="number" placeholder="Ej: 1100" />
+</div>
+<div class="form-row">
+<label>Condicion / Incoterm</label>
+<input class="inp" id="rq-cond" placeholder="Ej: Sealed FOB HK" />
+</div>
+<div class="form-row full">
+<label>Mensaje custom (opcional, sobreescribe el formato automatico)</label>
+<textarea class="txt" id="rq-message" placeholder="Dejar vacio para generar mensaje automatico"></textarea>
+</div>
+</div>
+<div class="preview-label">Preview del mensaje a enviar</div>
+<div class="preview" id="rq-preview">Completa el formulario...</div>
+<div class="form-actions">
+<button class="btn btn-primary" id="rq-send" onclick="sendRequest()">Enviar Cotizacion</button>
+</div>
+<div id="rq-result"></div>
 </div>
 
 </div>
@@ -130,10 +186,7 @@ async function loadBest(){
   try {
     var r = await fetch('/api/best-prices?days=7');
     var data = await r.json();
-    if (!data || !data.length) {
-      c.innerHTML = '<div class="empty">Sin datos</div>';
-      return;
-    }
+    if (!data || !data.length) { c.innerHTML = '<div class="empty">Sin datos</div>'; return; }
     var html = '<div class="scroll"><table><thead><tr><th>Producto</th><th>Modelo</th><th>Capacidad</th><th>Precio</th><th>Proveedor</th><th>Qty</th><th>Incoterm</th><th>Fecha</th></tr></thead><tbody>';
     for (var i=0; i<data.length; i++) {
       var q = data[i];
@@ -150,9 +203,7 @@ async function loadBest(){
     }
     html += '</tbody></table></div>';
     c.innerHTML = html;
-  } catch(e) {
-    c.innerHTML = '<div class="error">Error: '+e.message+'</div>';
-  }
+  } catch(e) { c.innerHTML = '<div class="error">Error: '+e.message+'</div>'; }
 }
 
 async function loadQuotes(){
@@ -162,10 +213,7 @@ async function loadQuotes(){
   try {
     var r = await fetch('/api/quotes?hours='+hours+'&limit=500');
     var data = await r.json();
-    if (!data || !data.length) {
-      c.innerHTML = '<div class="empty">Sin cotizaciones en este rango</div>';
-      return;
-    }
+    if (!data || !data.length) { c.innerHTML = '<div class="empty">Sin cotizaciones en este rango</div>'; return; }
     var html = '<div class="scroll"><table><thead><tr>'+
       '<th>Fecha</th><th>Proveedor</th><th>Producto</th><th>Modelo</th><th>Cap</th>'+
       '<th>Precio</th><th>Qty</th><th>Cond</th><th>Incoterm</th><th>Mensaje</th><th></th>'+
@@ -182,15 +230,13 @@ async function loadQuotes(){
         '<td>'+esc(q.qty)+'</td>'+
         '<td>'+esc(q.condition)+'</td>'+
         '<td>'+esc(q.incoterm)+'</td>'+
-        '<td class="raw">'+esc(q.raw_text||'').substring(0,200)+'</td>'+
+        '<td class="raw">'+esc((q.raw_text||'').substring(0,200))+'</td>'+
         '<td><button class="btn btn-danger" onclick="delQuote('+q.id+')">Borrar</button></td>'+
       '</tr>';
     }
     html += '</tbody></table></div>';
     c.innerHTML = html;
-  } catch(e) {
-    c.innerHTML = '<div class="error">Error: '+e.message+'</div>';
-  }
+  } catch(e) { c.innerHTML = '<div class="error">Error: '+e.message+'</div>'; }
 }
 
 async function delQuote(id){
@@ -198,10 +244,7 @@ async function delQuote(id){
   try {
     var r = await fetch('/api/quotes/'+id+'/delete', {method:'POST'});
     var data = await r.json();
-    if (data.error) {
-      alert('Error: '+data.error);
-      return;
-    }
+    if (data.error) { alert('Error: '+data.error); return; }
     var row = document.getElementById('row-'+id);
     if (row) {
       row.style.transition = 'opacity .3s';
@@ -209,9 +252,111 @@ async function delQuote(id){
       setTimeout(function(){ row.remove(); }, 300);
     }
     loadStats();
+  } catch(e) { alert('Error: '+e.message); }
+}
+
+// ===== Pedir Cotizacion =====
+var __suppliers = [];
+
+async function loadSuppliersForRequest(){
+  var sel = document.getElementById('rq-supplier');
+  try {
+    var r = await fetch('/api/suppliers');
+    __suppliers = await r.json();
+    var html = '<option value="">-- Elegir proveedor --</option>';
+    for (var i=0; i<__suppliers.length; i++) {
+      var s = __suppliers[i];
+      var label = s.name || s.alias || ('Slot '+s.slot);
+      if (s.alias && s.alias !== s.name) label = s.name + ' (' + s.alias + ')';
+      html += '<option value="'+s.id+'">'+esc(label)+'</option>';
+    }
+    sel.innerHTML = html;
   } catch(e) {
-    alert('Error: '+e.message);
+    sel.innerHTML = '<option value="">Error cargando proveedores</option>';
   }
+}
+
+function buildMessage(){
+  var custom = document.getElementById('rq-message').value.trim();
+  if (custom) return custom;
+  
+  var product = document.getElementById('rq-product').value.trim();
+  var model = document.getElementById('rq-model').value.trim();
+  var qty = document.getElementById('rq-qty').value.trim();
+  var target = document.getElementById('rq-target').value.trim();
+  var cond = document.getElementById('rq-cond').value.trim();
+  
+  if (!product) return '';
+  
+  var lines = ['Hola! Necesito cotizacion:'];
+  var detail = product;
+  if (model) detail += ' ' + model;
+  if (qty) detail += ' x ' + qty + ' u';
+  lines.push('- ' + detail);
+  if (cond) lines.push('- ' + cond);
+  if (target) lines.push('- Target: USD ' + target);
+  lines.push('Gracias!');
+  return lines.join('\n');
+}
+
+function updatePreview(){
+  var msg = buildMessage();
+  document.getElementById('rq-preview').textContent = msg || 'Completa el formulario...';
+}
+
+async function sendRequest(){
+  var supplierId = document.getElementById('rq-supplier').value;
+  var product = document.getElementById('rq-product').value.trim();
+  var target = document.getElementById('rq-target').value.trim();
+  var msg = buildMessage();
+  
+  if (!supplierId) { alert('Elegi un proveedor'); return; }
+  if (!product) { alert('Falta el producto'); return; }
+  if (!msg) { alert('El mensaje esta vacio'); return; }
+  
+  var supplier = __suppliers.find(function(s){ return String(s.id) === String(supplierId); });
+  var supName = supplier ? (supplier.name || supplier.alias) : supplierId;
+  
+  if (!confirm('Enviar cotizacion a "' + supName + '" via WhatsApp?\n\nPreview:\n' + msg)) return;
+  
+  var btn = document.getElementById('rq-send');
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+  var resultDiv = document.getElementById('rq-result');
+  resultDiv.innerHTML = '';
+  
+  try {
+    var r = await fetch('/api/request-quote', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        supplier_id: parseInt(supplierId),
+        product: product,
+        target_price: target ? parseFloat(target) : null,
+        message: msg
+      })
+    });
+    var data = await r.json();
+    if (data.error || !r.ok) {
+      resultDiv.innerHTML = '<div class="error">Error: ' + (data.error || ('HTTP '+r.status)) + '</div>';
+    } else {
+      var sent = data.sent || 1;
+      resultDiv.innerHTML = '<div class="success">Enviado a ' + esc(supName) + ' (' + sent + ' grupo' + (sent>1?'s':'') + '). ID: ' + (data.request_id || '-') + '</div>';
+      // Limpiar form
+      document.getElementById('rq-product').value = '';
+      document.getElementById('rq-model').value = '';
+      document.getElementById('rq-qty').value = '';
+      document.getElementById('rq-target').value = '';
+      document.getElementById('rq-cond').value = '';
+      document.getElementById('rq-message').value = '';
+      updatePreview();
+    }
+  } catch(e) {
+    resultDiv.innerHTML = '<div class="error">Error: ' + e.message + '</div>';
+  }
+  
+  btn.disabled = false;
+  btn.textContent = 'Enviar Cotizacion';
 }
 
 function setTab(name){
@@ -221,8 +366,13 @@ function setTab(name){
   }
   document.getElementById('tab-best').style.display = (name === 'best') ? 'block' : 'none';
   document.getElementById('tab-quotes').style.display = (name === 'quotes') ? 'block' : 'none';
+  document.getElementById('tab-request').style.display = (name === 'request') ? 'block' : 'none';
   if (name === 'quotes') loadQuotes();
   if (name === 'best') loadBest();
+  if (name === 'request') {
+    if (__suppliers.length === 0) loadSuppliersForRequest();
+    updatePreview();
+  }
 }
 
 function updateTs(){
@@ -239,6 +389,21 @@ function refresh(){
   else if (activeTab === 'quotes') loadQuotes();
   updateTs();
 }
+
+// Listeners para preview en vivo
+['rq-product','rq-model','rq-qty','rq-target','rq-cond','rq-message'].forEach(function(id){
+  document.addEventListener('DOMContentLoaded', function(){
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('input', updatePreview);
+  });
+});
+// Backup: agregar listeners despues de un delay
+setTimeout(function(){
+  ['rq-product','rq-model','rq-qty','rq-target','rq-cond','rq-message'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el && !el.__hooked) { el.addEventListener('input', updatePreview); el.__hooked = true; }
+  });
+}, 100);
 
 refresh();
 setInterval(refresh, 60000);
