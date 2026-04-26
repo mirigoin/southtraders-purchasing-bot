@@ -156,6 +156,28 @@ try {
     UNIQUE (supplier_name, product_label)
   )`);
 
+  await pool.query(`CREATE TABLE IF NOT EXISTS price_alerts (
+    id SERIAL PRIMARY KEY,
+    product TEXT,
+    model TEXT,
+    capacity TEXT,
+    target_price NUMERIC,
+    currency TEXT DEFAULT 'USD',
+    destination TEXT,
+    active BOOLEAN DEFAULT FALSE,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+  )`);
+
+  await pool.query(`CREATE TABLE IF NOT EXISTS alerts_sent (
+    id SERIAL PRIMARY KEY,
+    alert_id INTEGER REFERENCES price_alerts(id) ON DELETE CASCADE,
+    quote_id INTEGER,
+    sent_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(alert_id, quote_id)
+  )`);
+
   // Migrations - agregar columnas si no existen
   await pool.query(`ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS target_price NUMERIC`);
   await pool.query(`ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS suppliers_sent TEXT`);
@@ -2099,6 +2121,115 @@ app.post('/api/admin/test-alert', async (req, res) => {
     res.status(500).json({ error: String(e && e.message || e) });
   }
 });
+
+
+// ===== Price alerts CRUD =====
+app.get('/api/price-alerts', async (req, res) => {
+  try {
+    const r = await pool.query('SELECT * FROM price_alerts ORDER BY active DESC, created_at DESC');
+    res.json(r.rows);
+  } catch (e) {
+    res.status(500).json({ error: String(e && e.message || e) });
+  }
+});
+
+app.post('/api/price-alerts', async (req, res) => {
+  try {
+    const { id, product, model, capacity, target_price, currency, destination, active, notes } = req.body || {};
+    if (id) {
+      const r = await pool.query('UPDATE price_alerts SET product = COALESCE($1, product), model = COALESCE($2, model), capacity = COALESCE($3, capacity), target_price = COALESCE($4, target_price), currency = COALESCE($5, currency), destination = COALESCE($6, destination), active = COALESCE($7, active), notes = COALESCE($8, notes), updated_at = NOW() WHERE id = $9 RETURNING *', [product, model, capacity, target_price, currency, destination, active, notes, id]);
+      if (r.rowCount === 0) return res.status(404).json({ error: 'not found' });
+      return res.json({ ok: true, row: r.rows[0] });
+    }
+    if (!product || target_price == null) return res.status(400).json({ error: 'product and target_price required' });
+    const r = await pool.query('INSERT INTO price_alerts (product, model, capacity, target_price, currency, destination, active, notes) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *', [product, model || null, capacity || null, target_price, currency || 'USD', destination || '120363408804657018@g.us', active || false, notes || null]);
+    res.json({ ok: true, row: r.rows[0] });
+  } catch (e) {
+    res.status(500).json({ error: String(e && e.message || e) });
+  }
+});
+
+app.delete('/api/price-alerts/:id', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: 'invalid id' });
+    const r = await pool.query('DELETE FROM price_alerts WHERE id = $1 RETURNING id', [id]);
+    if (r.rowCount === 0) return res.status(404).json({ error: 'not found' });
+    res.json({ ok: true, deleted: id });
+  } catch (e) {
+    res.status(500).json({ error: String(e && e.message || e) });
+  }
+});
+
+app.get('/api/alerts-sent', async (req, res) => {
+  try {
+    const r = await pool.query('SELECT a.*, p.product, p.model, p.capacity, p.target_price FROM alerts_sent a LEFT JOIN price_alerts p ON p.id = a.alert_id ORDER BY a.sent_at DESC LIMIT 100');
+    res.json(r.rows);
+  } catch (e) {
+    res.status(500).json({ error: String(e && e.message || e) });
+  }
+});
+
+// ===== Polling de alertas (cada 5 min) =====
+async function checkPriceAlerts() {
+  try {
+    if (!baileysClient) return;
+    const alertsR = await pool.query("SELECT * FROM price_alerts WHERE active = TRUE");
+    const alerts = alertsR.rows;
+    if (alerts.length === 0) return;
+    // Cotizaciones de las ultimas 24hs (rango amplio para no perder por delays)
+    const quotesR = await pool.query("SELECT * FROM quotes WHERE ts >= NOW() - INTERVAL '24 hours' AND price IS NOT NULL");
+    const quotes = quotesR.rows;
+    for (const alert of alerts) {
+      for (const q of quotes) {
+        // Match exacto product (case-insensitive). Model y capacity opcionales.
+        const aP = (alert.product || "").toLowerCase().trim();
+        const qP = (q.product || "").toLowerCase().trim();
+        if (!aP || aP !== qP) continue;
+        if (alert.model) {
+          const aM = alert.model.toLowerCase().trim();
+          const qM = (q.model || "").toLowerCase().trim();
+          if (aM !== qM) continue;
+        }
+        if (alert.capacity) {
+          const aC = alert.capacity.toLowerCase().replace(/\s/g, "");
+          const qC = (q.capacity || "").toLowerCase().replace(/\s/g, "");
+          if (aC !== qC) continue;
+        }
+        // Comparar precio
+        const qPrice = parseFloat(q.price);
+        const target = parseFloat(alert.target_price);
+        if (isNaN(qPrice) || isNaN(target)) continue;
+        if (qPrice > target) continue; // no matchea
+        // Ya se mando alerta para este alert+quote?
+        const sentR = await pool.query('SELECT id FROM alerts_sent WHERE alert_id = $1 AND quote_id = $2', [alert.id, q.id]);
+        if (sentR.rowCount > 0) continue;
+        // Mandar alerta
+        const labelParts = [alert.product];
+        if (alert.model) labelParts.push(alert.model);
+        if (alert.capacity) labelParts.push(alert.capacity);
+        const label = labelParts.join(" ");
+        const supName = q.supplier_name || "?";
+        const diff = (qPrice - target).toFixed(2);
+        const pctDiff = target > 0 ? ((qPrice - target) / target * 100).toFixed(1) : "0";
+        const message = "ALERTA PRECIO Marco\n\n" + label + "\n" + supName + " cotizo " + (q.currency || "USD") + " " + qPrice + "\nTarget: " + (alert.currency || "USD") + " " + target + "\nDiff: " + diff + " (" + pctDiff + "%)" + (alert.notes ? "\n\nNota: " + alert.notes : "");
+        try {
+          const dest = alert.destination || '120363408804657018@g.us';
+          await baileysClient.sendMessage(dest, { text: message });
+          await pool.query('INSERT INTO alerts_sent (alert_id, quote_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [alert.id, q.id]);
+          console.log('[price_alert] sent for alert', alert.id, 'quote', q.id);
+        } catch (sendErr) {
+          console.error('[price_alert] send failed:', sendErr && sendErr.message || sendErr);
+        }
+      }
+    }
+  } catch (e) {
+    console.error('[checkPriceAlerts] error:', e && e.message || e);
+  }
+}
+
+// Polling cada 5 minutos
+setInterval(checkPriceAlerts, 5 * 60 * 1000);
 
   app.listen(PORT, () => console.log(`Marco purchasing bot on port ${PORT}`));
 
