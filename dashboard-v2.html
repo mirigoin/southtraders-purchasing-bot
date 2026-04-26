@@ -95,6 +95,7 @@ tr:last-child td{border-bottom:none}
 <button class="tab" data-tab="quotes" onclick="setTab('quotes')">Cotizaciones</button>
 <button class="tab" data-tab="request" onclick="setTab('request')">Pedir Cotizacion</button>
 <button class="tab" data-tab="compras" onclick="setTab('compras')">Compras</button>
+<button class="tab" data-tab="suppliers" onclick="setTab('suppliers')">Proveedores</button>
 </div>
 
 <div id="tab-best" class="section">
@@ -150,6 +151,18 @@ tr:last-child td{border-bottom:none}
 </div>
 </div>
 <div id="compras-content"><div class="empty">Loading...</div></div>
+</div>
+
+<div id="tab-suppliers" class="section" style="display:none">
+<div class="section-head">
+<h2>Proveedores</h2>
+<div class="controls">
+<input class="inp" id="sup-search" oninput="renderSuppliersTab()" placeholder="Buscar proveedor..." style="width:220px" />
+<select class="select" id="sup-product-filter" onchange="renderSuppliersTab()" style="width:auto"><option value="">Todos los productos</option></select>
+<button class="btn" onclick="loadSuppliersTab()">Refresh</button>
+</div>
+</div>
+<div id="suppliers-content"><div class="empty">Loading...</div></div>
 </div>
 
 </div>
@@ -710,6 +723,163 @@ async function saveMinimo(input, rowIdx){
   }
 }
 
+// ===== Suppliers tab =====
+var __sup_data = [];      // suppliers (de /api/suppliers)
+var __sup_products = [];  // supplier_products (de /api/supplier-products)
+var __sup_quotedProducts = {}; // supplier_name -> [products]
+
+async function loadSuppliersTab(){
+  var c = document.getElementById("suppliers-content");
+  c.innerHTML = "<div class=\"empty\">Loading suppliers + products + quotes...</div>";
+  try {
+    var [r1, r2, r3] = await Promise.all([
+      fetch("/api/suppliers").then(r => r.json()),
+      fetch("/api/supplier-products").then(r => r.json()),
+      fetch("/api/quotes?hours=720&limit=2000").then(r => r.json())
+    ]);
+    __sup_data = Array.isArray(r1) ? r1 : [];
+    __sup_products = Array.isArray(r2) ? r2 : [];
+    // Construir map de productos cotizados por supplier_name
+    __sup_quotedProducts = {};
+    if (Array.isArray(r3)) {
+      for (var i=0; i<r3.length; i++) {
+        var q = r3[i];
+        var sn = q.supplier_name;
+        if (!sn) continue;
+        if (!__sup_quotedProducts[sn]) __sup_quotedProducts[sn] = {};
+        var label = (q.product || "?") + (q.model ? " " + q.model : "") + (q.capacity ? " " + q.capacity : "");
+        __sup_quotedProducts[sn][label] = (__sup_quotedProducts[sn][label] || 0) + 1;
+      }
+    }
+    // Popular dropdown de productos
+    var sel = document.getElementById("sup-product-filter");
+    if (sel) {
+      var prevValue = sel.value;
+      var products = {};
+      __sup_products.forEach(function(p){ if (p.product_label) products[p.product_label] = true; });
+      var sortedP = Object.keys(products).sort();
+      var html = "<option value=\"\">Todos los productos</option>";
+      for (var k=0; k<sortedP.length; k++) html += "<option value=\"" + esc(sortedP[k]) + "\">" + esc(sortedP[k]) + "</option>";
+      sel.innerHTML = html;
+      if (prevValue) sel.value = prevValue;
+    }
+    renderSuppliersTab();
+  } catch(e) {
+    c.innerHTML = "<div class=\"error\">Error: " + e.message + "</div>";
+  }
+}
+
+function renderSuppliersTab(){
+  var c = document.getElementById("suppliers-content");
+  var search = (document.getElementById("sup-search").value || "").toLowerCase().trim();
+  var productFilter = document.getElementById("sup-product-filter").value;
+
+  // Construir lista combinada: union de suppliers de DB + suppliers que aparecen en supplier_products pero no en DB
+  var allNames = {};
+  __sup_data.forEach(function(s){ allNames[s.name] = true; });
+  __sup_products.forEach(function(p){ allNames[p.supplier_name] = true; });
+
+  var rows = Object.keys(allNames).sort().map(function(name){
+    var supObj = __sup_data.find(function(s){ return s.name === name; });
+    var products = __sup_products.filter(function(p){ return p.supplier_name === name; });
+    var quoted = __sup_quotedProducts[name] || {};
+    return {name: name, sup: supObj, products: products, quoted: Object.keys(quoted)};
+  });
+
+  // Filtros
+  if (search) {
+    rows = rows.filter(function(r){
+      return r.name.toLowerCase().indexOf(search) >= 0;
+    });
+  }
+  if (productFilter) {
+    rows = rows.filter(function(r){
+      return r.products.some(function(p){ return p.product_label === productFilter; });
+    });
+  }
+
+  if (!rows.length) { c.innerHTML = "<div class=\"empty\">No suppliers match</div>"; return; }
+
+  var html = "<div class=\"scroll\"><table><thead><tr>"+
+    "<th>Proveedor</th><th>Phone</th><th>WhatsApp Group</th><th>Country</th>"+
+    "<th>Productos comprados</th><th>Cotizo recientemente</th>"+
+    "</tr></thead><tbody>";
+
+  for (var i=0; i<rows.length; i++) {
+    var r = rows[i];
+    var s = r.sup;
+    var idAttr = s ? ("data-supid=\"" + s.id + "\"") : "data-supid=\"\"";
+    var disabled = s ? "" : "disabled title=\"Proveedor no esta en suppliers DB\""; 
+    html += "<tr>"+
+      "<td><b>"+esc(r.name)+"</b>" + (s ? "" : "<div class=\"muted\" style=\"font-size:10px\">(solo en historico)</div>") + "</td>"+
+      "<td><input class=\"inp\" "+idAttr+" data-field=\"contact_phone\" value=\""+esc(s ? (s.contact_phone||'') : '')+"\" "+disabled+" onblur=\"saveSupplierField(this)\" style=\"width:130px\" /></td>"+
+      "<td><input class=\"inp\" "+idAttr+" data-field=\"whatsapp_group_name\" value=\""+esc(s ? (s.whatsapp_group_name||'') : '')+"\" "+disabled+" onblur=\"saveSupplierField(this)\" style=\"width:170px\" /></td>"+
+      "<td><input class=\"inp\" "+idAttr+" data-field=\"country\" value=\""+esc(s ? (s.country||'') : '')+"\" "+disabled+" onblur=\"saveSupplierField(this)\" style=\"width:80px\" /></td>"+
+      "<td>" + renderProductBadges(r) + "</td>"+
+      "<td>" + (r.quoted.length === 0 ? "<span class=\"muted\">-</span>" : r.quoted.map(function(p){return "<span class=\"badge badge-info\" style=\"margin:1px\">"+esc(p)+"</span>";}).join(" ")) + "</td>"+
+    "</tr>";
+  }
+  html += "</tbody></table></div>";
+  c.innerHTML = html;
+}
+
+function renderProductBadges(row){
+  var html = "";
+  row.products.forEach(function(p){
+    html += "<span class=\"badge badge-ok\" style=\"margin:1px\" title=\"id="+p.id+"\">"+esc(p.product_label)+" ("+p.units+"u)<button class=\"btn-mini\" style=\"margin-left:4px;padding:0 4px\" onclick=\"deleteSupplierProduct("+p.id+", \'"+esc(row.name).replace(/'/g,"\\\'")+"\')\">x</button></span> ";
+  });
+  // Boton + para agregar
+  html += "<button class=\"btn btn-secondary\" style=\"padding:2px 8px;font-size:11px\" onclick=\"addSupplierProduct(\'"+esc(row.name).replace(/'/g,"\\\'")+"\')\">+ producto</button>";
+  return html;
+}
+
+async function saveSupplierField(input){
+  var supId = input.getAttribute("data-supid");
+  var field = input.getAttribute("data-field");
+  var value = input.value;
+  if (!supId || !field) return;
+  // Obtener old value para comparar
+  var sup = __sup_data.find(function(s){ return String(s.id) === String(supId); });
+  if (sup && sup[field] === value) return; // no change
+  try {
+    var body = {};
+    body[field] = value;
+    var r = await fetch("/api/suppliers/"+supId, {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body)});
+    var d = await r.json();
+    if (d.error) { alert("Error: "+d.error); return; }
+    // Update cache
+    if (sup) sup[field] = value;
+    input.style.borderColor = "#22c55e";
+    setTimeout(function(){ input.style.borderColor = ""; }, 1500);
+  } catch(e) {
+    alert("Error: "+e.message);
+  }
+}
+
+async function addSupplierProduct(supplierName){
+  var label = prompt("Producto a agregar (ej: iPhone 17 Pro Max, Samsung, MacBook Air 13 M5):", "");
+  if (!label) return;
+  var unitsStr = prompt("Unidades (opcional, dejar vacio si no se sabe):", "0");
+  if (unitsStr === null) return;
+  var units = parseInt(unitsStr) || 0;
+  try {
+    var r = await fetch("/api/supplier-products", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({supplier_name: supplierName, product_label: label.trim(), units: units, source: "manual"})});
+    var d = await r.json();
+    if (d.error) { alert("Error: "+d.error); return; }
+    await loadSuppliersTab();
+  } catch(e) { alert("Error: "+e.message); }
+}
+
+async function deleteSupplierProduct(id, supplierName){
+  if (!confirm("Borrar este producto del proveedor "+supplierName+"?")) return;
+  try {
+    var r = await fetch("/api/supplier-products/"+id, {method:"DELETE"});
+    var d = await r.json();
+    if (d.error) { alert("Error: "+d.error); return; }
+    await loadSuppliersTab();
+  } catch(e) { alert("Error: "+e.message); }
+}
+
 function setTab(name){
   var tabs = document.querySelectorAll('.tab');
   for (var i=0; i<tabs.length; i++) tabs[i].classList.toggle('active', tabs[i].dataset.tab === name);
@@ -717,6 +887,7 @@ function setTab(name){
   document.getElementById('tab-quotes').style.display = (name === 'quotes') ? 'block' : 'none';
   document.getElementById('tab-request').style.display = (name === 'request') ? 'block' : 'none';
   document.getElementById('tab-compras').style.display = (name === 'compras') ? 'block' : 'none';
+  document.getElementById('tab-suppliers').style.display = (name === 'suppliers') ? 'block' : 'none';
   if (name === 'quotes') loadQuotes();
   if (name === 'best') loadBest();
   if (name === 'request') {
@@ -725,6 +896,7 @@ function setTab(name){
     updatePreview();
   }
   if (name === 'compras') loadCompras();
+  if (name === 'suppliers') loadSuppliersTab();
 }
 
 function updateTs(){
