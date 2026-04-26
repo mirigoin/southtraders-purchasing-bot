@@ -1950,6 +1950,32 @@ app.get('/api/pangea-stock', async (req, res) => {
   }
 });
 
+
+// ===== Admin: dump completo de DB (backup) =====
+app.get('/api/admin/dump', async (req, res) => {
+  try {
+    const dump = {};
+    const tables = [
+      'suppliers',
+      'quotes',
+      'purchase_minimums',
+      'quote_requests'
+    ];
+    for (const t of tables) {
+      try {
+        const r = await pool.query(`SELECT * FROM ${t}`);
+        dump[t] = r.rows;
+      } catch (e) {
+        dump[t] = { error: String(e && e.message || e) };
+      }
+    }
+    dump.timestamp = new Date().toISOString();
+    res.json(dump);
+  } catch (e) {
+    res.status(500).json({ error: String(e && e.message || e) });
+  }
+});
+
   app.listen(PORT, () => console.log(`Marco purchasing bot on port ${PORT}`));
 
   // Try to start Baileys (won't crash if not installed)
