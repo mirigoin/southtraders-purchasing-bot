@@ -1104,7 +1104,7 @@ app.get('/api/quotes/best', async (req, res) => {
 // Request quote from suppliers (sends via Baileys to groups)
 app.post('/api/request-quote', async (req, res) => {
   try {
-    const { product, target_price, supplier_slots , supplier_id } = req.body;
+    const { product, target_price, supplier_slots , supplier_id , message } = req.body;
     if (!product) return res.status(400).json({ error: 'product required' });
 
     // Obtener proveedores activos con grupo de WA
@@ -1120,7 +1120,7 @@ app.post('/api/request-quote', async (req, res) => {
 
     // Guardar registro
     const supplierNames = targets.map(s => s.name || 'Slot ' + s.slot).join(', ');
-    const msg = 'Cotizacion: ' + product + (target_price ? ' | Target: $' + target_price : '') + ' | Responder con precio, cantidad e incoterm';
+    const msg = (message && String(message).trim()) ? String(message) : ('Cotizacion: ' + product + (target_price ? ' | Target: $' + target_price : '') + ' | Responder con precio, cantidad e incoterm');
     await pool.query(
       'INSERT INTO quote_requests (product, target_price, suppliers_sent, message_sent, status) VALUES ($1,$2,$3,$4,$5)',
       [product, target_price || null, supplierNames || null, msg, 'open']
