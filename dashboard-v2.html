@@ -96,6 +96,7 @@ tr:last-child td{border-bottom:none}
 <button class="tab" data-tab="request" onclick="setTab('request')">Pedir Cotizacion</button>
 <button class="tab" data-tab="compras" onclick="setTab('compras')">Compras</button>
 <button class="tab" data-tab="suppliers" onclick="setTab('suppliers')">Proveedores</button>
+<button class="tab" data-tab="alerts" onclick="setTab('alerts')">Alertas</button>
 </div>
 
 <div id="tab-best" class="section">
@@ -163,6 +164,16 @@ tr:last-child td{border-bottom:none}
 </div>
 </div>
 <div id="suppliers-content"><div class="empty">Loading...</div></div>
+</div>
+
+<div id="tab-alerts" class="section" style="display:none">
+<div class="section-head">
+<h2>Alertas de precio</h2>
+<div class="controls">
+<button class="btn" onclick="loadAlerts()">Refresh</button>
+</div>
+</div>
+<div id="alerts-content"><div class="empty">Loading...</div></div>
 </div>
 
 </div>
@@ -880,6 +891,134 @@ async function deleteSupplierProduct(id, supplierName){
   } catch(e) { alert("Error: "+e.message); }
 }
 
+// ===== Alerts tab =====
+var __alerts = [];
+var __alertsSent = [];
+
+async function loadAlerts(){
+  var c = document.getElementById("alerts-content");
+  c.innerHTML = "<div class=\"empty\">Loading...</div>";
+  try {
+    var [r1, r2] = await Promise.all([
+      fetch("/api/price-alerts").then(r => r.json()),
+      fetch("/api/alerts-sent").then(r => r.json())
+    ]);
+    __alerts = Array.isArray(r1) ? r1 : [];
+    __alertsSent = Array.isArray(r2) ? r2 : [];
+    renderAlerts();
+  } catch(e) {
+    c.innerHTML = "<div class=\"error\">Error: " + e.message + "</div>";
+  }
+}
+
+function renderAlerts(){
+  var c = document.getElementById("alerts-content");
+  var html = "";
+  // Form para agregar nueva alerta
+  html += "<div style=\"padding:14px 18px;border-bottom:1px solid #2d3748;background:#161922\">";
+  html += "<div style=\"display:flex;gap:8px;align-items:center;flex-wrap:wrap\">";
+  html += "<input class=\"inp\" id=\"new-alert-product\" placeholder=\"Producto (ej: iPhone)\" style=\"width:140px\" />";
+  html += "<input class=\"inp\" id=\"new-alert-model\" placeholder=\"Modelo (ej: 17 Pro Max)\" style=\"width:140px\" />";
+  html += "<input class=\"inp\" id=\"new-alert-capacity\" placeholder=\"Cap (ej: 256GB)\" style=\"width:90px\" />";
+  html += "<input class=\"inp\" id=\"new-alert-price\" type=\"number\" placeholder=\"Target USD\" style=\"width:110px\" />";
+  html += "<input class=\"inp\" id=\"new-alert-notes\" placeholder=\"Nota (opcional)\" style=\"flex:1;min-width:140px\" />";
+  html += "<button class=\"btn btn-primary\" onclick=\"addAlert()\">+ Agregar alerta</button>";
+  html += "</div>";
+  html += "<div style=\"font-size:11px;color:#94a3b8;margin-top:6px\">Las alertas nuevas arrancan APAGADAS. Activarlas con el toggle abajo.</div>";
+  html += "</div>";
+
+  if (__alerts.length === 0) {
+    html += "<div class=\"empty\">No alertas configuradas. Agrega una arriba.</div>";
+  } else {
+    html += "<div class=\"scroll\"><table><thead><tr>"+
+      "<th>Activa</th><th>Producto</th><th>Modelo</th><th>Capacidad</th><th>Target</th><th>Nota</th><th>Creada</th><th></th>"+
+      "</tr></thead><tbody>";
+    for (var i=0; i<__alerts.length; i++) {
+      var a = __alerts[i];
+      var checked = a.active ? "checked" : "";
+      html += "<tr>"+
+        "<td><input type=\"checkbox\" data-aid=\""+a.id+"\" "+checked+" onchange=\"toggleAlert(this)\" style=\"transform:scale(1.4)\" /></td>"+
+        "<td><b>"+esc(a.product||"-")+"</b></td>"+
+        "<td>"+esc(a.model||"-")+"</td>"+
+        "<td>"+esc(a.capacity||"-")+"</td>"+
+        "<td><b>"+(a.currency||"USD")+" "+esc(a.target_price)+"</b></td>"+
+        "<td class=\"muted\">"+esc(a.notes||"-")+"</td>"+
+        "<td class=\"muted\">"+fmtDate(a.created_at)+"</td>"+
+        "<td><button class=\"btn btn-danger\" onclick=\"deleteAlert("+a.id+")\">Borrar</button></td>"+
+      "</tr>";
+    }
+    html += "</tbody></table></div>";
+  }
+
+  // Historial de alertas enviadas
+  html += "<div style=\"padding:14px 18px;border-top:1px solid #2d3748\"><h3 style=\"font-size:13px;color:#e2e8f0;margin-bottom:10px\">Ultimas alertas enviadas</h3>";
+  if (__alertsSent.length === 0) {
+    html += "<div class=\"muted\" style=\"font-size:12px\">No se han enviado alertas todavia.</div>";
+  } else {
+    html += "<div class=\"scroll\"><table><thead><tr><th>Fecha</th><th>Alerta</th><th>Quote ID</th></tr></thead><tbody>";
+    for (var j=0; j<__alertsSent.length; j++) {
+      var s = __alertsSent[j];
+      var labelParts = [s.product||"-"];
+      if (s.model) labelParts.push(s.model);
+      if (s.capacity) labelParts.push(s.capacity);
+      html += "<tr>"+
+        "<td class=\"muted\">"+fmtDate(s.sent_at)+"</td>"+
+        "<td>"+esc(labelParts.join(" "))+" (target "+esc(s.target_price||"-")+")</td>"+
+        "<td class=\"muted\">#"+(s.quote_id||"-")+"</td>"+
+      "</tr>";
+    }
+    html += "</tbody></table></div>";
+  }
+  html += "</div>";
+
+  c.innerHTML = html;
+}
+
+async function addAlert(){
+  var product = document.getElementById("new-alert-product").value.trim();
+  var model = document.getElementById("new-alert-model").value.trim();
+  var capacity = document.getElementById("new-alert-capacity").value.trim();
+  var price = parseFloat(document.getElementById("new-alert-price").value);
+  var notes = document.getElementById("new-alert-notes").value.trim();
+  if (!product) { alert("Producto es obligatorio"); return; }
+  if (isNaN(price) || price <= 0) { alert("Target price es obligatorio y debe ser positivo"); return; }
+  try {
+    var r = await fetch("/api/price-alerts", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({
+      product: product, model: model || null, capacity: capacity || null, target_price: price, notes: notes || null, active: false
+    })});
+    var d = await r.json();
+    if (d.error) { alert("Error: " + d.error); return; }
+    document.getElementById("new-alert-product").value = "";
+    document.getElementById("new-alert-model").value = "";
+    document.getElementById("new-alert-capacity").value = "";
+    document.getElementById("new-alert-price").value = "";
+    document.getElementById("new-alert-notes").value = "";
+    await loadAlerts();
+  } catch(e) { alert("Error: " + e.message); }
+}
+
+async function toggleAlert(checkbox){
+  var id = parseInt(checkbox.getAttribute("data-aid"));
+  var newVal = checkbox.checked;
+  try {
+    var r = await fetch("/api/price-alerts", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({id: id, active: newVal})});
+    var d = await r.json();
+    if (d.error) { alert("Error: " + d.error); checkbox.checked = !newVal; return; }
+    var found = __alerts.find(function(a){ return a.id === id; });
+    if (found) found.active = newVal;
+  } catch(e) { alert("Error: " + e.message); checkbox.checked = !newVal; }
+}
+
+async function deleteAlert(id){
+  if (!confirm("Borrar alerta #"+id+"?")) return;
+  try {
+    var r = await fetch("/api/price-alerts/"+id, {method:"DELETE"});
+    var d = await r.json();
+    if (d.error) { alert("Error: " + d.error); return; }
+    await loadAlerts();
+  } catch(e) { alert("Error: " + e.message); }
+}
+
 function setTab(name){
   var tabs = document.querySelectorAll('.tab');
   for (var i=0; i<tabs.length; i++) tabs[i].classList.toggle('active', tabs[i].dataset.tab === name);
@@ -888,6 +1027,7 @@ function setTab(name){
   document.getElementById('tab-request').style.display = (name === 'request') ? 'block' : 'none';
   document.getElementById('tab-compras').style.display = (name === 'compras') ? 'block' : 'none';
   document.getElementById('tab-suppliers').style.display = (name === 'suppliers') ? 'block' : 'none';
+  document.getElementById('tab-alerts').style.display = (name === 'alerts') ? 'block' : 'none';
   if (name === 'quotes') loadQuotes();
   if (name === 'best') loadBest();
   if (name === 'request') {
@@ -897,6 +1037,7 @@ function setTab(name){
   }
   if (name === 'compras') loadCompras();
   if (name === 'suppliers') loadSuppliersTab();
+  if (name === 'alerts') loadAlerts();
 }
 
 function updateTs(){
