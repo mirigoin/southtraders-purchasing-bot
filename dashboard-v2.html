@@ -98,7 +98,7 @@ tr:last-child td{border-bottom:none}
 </div>
 
 <div id="tab-best" class="section">
-<div class="section-head"><h2>Best Prices (last 7 days)</h2><button class="btn" onclick="loadBest()">Refresh</button></div>
+<div class="section-head"><h2>Best Prices (last 7 days)</h2><div class="controls"><select class="select" id="bp-model-filter" onchange="renderBest()" style="width:auto"><option value="">Todos los productos</option></select><button class="btn" onclick="loadBest()">Refresh</button></div></div>
 <div id="best-content"><div class="empty">Loading...</div></div>
 </div>
 
@@ -189,6 +189,8 @@ async function loadStats(){
   }
 }
 
+var __bestData = [];
+
 async function loadBest(){
   var c = document.getElementById('best-content');
   c.innerHTML = '<div class="empty">Loading...</div>';
@@ -196,6 +198,42 @@ async function loadBest(){
     var r = await fetch('/api/best-prices?days=7');
     var data = await r.json();
     if (!data || !data.length) { c.innerHTML = '<div class="empty">No data</div>'; return; }
+    __bestData = data;
+    // Popular dropdown con productos unicos
+    var select = document.getElementById('bp-model-filter');
+    if (select) {
+      var prevValue = select.value;
+      var products = {};
+      for (var k=0; k<data.length; k++) { if (data[k].product) products[data[k].product] = true; }
+      var sorted = Object.keys(products).sort();
+      var html = '<option value="">Todos los productos</option>';
+      for (var k=0; k<sorted.length; k++) html += '<option value="'+esc(sorted[k])+'">'+esc(sorted[k])+'</option>';
+      select.innerHTML = html;
+      if (prevValue) select.value = prevValue;
+    }
+    renderBest();
+  } catch(e) { c.innerHTML = '<div class="error">Error: '+e.message+'</div>'; }
+}
+
+function renderBest(){
+  var c = document.getElementById('best-content');
+  var data = __bestData.slice();
+  var filter = document.getElementById('bp-model-filter') ? document.getElementById('bp-model-filter').value : '';
+  if (filter) data = data.filter(function(q){ return q.product === filter; });
+  // Ordenar por producto + modelo + capacidad
+  data.sort(function(a,b){
+    var pa = (a.product||'').toLowerCase();
+    var pb = (b.product||'').toLowerCase();
+    if (pa !== pb) return pa.localeCompare(pb);
+    var ma = (a.model||'').toLowerCase();
+    var mb = (b.model||'').toLowerCase();
+    if (ma !== mb) return ma.localeCompare(mb);
+    var ca = (a.capacity||'').toLowerCase();
+    var cb = (b.capacity||'').toLowerCase();
+    return ca.localeCompare(cb);
+  });
+  if (!data.length) { c.innerHTML = '<div class="empty">No data for this filter</div>'; return; }
+  try {
     var html = '<div class="scroll"><table><thead><tr><th>Product</th><th>Model</th><th>Capacity</th><th>Price</th><th>Supplier</th><th>Qty</th><th>Incoterm</th><th>Date</th></tr></thead><tbody>';
     for (var i=0; i<data.length; i++) {
       var q = data[i];
