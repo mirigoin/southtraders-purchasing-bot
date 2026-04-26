@@ -934,63 +934,139 @@ async function deleteSupplierProduct(id, supplierName){
 // ===== Alerts tab =====
 var __alerts = [];
 var __alertsSent = [];
+var __alertProducts = []; // unique products from quotes
 
 async function loadAlerts(){
   var c = document.getElementById("alerts-content");
-  c.innerHTML = "<div class=\"empty\">Loading...</div>";
+  c.innerHTML = "<div class=\"empty\">Cargando productos y alertas...</div>";
   try {
-    var [r1, r2] = await Promise.all([
+    var [r1, r2, r3] = await Promise.all([
       fetch("/api/price-alerts").then(r => r.json()),
-      fetch("/api/alerts-sent").then(r => r.json())
+      fetch("/api/alerts-sent").then(r => r.json()),
+      fetch("/api/quotes?hours=1440&limit=2000").then(r => r.json())
     ]);
     __alerts = Array.isArray(r1) ? r1 : [];
     __alertsSent = Array.isArray(r2) ? r2 : [];
+    var quotes = Array.isArray(r3) ? r3 : [];
+    // Construir lista unica de productos: agrupar por (product+model+capacity)
+    var grouped = {};
+    for (var i=0; i<quotes.length; i++) {
+      var q = quotes[i];
+      if (!q.product) continue;
+      var key = ((q.product||"") + "|" + (q.model||"") + "|" + (q.capacity||"")).toLowerCase();
+      if (!grouped[key]) {
+        grouped[key] = {
+          product: q.product,
+          model: q.model || "",
+          capacity: q.capacity || "",
+          minPrice: parseFloat(q.price) || null,
+          avgPrice: 0,
+          count: 0,
+          totalPrice: 0,
+          lastTs: q.ts
+        };
+      }
+      var p = parseFloat(q.price);
+      if (!isNaN(p) && p > 0) {
+        if (grouped[key].minPrice == null || p < grouped[key].minPrice) grouped[key].minPrice = p;
+        grouped[key].totalPrice += p;
+        grouped[key].count++;
+      }
+      if (q.ts > grouped[key].lastTs) grouped[key].lastTs = q.ts;
+    }
+    __alertProducts = [];
+    Object.keys(grouped).forEach(function(k){
+      var g = grouped[k];
+      if (g.count > 0) g.avgPrice = g.totalPrice / g.count;
+      __alertProducts.push(g);
+    });
+    __alertProducts.sort(function(a,b){
+      var ka = (a.product+a.model+a.capacity).toLowerCase();
+      var kb = (b.product+b.model+b.capacity).toLowerCase();
+      return ka.localeCompare(kb);
+    });
     renderAlerts();
   } catch(e) {
     c.innerHTML = "<div class=\"error\">Error: " + e.message + "</div>";
   }
 }
 
+function findAlertForProduct(product, model, capacity){
+  var pl = (product||"").toLowerCase();
+  var ml = (model||"").toLowerCase();
+  var cl = (capacity||"").toLowerCase();
+  return __alerts.find(function(a){
+    return (a.product||"").toLowerCase() === pl &&
+           (a.model||"").toLowerCase() === ml &&
+           ((a.capacity||"").toLowerCase() === cl ||
+            (a.capacity||"").toLowerCase().replace(/\s/g,"") === cl.replace(/\s/g,""));
+  });
+}
+
 function renderAlerts(){
   var c = document.getElementById("alerts-content");
+  var search = (document.getElementById("alert-search") ? document.getElementById("alert-search").value : "").toLowerCase().trim();
   var html = "";
-  // Form para agregar nueva alerta
+
+  // Header con search
   html += "<div style=\"padding:14px 18px;border-bottom:1px solid #2d3748;background:#161922\">";
-  html += "<div style=\"display:flex;gap:8px;align-items:center;flex-wrap:wrap\">";
-  html += "<input class=\"inp\" id=\"new-alert-product\" placeholder=\"Producto (ej: iPhone)\" style=\"width:140px\" />";
-  html += "<input class=\"inp\" id=\"new-alert-model\" placeholder=\"Modelo (ej: 17 Pro Max)\" style=\"width:140px\" />";
-  html += "<input class=\"inp\" id=\"new-alert-capacity\" placeholder=\"Cap (ej: 256GB)\" style=\"width:90px\" />";
-  html += "<input class=\"inp\" id=\"new-alert-price\" type=\"number\" placeholder=\"Target USD\" style=\"width:110px\" />";
-  html += "<input class=\"inp\" id=\"new-alert-notes\" placeholder=\"Nota (opcional)\" style=\"flex:1;min-width:140px\" />";
-  html += "<button class=\"btn btn-primary\" onclick=\"addAlert()\">+ Agregar alerta</button>";
-  html += "</div>";
-  html += "<div style=\"font-size:11px;color:#94a3b8;margin-top:6px\">Las alertas nuevas arrancan APAGADAS. Activarlas con el toggle abajo.</div>";
+  html += "<input class=\"inp\" id=\"alert-search\" oninput=\"renderAlerts()\" placeholder=\"Buscar producto (ej: iPhone 17, Samsung, 256GB)...\" style=\"width:100%\" value=\""+esc(search)+"\" />";
+  html += "<div style=\"font-size:11px;color:#94a3b8;margin-top:6px\">Productos extraidos de cotizaciones de los ultimos 60 dias. Configura tu target USD y activa la alerta.</div>";
   html += "</div>";
 
-  if (__alerts.length === 0) {
-    html += "<div class=\"empty\">No alertas configuradas. Agrega una arriba.</div>";
+  // Lista de productos
+  var rows = __alertProducts.slice();
+  if (search) {
+    rows = rows.filter(function(g){
+      var hay = (g.product+" "+g.model+" "+g.capacity).toLowerCase();
+      return hay.indexOf(search) >= 0;
+    });
+  }
+
+  if (rows.length === 0) {
+    html += "<div class=\"empty\">No hay productos cotizados que coincidan</div>";
   } else {
     html += "<div class=\"scroll\"><table><thead><tr>"+
-      "<th>Activa</th><th>Producto</th><th>Modelo</th><th>Capacidad</th><th>Target</th><th>Nota</th><th>Creada</th><th></th>"+
+      "<th>Producto</th><th>Modelo</th><th>Cap</th><th>Min hist</th><th>Avg hist</th><th>Cotiz</th><th>Target USD</th><th>Estado</th><th></th>"+
       "</tr></thead><tbody>";
-    for (var i=0; i<__alerts.length; i++) {
-      var a = __alerts[i];
-      var checked = a.active ? "checked" : "";
+    for (var i=0; i<rows.length; i++) {
+      var g = rows[i];
+      var existing = findAlertForProduct(g.product, g.model, g.capacity);
+      var rowKey = "ar_" + i;
+      var minP = g.minPrice != null ? "USD " + g.minPrice : "-";
+      var avgP = g.count > 0 ? "USD " + g.avgPrice.toFixed(0) : "-";
+      var inputVal = existing ? existing.target_price : (g.minPrice != null ? Math.floor(g.minPrice * 0.95) : "");
+      var inputDisabled = existing && existing.active ? "disabled" : "";
+      var stateBadge = "";
+      var actionBtn = "";
+      if (existing) {
+        if (existing.active) {
+          stateBadge = "<span class=\"badge badge-ok\">ACTIVA</span>";
+          actionBtn = "<button class=\"btn btn-secondary\" onclick=\"toggleAlertById("+existing.id+", false)\">Apagar</button>";
+        } else {
+          stateBadge = "<span class=\"badge badge-warn\">apagada</span>";
+          actionBtn = "<button class=\"btn btn-primary\" onclick=\"toggleAlertById("+existing.id+", true)\">Activar</button> <button class=\"btn btn-danger\" onclick=\"deleteAlertById("+existing.id+")\">Borrar</button>";
+        }
+      } else {
+        stateBadge = "<span class=\"muted\" style=\"font-size:11px\">sin alerta</span>";
+        actionBtn = "<button class=\"btn btn-primary\" onclick=\"createAlertForRow("+i+")\">Crear</button>";
+      }
       html += "<tr>"+
-        "<td><input type=\"checkbox\" data-aid=\""+a.id+"\" "+checked+" onchange=\"toggleAlert(this)\" style=\"transform:scale(1.4)\" /></td>"+
-        "<td><b>"+esc(a.product||"-")+"</b></td>"+
-        "<td>"+esc(a.model||"-")+"</td>"+
-        "<td>"+esc(a.capacity||"-")+"</td>"+
-        "<td><b>"+(a.currency||"USD")+" "+esc(a.target_price)+"</b></td>"+
-        "<td class=\"muted\">"+esc(a.notes||"-")+"</td>"+
-        "<td class=\"muted\">"+fmtDate(a.created_at)+"</td>"+
-        "<td><button class=\"btn btn-danger\" onclick=\"deleteAlert("+a.id+")\">Borrar</button></td>"+
+        "<td><b>"+esc(g.product)+"</b></td>"+
+        "<td>"+esc(g.model||"-")+"</td>"+
+        "<td>"+esc(g.capacity||"-")+"</td>"+
+        "<td>"+esc(minP)+"</td>"+
+        "<td class=\"muted\">"+esc(avgP)+"</td>"+
+        "<td class=\"muted\">"+g.count+"</td>"+
+        "<td><input type=\"number\" id=\""+rowKey+"\" value=\""+esc(inputVal)+"\" "+inputDisabled+" style=\"width:90px;background:#0f1117;color:#e2e8f0;border:1px solid #2d3748;padding:6px;border-radius:4px\" /></td>"+
+        "<td>"+stateBadge+"</td>"+
+        "<td>"+actionBtn+"</td>"+
       "</tr>";
     }
     html += "</tbody></table></div>";
   }
 
-  // Historial de alertas enviadas
+  // Historial de enviadas
   html += "<div style=\"padding:14px 18px;border-top:1px solid #2d3748\"><h3 style=\"font-size:13px;color:#e2e8f0;margin-bottom:10px\">Ultimas alertas enviadas</h3>";
   if (__alertsSent.length === 0) {
     html += "<div class=\"muted\" style=\"font-size:12px\">No se han enviado alertas todavia.</div>";
@@ -1014,43 +1090,35 @@ function renderAlerts(){
   c.innerHTML = html;
 }
 
-async function addAlert(){
-  var product = document.getElementById("new-alert-product").value.trim();
-  var model = document.getElementById("new-alert-model").value.trim();
-  var capacity = document.getElementById("new-alert-capacity").value.trim();
-  var price = parseFloat(document.getElementById("new-alert-price").value);
-  var notes = document.getElementById("new-alert-notes").value.trim();
-  if (!product) { alert("Producto es obligatorio"); return; }
-  if (isNaN(price) || price <= 0) { alert("Target price es obligatorio y debe ser positivo"); return; }
+async function createAlertForRow(rowIdx){
+  var g = __alertProducts[rowIdx];
+  if (!g) return;
+  // Buscar input value
+  var input = document.getElementById("ar_" + rowIdx);
+  if (!input) return;
+  var price = parseFloat(input.value);
+  if (isNaN(price) || price <= 0) { alert("Ingresa un target USD valido"); return; }
   try {
     var r = await fetch("/api/price-alerts", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({
-      product: product, model: model || null, capacity: capacity || null, target_price: price, notes: notes || null, active: false
+      product: g.product, model: g.model || null, capacity: g.capacity || null, target_price: price, active: true
     })});
     var d = await r.json();
     if (d.error) { alert("Error: " + d.error); return; }
-    document.getElementById("new-alert-product").value = "";
-    document.getElementById("new-alert-model").value = "";
-    document.getElementById("new-alert-capacity").value = "";
-    document.getElementById("new-alert-price").value = "";
-    document.getElementById("new-alert-notes").value = "";
     await loadAlerts();
   } catch(e) { alert("Error: " + e.message); }
 }
 
-async function toggleAlert(checkbox){
-  var id = parseInt(checkbox.getAttribute("data-aid"));
-  var newVal = checkbox.checked;
+async function toggleAlertById(id, newVal){
   try {
     var r = await fetch("/api/price-alerts", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({id: id, active: newVal})});
     var d = await r.json();
-    if (d.error) { alert("Error: " + d.error); checkbox.checked = !newVal; return; }
-    var found = __alerts.find(function(a){ return a.id === id; });
-    if (found) found.active = newVal;
-  } catch(e) { alert("Error: " + e.message); checkbox.checked = !newVal; }
+    if (d.error) { alert("Error: " + d.error); return; }
+    await loadAlerts();
+  } catch(e) { alert("Error: " + e.message); }
 }
 
-async function deleteAlert(id){
-  if (!confirm("Borrar alerta #"+id+"?")) return;
+async function deleteAlertById(id){
+  if (!confirm("Borrar alerta?")) return;
   try {
     var r = await fetch("/api/price-alerts/"+id, {method:"DELETE"});
     var d = await r.json();
