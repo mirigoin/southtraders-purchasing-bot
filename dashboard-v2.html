@@ -249,7 +249,7 @@ function filterQuotesBy(product, model, capacity){
 async function delQuote(id){
   if (!confirm('Delete quote #'+id+'?')) return;
   try {
-    var r = await fetch('/api/quotes/'+id+'/delete', {method:'POST'});
+    var r = await fetch('/api/quotes/'+id, {method:'DELETE'});
     var data = await r.json();
     if (data.error) { alert('Error: '+data.error); return; }
     var row = document.getElementById('row-'+id);
