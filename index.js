@@ -185,6 +185,7 @@ try {
   await pool.query(`ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS responses INTEGER DEFAULT 0`);
   await pool.query(`ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'open'`);
   await pool.query(`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS group_id TEXT`);
+  await pool.query(`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS is_own BOOLEAN DEFAULT FALSE`);
   await pool.query(`ALTER TABLE group_messages ADD COLUMN IF NOT EXISTS wa_message_id TEXT`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_group_messages_wa_id ON group_messages(wa_message_id)`);
 
@@ -328,12 +329,7 @@ async function downloadMediaFromMeta(mediaId) {
 // Procesa una imagen con Claude Vision (Sonnet). Usa el mismo formato de salida que extractQuote.
 async function extractQuoteFromImage(imageBytes, mimeType, supplierName, caption) {
   if (!ANTHROPIC_API_KEY || !imageBytes) return { quotes: [] };
-  // Guard owner igual que en texto
-  const OWNER_NAMES = ['marcelo', 'marquitos', 'south traders'];
-  const senderLower = (supplierName || '').toLowerCase();
-  if (OWNER_NAMES.some(n => senderLower.includes(n))) {
-    return { quotes: [], skipped_reason: 'sender_is_owner' };
-  }
+  // Guard OWNER deshabilitado - ahora se procesan tambien ofertas propias (marcadas como is_own)
 
   const base64 = Buffer.from(imageBytes).toString('base64');
   const imageMime = (mimeType && mimeType.startsWith('image/')) ? mimeType : 'image/jpeg';
@@ -413,12 +409,7 @@ async function extractQuoteFromXlsx(buffer, supplierName) {
 
 async function extractQuote(msgText, supplierName) {
   if (!ANTHROPIC_API_KEY) return { quotes: [] };
-  // GUARD: ignorar mensajes de nosotros mismos (no son cotizaciones de proveedor)
-  const OWNER_NAMES = ['marcelo', 'marquitos', 'south traders'];
-  const senderLower = (supplierName || '').toLowerCase();
-  if (OWNER_NAMES.some(n => senderLower.includes(n))) {
-    return { quotes: [], skipped_reason: 'sender_is_owner' };
-  }
+  // Guard OWNER deshabilitado - todos los mensajes con producto+precio se procesan
   try {
     const resp = await axios.post(
       'https://api.anthropic.com/v1/messages',
@@ -510,11 +501,15 @@ Si NADA encaja, devuelve {"quotes":[]}.`,
 
 // ============ SAVE QUOTES TO DB ============
 async function saveQuotes(quotes, supplierSlot, supplierName, rawText, source) {
+  // Detectar si la cotizacion es del owner (Marcelo, etc) para marcarla como propia
+  const OWNER_HINTS = ['marcelo', 'marquitos', 'south traders'];
+  const sLower = (supplierName || '').toLowerCase();
+  const isOwn = OWNER_HINTS.some(n => sLower.includes(n));
   for (const q of quotes) {
     await pool.query(
-      `INSERT INTO quotes (supplier_slot, supplier_name, source, raw_text, product, model, capacity, color, condition, price, currency, qty, incoterm) 
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
-      [supplierSlot, supplierName, source || 'group', rawText, q.product, q.model, q.capacity, q.color, q.condition || 'new', q.price, q.currency || 'USD', q.qty, q.incoterm || 'FOB']
+      `INSERT INTO quotes (supplier_slot, supplier_name, source, raw_text, product, model, capacity, color, condition, price, currency, qty, incoterm, is_own) 
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+      [supplierSlot, supplierName, source || 'group', rawText, q.product, q.model, q.capacity, q.color, q.condition || 'new', q.price, q.currency || 'USD', q.qty, q.incoterm || 'FOB', isOwn]
     );
   }
 }
@@ -637,8 +632,8 @@ async function initBaileys() {
             );
             // Buscar supplier por group_id
             const supplier = await pool.query('SELECT * FROM suppliers WHERE whatsapp_group_id = $1 AND active = TRUE', [groupId]);
-            let supSlot = null, supName = groupName;
-            if (supplier.rows.length > 0) { supSlot = supplier.rows[0].slot; supName = supplier.rows[0].name || supplier.rows[0].alias || groupName; }
+            let supSlot = null, supName = senderName || groupName;
+            if (supplier.rows.length > 0) { supSlot = supplier.rows[0].slot; supName = supplier.rows[0].name || supplier.rows[0].alias || senderName || groupName; }
             // Extraer quote siempre (registrado o no)
             const result = await extractQuote(text, supName);
             if (result.quotes && result.quotes.length > 0) {
@@ -659,8 +654,8 @@ async function initBaileys() {
               `SELECT * FROM suppliers WHERE active = TRUE AND contact_phone IS NOT NULL AND (regexp_replace(contact_phone, '[^0-9]', '', 'g') = $1 OR regexp_replace(contact_phone, '[^0-9]', '', 'g') LIKE '%' || $1 OR $1 LIKE '%' || regexp_replace(contact_phone, '[^0-9]', '', 'g')) LIMIT 1`,
               [senderPhone]
             );
-            let supSlot = null, supName = 'DM:' + senderPhone;
-            if (supplierRes.rows.length > 0) { supSlot = supplierRes.rows[0].slot; supName = supplierRes.rows[0].name || supplierRes.rows[0].alias || supName; }
+            let supSlot = null, supName = senderName || ('DM:' + senderPhone);
+            if (supplierRes.rows.length > 0) { supSlot = supplierRes.rows[0].slot; supName = supplierRes.rows[0].name || supplierRes.rows[0].alias || senderName || supName; }
             const result = await extractQuote(text, supName);
             if (result.quotes && result.quotes.length > 0) {
               await pool.query(`UPDATE group_messages SET has_quote = TRUE, processed = TRUE WHERE wa_message_id = $1`, [msg.key.id]);
