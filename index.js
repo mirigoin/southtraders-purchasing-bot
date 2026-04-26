@@ -144,6 +144,18 @@ try {
     updated_at TIMESTAMPTZ DEFAULT NOW()
   )`);
 
+  await pool.query(`CREATE TABLE IF NOT EXISTS supplier_products (
+    id SERIAL PRIMARY KEY,
+    supplier_name TEXT NOT NULL,
+    product_label TEXT NOT NULL,
+    units INTEGER DEFAULT 0,
+    source TEXT DEFAULT 'history',
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE (supplier_name, product_label)
+  )`);
+
   // Migrations - agregar columnas si no existen
   await pool.query(`ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS target_price NUMERIC`);
   await pool.query(`ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS suppliers_sent TEXT`);
@@ -1971,6 +1983,102 @@ app.get('/api/admin/dump', async (req, res) => {
     }
     dump.timestamp = new Date().toISOString();
     res.json(dump);
+  } catch (e) {
+    res.status(500).json({ error: String(e && e.message || e) });
+  }
+});
+
+
+// ===== Suppliers: editar campos =====
+app.post('/api/suppliers/:id', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: 'invalid id' });
+    const { contact_phone, contact_name, whatsapp_group_id, whatsapp_group_name, alias, country } = req.body || {};
+    const updates = [];
+    const params = [];
+    let idx = 1;
+    if (contact_phone !== undefined) { updates.push(`contact_phone = $${idx++}`); params.push(contact_phone); }
+    if (contact_name !== undefined) { updates.push(`contact_name = $${idx++}`); params.push(contact_name); }
+    if (whatsapp_group_id !== undefined) { updates.push(`whatsapp_group_id = $${idx++}`); params.push(whatsapp_group_id); }
+    if (whatsapp_group_name !== undefined) { updates.push(`whatsapp_group_name = $${idx++}`); params.push(whatsapp_group_name); }
+    if (alias !== undefined) { updates.push(`alias = $${idx++}`); params.push(alias); }
+    if (country !== undefined) { updates.push(`country = $${idx++}`); params.push(country); }
+    if (updates.length === 0) return res.status(400).json({ error: 'no fields to update' });
+    params.push(id);
+    const r = await pool.query(`UPDATE suppliers SET ${updates.join(', ')} WHERE id = $${idx} RETURNING *`, params);
+    if (r.rowCount === 0) return res.status(404).json({ error: 'supplier not found' });
+    res.json({ ok: true, supplier: r.rows[0] });
+  } catch (e) {
+    res.status(500).json({ error: String(e && e.message || e) });
+  }
+});
+
+// ===== Supplier products =====
+app.get('/api/supplier-products', async (req, res) => {
+  try {
+    const supplier = req.query.supplier;
+    let r;
+    if (supplier) {
+      r = await pool.query('SELECT * FROM supplier_products WHERE supplier_name = $1 ORDER BY units DESC', [supplier]);
+    } else {
+      r = await pool.query('SELECT * FROM supplier_products ORDER BY supplier_name, units DESC');
+    }
+    res.json(r.rows);
+  } catch (e) {
+    res.status(500).json({ error: String(e && e.message || e) });
+  }
+});
+
+app.post('/api/supplier-products', async (req, res) => {
+  try {
+    const { id, supplier_name, product_label, units, source, notes } = req.body || {};
+    if (id) {
+      const r = await pool.query('UPDATE supplier_products SET supplier_name = COALESCE($1, supplier_name), product_label = COALESCE($2, product_label), units = COALESCE($3, units), source = COALESCE($4, source), notes = COALESCE($5, notes), updated_at = NOW() WHERE id = $6 RETURNING *', [supplier_name, product_label, units, source, notes, id]);
+      if (r.rowCount === 0) return res.status(404).json({ error: 'not found' });
+      return res.json({ ok: true, row: r.rows[0] });
+    }
+    if (!supplier_name || !product_label) return res.status(400).json({ error: 'supplier_name and product_label required' });
+    const r = await pool.query('INSERT INTO supplier_products (supplier_name, product_label, units, source, notes) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (supplier_name, product_label) DO UPDATE SET units = supplier_products.units + EXCLUDED.units, updated_at = NOW() RETURNING *', [supplier_name, product_label, units || 0, source || 'manual', notes || null]);
+    res.json({ ok: true, row: r.rows[0] });
+  } catch (e) {
+    res.status(500).json({ error: String(e && e.message || e) });
+  }
+});
+
+app.delete('/api/supplier-products/:id', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: 'invalid id' });
+    const r = await pool.query('DELETE FROM supplier_products WHERE id = $1 RETURNING id', [id]);
+    if (r.rowCount === 0) return res.status(404).json({ error: 'not found' });
+    res.json({ ok: true, deleted: id });
+  } catch (e) {
+    res.status(500).json({ error: String(e && e.message || e) });
+  }
+});
+
+// ===== Importer: bulk import supplier history =====
+app.post('/api/admin/import-supplier-history', async (req, res) => {
+  try {
+    const { items, replace } = req.body || {};
+    if (!Array.isArray(items)) return res.status(400).json({ error: 'items must be array' });
+    let inserted = 0;
+    let updated = 0;
+    let errors = [];
+    if (replace === true) {
+      await pool.query("DELETE FROM supplier_products WHERE source = 'history'");
+    }
+    for (const it of items) {
+      try {
+        if (!it.supplier_name || !it.product_label) { errors.push({ item: it, err: "missing fields" }); continue; }
+        const r = await pool.query('INSERT INTO supplier_products (supplier_name, product_label, units, source) VALUES ($1, $2, $3, $4) ON CONFLICT (supplier_name, product_label) DO UPDATE SET units = supplier_products.units + EXCLUDED.units, updated_at = NOW() RETURNING (xmax = 0) AS inserted', [it.supplier_name, it.product_label, it.units || 0, it.source || 'history']);
+        if (r.rows[0].inserted) inserted++; else updated++;
+      } catch (e) {
+        errors.push({ item: it, err: String(e && e.message || e) });
+      }
+    }
+    res.json({ ok: true, inserted: inserted, updated: updated, total: items.length, errors: errors });
   } catch (e) {
     res.status(500).json({ error: String(e && e.message || e) });
   }
