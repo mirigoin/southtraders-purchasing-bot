@@ -480,6 +480,49 @@ REGLAS CRITICAS:
 
 9. DISPONIBILIDAD SIN PRECIO: Si el proveedor solo informa stock disponible sin precio, devolver la quote con price=null. Marca importante: estas son oportunidades de pedir cotizacion.
 
+10. PROPAGACION DE CONTEXTO INICIAL - CRITICO PARA FORMATOS COMPRIMIDOS:
+   - Cuando un mensaje empieza con un identificador de PRODUCTO o GENERACION (ej: "17", "iPhone 17", "Samsung S26", "MacBook"), ese identificador se PROPAGA a TODOS los items siguientes hasta encontrar otro identificador de producto.
+   - Ejemplo critico: "CIF 17 AIR 256/512 $834/910 E 256/512 $597/679 PRO 256/512 $1137/1200 PRO M 256/512/1TB $1330/1400/1700"
+     * El "17" inicial se propaga: AIR=iPhone 17 Air, E=iPhone 17E, PRO=iPhone 17 Pro, PRO M=iPhone 17 Pro Max
+     * Resultado: 9 quotes (todas iPhone, todas con incoterm=CIF):
+       - iPhone 17 Air 256GB $834
+       - iPhone 17 Air 512GB $910
+       - iPhone 17E 256GB $597
+       - iPhone 17E 512GB $679
+       - iPhone 17 Pro 256GB $1137
+       - iPhone 17 Pro 512GB $1200
+       - iPhone 17 Pro Max 256GB $1330
+       - iPhone 17 Pro Max 512GB $1400
+       - iPhone 17 Pro Max 1TB $1700
+   - El formato "256/512 $X/Y" significa "256GB cuesta X, 512GB cuesta Y" - generar 1 quote por capacidad.
+   - El formato "256/512/1TB $X/Y/Z" significa "3 capacidades, 3 precios" - generar 3 quotes.
+   - Si NO hay identificador inicial pero el contexto es claramente Apple (palabras como CIF/FOB + capacidades 256/512/1TB + modelos PRO/AIR/E/PM), asumir iPhone si los precios estan en rango iPhone (500-2500).
+
+11. ABREVIACIONES DE iPhone Pro Max - CRITICO:
+   - "PM" / "P MAX" / "PRO M" / "PRO MAX" / "PROMAX" -> todas significan "Pro Max"
+   - "PRO" suelto -> "Pro" (sin Max)
+   - "M" suelto al final de modelo -> "Max"
+   - Ejemplos:
+     * "17 PM 256 $1331" -> iPhone 17 Pro Max 256GB $1331
+     * "17 PRO M 1TB $1700" -> iPhone 17 Pro Max 1TB $1700
+     * "16 PMAX 512" -> iPhone 16 Pro Max 512GB
+     * "15 PRO 256" -> iPhone 15 Pro 256GB (NO es Pro Max, falta el M)
+
+12. INFERENCIA DE PRODUCTO POR CONTEXTO - APPLE-FIRST:
+   - South Traders es un negocio enfocado en productos Apple. Cuando hay ambiguedad y el mensaje contiene numeros de generacion (15, 16, 17), submodelos (PRO, PRO MAX, AIR, E, PM, PRO M) y capacidades (128, 256, 512, 1TB), POR DEFECTO asumir iPhone.
+   - Solo asignar a iPad si el mensaje menciona explicitamente "iPad", "tablet", o capacidades >1TB sin precios de iPhone.
+   - Solo asignar a MacBook si el mensaje menciona explicitamente "MacBook", "Mac", "Air M", "Neo", o specs de RAM (8GB/16GB/32GB).
+   - Si "PRO" aparece SOLO con numero de generacion (15/16/17) y precio en rango iPhone, es iPhone Pro.
+   - Si "PRO" aparece con palabra "iPad" o "tablet" cerca, es iPad Pro.
+   - REGLA DE ORO: ante duda con productos Apple, mirar el rango de precio: iPhone $500-2500, iPad $300-1700, MacBook $600-3000, AirPods $100-300.
+
+13. NEO = MacBook Apple, NUNCA Samsung:
+   - Refuerzo de regla 7. Si aparece "NEO" o "Neo" en una cotizacion, SIEMPRE es MacBook Neo.
+   - JAMAS interpretar "NEO" como Samsung Galaxy.
+   - Si aparece "Neo 256 $607.75" sin nada mas: MacBook Neo 256GB $607.75.
+   - Si aparece "NEO 256/512 $X/Y": 2 quotes MacBook Neo.
+
+
 Si NADA encaja, devuelve {"quotes":[]}.`,
         messages: [{ role: 'user', content: `Proveedor: ${supplierName}\nMensaje:\n${msgText}` }]
       },
