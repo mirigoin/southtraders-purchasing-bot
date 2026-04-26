@@ -550,29 +550,52 @@ var __minimums = [];
 var __quotes = [];
 var __grouped = [];
 
-function parseDescription(desc){
-  // Extrae producto, capacidad y color de la description de Pangea
-  // Ej: "APPLE IPHONE 16 128GB BLACK IND - SIM CARD" -> {product:"APPLE IPHONE 16", capacity:"128GB", color:"BLACK"}
-  var d = desc.toUpperCase();
-  // Capacidad
-  var capMatch = d.match(/(\d+\s?(?:GB|TB))/);
-  var cap = capMatch ? capMatch[1].replace(/\s/g,'') : '';
-  // Quitar capacidad para procesar el resto
-  var rest = cap ? d.replace(capMatch[1], '|CAP|') : d;
-  // Producto = todo antes de la capacidad
-  var product = '';
-  var color = '';
-  if (cap) {
-    var parts = rest.split('|CAP|');
-    product = parts[0].trim();
-    var afterCap = (parts[1] || '').trim();
-    // Color = primera palabra despues de la capacidad (limpiando)
-    var colorMatch = afterCap.match(/^([A-Z]+)/);
-    color = colorMatch ? colorMatch[1] : '';
-  } else {
-    product = d;
+function parseDescription(description, sku) {
+  // Lista de colores Apple conocidos (multi-palabra primero)
+  var COLORS = [
+    "NATURAL TITANIUM", "BLUE TITANIUM", "WHITE TITANIUM", "BLACK TITANIUM", "DESERT TITANIUM",
+    "DEEP BLUE", "COSMIC ORANGE", "MIST BLUE", "ROSE GOLD", "SPACE GRAY", "SPACE BLACK", "SPACE GREY",
+    "SKY BLUE", "AZUL CIELO",
+    "BLACK", "WHITE", "RED", "BLUE", "GREEN", "PINK", "YELLOW", "PURPLE", "NATURAL",
+    "TEAL", "ULTRAMARINE", "LAVENDER", "SILVER", "MIDNIGHT", "STARLIGHT",
+    "CITRUS", "INDIGO", "GRAPHITE", "GOLD"
+  ];
+  var desc = (description || "").toUpperCase().trim();
+  // 1. Detectar producto principal (limpieza basica)
+  var product = desc;
+  if (desc.indexOf("MACBOOK") >= 0) {
+    var m = desc.match(/MACBOOK\s+(AIR|PRO|NEO)\s+\d+\"?\s*([A-Z0-9]+\s*PRO|[A-Z]\d+|[A-Z]\d+\s*PRO)?/);
+    product = m ? ("MACBOOK " + (m[1]||"") + " " + (desc.match(/\d+\"/) || [""])[0] + " " + (m[2]||"")).trim().replace(/\s+/g," ") : "MACBOOK";
+  } else if (desc.indexOf("APPLE IPHONE") === 0) {
+    var m = desc.match(/IPHONE\s+(\d+\s*(?:PRO\s*MAX|PRO|PLUS|MINI|AIR|E)?)/);
+    product = m ? "APPLE IPHONE " + m[1].trim().replace(/\s+/g," ") : "APPLE IPHONE";
+  } else if (desc.indexOf("IPAD") === 0) {
+    var m = desc.match(/IPAD(\s+(PRO|AIR|MINI))?(\s+([A-Z0-9]+))?/);
+    product = m ? ("IPAD" + (m[1]||"") + (m[3]||"")).trim().replace(/\s+/g," ") : "IPAD";
+  } else if (desc.indexOf("AIRPODS") === 0) {
+    var m = desc.match(/AIRPODS(\s+(PRO\s+\d+\s+GEN|PRO|MAX|\d+\s+GEN|\d+))?/);
+    product = m ? ("AIRPODS" + (m[1]||"")).trim().replace(/\s+/g," ") : "AIRPODS";
   }
-  return {product: product, capacity: cap, color: color};
+  // 2. Detectar capacidad (storage)
+  var capacity = "";
+  var cm = desc.match(/\d+(GB|TB)/g);
+  if (cm && cm.length > 0) {
+    if (desc.indexOf("MACBOOK") >= 0 && cm.length >= 2) {
+      // Para MacBook formato "8GB/256GB" -> el storage es el segundo
+      capacity = cm[1];
+    } else {
+      capacity = cm[cm.length - 1];
+    }
+  }
+  // 3. Detectar color
+  var color = "";
+  for (var i = 0; i < COLORS.length; i++) {
+    var c = COLORS[i];
+    // Match con boundary: que aparezca al final o seguido de espacio/limite
+    var re = new RegExp("(?:^|\\s)" + c.replace(/\s/g, "\\s") + "(?:\\s|$)");
+    if (re.test(desc)) { color = c; break; }
+  }
+  return { product: product, capacity: capacity, color: color };
 }
 
 async function loadCompras(){
