@@ -129,6 +129,8 @@ tr:last-child td{border-bottom:none}
 .chart-btn{background:transparent;border:none;color:#94a3b8;cursor:pointer;padding:0 4px;font-size:14px;margin-left:6px}
 .chart-btn:hover{color:#63b3ed}
 @media (max-width:768px){.chart-stats{grid-template-columns:repeat(2,1fr)}.modal{max-height:95vh}}
+.badge-own{background:#ed8936;color:#fff;font-weight:600}
+.row-own{background:rgba(237,137,54,0.05)}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
@@ -349,7 +351,7 @@ function renderBest(){
           diffTd = '<td style="color:'+color+'"><b>'+sign+diff.toFixed(0)+'</b> ('+sign+pct+'%)</td>';
         }
       }
-      html += '<tr'+clickAttr+'><td>'+esc(q.product)+' <button class="chart-btn" onclick="event.stopPropagation();openChart(\''+esc(q.product||'').replace(/\'/g,"\\'")+'\',\''+esc(q.model||'').replace(/\'/g,"\\'")+'\',\''+esc(q.capacity||'').replace(/\'/g,"\\'")+'\')" title="Ver historico">Ver</button></td><td>'+esc(q.model)+'</td><td>'+esc(q.capacity)+'</td><td><b>'+(q.currency||'USD')+' '+esc(q.price)+'</b></td>'+costoTd+diffTd+'<td>'+esc(q.supplier_name||q.supplier)+'</td><td>'+esc(q.qty||q.quantity)+'</td><td>'+esc(q.incoterm)+'</td><td class="muted">'+fmtDate(q.ts||q.created_at)+'</td></tr>';
+      html += '<tr'+clickAttr+'><td>'+esc(q.product)+' <button class="chart-btn" onclick="event.stopPropagation();openChart(\''+esc(q.product||'').replace(/\'/g,"\\'")+'\',\''+esc(q.model||'').replace(/\'/g,"\\'")+'\',\''+esc(q.capacity||'').replace(/\'/g,"\\'")+'\')" title="Ver historico">Ver</button></td><td>'+esc(q.model)+'</td><td>'+esc(q.capacity)+'</td><td><b>'+(q.currency||'USD')+' '+esc(q.price)+'</b></td>'+costoTd+diffTd+'<td>'+esc(q.supplier_name||q.supplier)+(q.is_own?" <span class=\"badge badge-own\">TU OFERTA</span>":"")+'</td><td>'+esc(q.qty||q.quantity)+'</td><td>'+esc(q.incoterm)+'</td><td class="muted">'+fmtDate(q.ts||q.created_at)+'</td></tr>';
     }
     html += '</tbody></table></div>';
     c.innerHTML = html;
@@ -375,7 +377,7 @@ async function loadQuotes(){
     var html = '<div class="scroll"><table><thead><tr><th>Date</th><th>Supplier</th><th>Product</th><th>Model</th><th>Cap</th><th>Price</th><th>Qty</th><th>Cond</th><th>Incoterm</th><th>Message</th><th></th></tr></thead><tbody>';
     for (var i=0; i<data.length; i++) {
       var q = data[i];
-      html += '<tr id="row-'+q.id+'"><td class="muted">'+fmtDate(q.ts)+'</td><td>'+esc(q.supplier_name)+'</td><td>'+esc(q.product)+'</td><td>'+esc(q.model)+'</td><td>'+esc(q.capacity)+'</td><td><b>'+(q.currency||'USD')+' '+esc(q.price)+'</b></td><td>'+esc(q.qty)+'</td><td>'+esc(q.condition)+'</td><td>'+esc(q.incoterm)+'</td><td class="raw">'+esc((q.raw_text||'').substring(0,200))+'</td><td><button class="btn btn-danger" onclick="delQuote('+q.id+')">Delete</button></td></tr>';
+      html += '<tr id="row-'+q.id+'"><td class="muted">'+fmtDate(q.ts)+'</td><td>'+esc(q.supplier_name)+(q.is_own?" <span class=\"badge badge-own\">TU OFERTA</span>":"")+'</td><td>'+esc(q.product)+'</td><td>'+esc(q.model)+'</td><td>'+esc(q.capacity)+'</td><td><b>'+(q.currency||'USD')+' '+esc(q.price)+'</b></td><td>'+esc(q.qty)+'</td><td>'+esc(q.condition)+'</td><td>'+esc(q.incoterm)+'</td><td class="raw">'+esc((q.raw_text||'').substring(0,200))+'</td><td><button class="btn btn-danger" onclick="delQuote('+q.id+')">Delete</button></td></tr>';
     }
     html += '</tbody></table></div>';
     c.innerHTML = html;
