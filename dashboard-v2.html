@@ -32,6 +32,10 @@ header h1{font-size:18px;font-weight:700;color:#fff}
 .btn-danger:hover{background:#b91c1c}
 .btn-primary{background:#16a34a;padding:10px 20px;font-size:14px}
 .btn-primary:hover{background:#15803d}
+.btn-secondary{background:#1e293b;border:1px solid #334155;padding:8px 14px;font-size:13px;color:#cbd5e0}
+.btn-secondary:hover{background:#334155}
+.btn-mini{background:transparent;color:#ef4444;border:1px solid #7f1d1d;padding:4px 8px;font-size:11px}
+.btn-mini:hover{background:#7f1d1d;color:#fff}
 .select,.inp,.txt{background:#0f1117;color:#e2e8f0;border:1px solid #2d3748;padding:8px 12px;border-radius:6px;font-size:13px;width:100%;font-family:inherit}
 .select:focus,.inp:focus,.txt:focus{outline:none;border-color:#63b3ed}
 .txt{resize:vertical;min-height:80px}
@@ -46,13 +50,22 @@ tr:last-child td{border-bottom:none}
 .success{color:#22c55e;padding:14px 18px;font-size:13px}
 .raw{max-width:280px;font-size:11px;color:#94a3b8;line-height:1.4;font-family:monospace;white-space:pre-wrap;word-break:break-word}
 .scroll{overflow-x:auto}
-.form{padding:20px;display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
-.form-row{display:flex;flex-direction:column;gap:6px}
+.form{padding:20px}
+.form-row{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
 .form-row label{font-size:12px;color:#94a3b8;font-weight:500;text-transform:uppercase;letter-spacing:.04em}
-.form-row.full{grid-column:1/-1}
-.form-actions{padding:0 20px 20px;display:flex;gap:10px;justify-content:flex-end}
+.items-list{display:flex;flex-direction:column;gap:12px;margin-bottom:14px}
+.item-card{background:#0f1117;border:1px solid #2d3748;border-radius:8px;padding:14px;position:relative}
+.item-card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.item-card-title{font-size:12px;font-weight:600;color:#63b3ed;text-transform:uppercase;letter-spacing:.05em}
+.item-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.item-grid .full{grid-column:1/-1}
+.item-grid label{font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px}
+.add-item-btn{display:block;width:100%;padding:10px;background:transparent;border:1px dashed #475569;color:#94a3b8;border-radius:8px;font-size:13px;cursor:pointer;font-weight:500}
+.add-item-btn:hover{border-color:#63b3ed;color:#63b3ed}
 .preview{background:#0f1117;border:1px solid #2d3748;border-radius:6px;padding:12px;font-family:monospace;font-size:12px;color:#cbd5e0;white-space:pre-wrap;line-height:1.5;margin:0 20px 20px}
 .preview-label{font-size:11px;color:#718096;margin:0 20px 6px;text-transform:uppercase;letter-spacing:.05em}
+.form-actions{padding:0 20px 20px;display:flex;gap:10px;justify-content:flex-end}
+.divider{height:1px;background:#2d3748;margin:14px 0}
 </style>
 </head>
 <body>
@@ -77,10 +90,10 @@ tr:last-child td{border-bottom:none}
 
 <div id="tab-best" class="section">
 <div class="section-head">
-<h2>Best Prices (ultimos 7 dias)</h2>
+<h2>Best Prices (last 7 days)</h2>
 <button class="btn" onclick="loadBest()">Refresh</button>
 </div>
-<div id="best-content"><div class="empty">Cargando...</div></div>
+<div id="best-content"><div class="empty">Loading...</div></div>
 </div>
 
 <div id="tab-quotes" class="section" style="display:none">
@@ -88,54 +101,39 @@ tr:last-child td{border-bottom:none}
 <h2>Cotizaciones</h2>
 <div class="controls">
 <select class="select" id="q-range" onchange="loadQuotes()" style="width:auto">
-<option value="24">Ultimas 24h</option>
-<option value="168" selected>Ultimos 7 dias</option>
-<option value="720">Ultimos 30 dias</option>
+<option value="24">Last 24h</option>
+<option value="168" selected>Last 7 days</option>
+<option value="720">Last 30 days</option>
 </select>
 <button class="btn" onclick="loadQuotes()">Refresh</button>
 </div>
 </div>
-<div id="quotes-content"><div class="empty">Cargando...</div></div>
+<div id="quotes-content"><div class="empty">Loading...</div></div>
 </div>
 
 <div id="tab-request" class="section" style="display:none">
 <div class="section-head">
-<h2>Pedir Cotizacion</h2>
+<h2>Request Quote</h2>
 </div>
 <div class="form">
 <div class="form-row">
-<label>Proveedor *</label>
-<select class="select" id="rq-supplier"><option value="">Cargando proveedores...</option></select>
+<label>Supplier *</label>
+<select class="select" id="rq-supplier"><option value="">Loading suppliers...</option></select>
 </div>
+<div class="divider"></div>
+<label style="font-size:12px;color:#94a3b8;font-weight:500;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;display:block">Items</label>
+<div class="items-list" id="rq-items"></div>
+<button class="add-item-btn" onclick="addItem()">+ Add another item</button>
+<div class="divider"></div>
 <div class="form-row">
-<label>Producto *</label>
-<input class="inp" id="rq-product" placeholder="Ej: iPhone 15 Pro Max" />
-</div>
-<div class="form-row">
-<label>Modelo / Capacidad</label>
-<input class="inp" id="rq-model" placeholder="Ej: 256GB Natural Titanium" />
-</div>
-<div class="form-row">
-<label>Cantidad</label>
-<input class="inp" id="rq-qty" type="number" placeholder="Ej: 50" />
-</div>
-<div class="form-row">
-<label>Target Price (USD)</label>
-<input class="inp" id="rq-target" type="number" placeholder="Ej: 1100" />
-</div>
-<div class="form-row">
-<label>Condicion / Incoterm</label>
-<input class="inp" id="rq-cond" placeholder="Ej: Sealed FOB HK" />
-</div>
-<div class="form-row full">
-<label>Mensaje custom (opcional, sobreescribe el formato automatico)</label>
-<textarea class="txt" id="rq-message" placeholder="Dejar vacio para generar mensaje automatico"></textarea>
+<label>Custom message (optional - overrides auto-generated message)</label>
+<textarea class="txt" id="rq-message" placeholder="Leave empty to auto-generate from items above"></textarea>
 </div>
 </div>
-<div class="preview-label">Preview del mensaje a enviar</div>
-<div class="preview" id="rq-preview">Completa el formulario...</div>
+<div class="preview-label">Preview - message that will be sent</div>
+<div class="preview" id="rq-preview">Fill the form...</div>
 <div class="form-actions">
-<button class="btn btn-primary" id="rq-send" onclick="sendRequest()">Enviar Cotizacion</button>
+<button class="btn btn-primary" id="rq-send" onclick="sendRequest()">Send Quote Request</button>
 </div>
 <div id="rq-result"></div>
 </div>
@@ -151,7 +149,6 @@ function fmtDate(d){
   var mi = String(dt.getMinutes()).padStart(2,'0');
   return dd+'/'+mm+' '+hh+':'+mi;
 }
-
 function esc(s){
   if (s == null) return '-';
   return String(s).replace(/[&<>"']/g, function(c){
@@ -166,11 +163,9 @@ async function loadStats(){
     document.getElementById('s-sup').textContent = sups.length || 0;
     document.getElementById('s-conn').textContent = 'OK';
     document.getElementById('dot').style.background = '#22c55e';
-    
     var r2 = await fetch('/api/quotes?hours=24&limit=500');
     var q24 = await r2.json();
     document.getElementById('s-q24').textContent = q24.length || 0;
-    
     var r3 = await fetch('/api/quotes?hours=168&limit=2000');
     var q7 = await r3.json();
     document.getElementById('s-q7').textContent = q7.length || 0;
@@ -182,12 +177,12 @@ async function loadStats(){
 
 async function loadBest(){
   var c = document.getElementById('best-content');
-  c.innerHTML = '<div class="empty">Cargando...</div>';
+  c.innerHTML = '<div class="empty">Loading...</div>';
   try {
     var r = await fetch('/api/best-prices?days=7');
     var data = await r.json();
-    if (!data || !data.length) { c.innerHTML = '<div class="empty">Sin datos</div>'; return; }
-    var html = '<div class="scroll"><table><thead><tr><th>Producto</th><th>Modelo</th><th>Capacidad</th><th>Precio</th><th>Proveedor</th><th>Qty</th><th>Incoterm</th><th>Fecha</th></tr></thead><tbody>';
+    if (!data || !data.length) { c.innerHTML = '<div class="empty">No data</div>'; return; }
+    var html = '<div class="scroll"><table><thead><tr><th>Product</th><th>Model</th><th>Capacity</th><th>Price</th><th>Supplier</th><th>Qty</th><th>Incoterm</th><th>Date</th></tr></thead><tbody>';
     for (var i=0; i<data.length; i++) {
       var q = data[i];
       html += '<tr>'+
@@ -208,15 +203,15 @@ async function loadBest(){
 
 async function loadQuotes(){
   var c = document.getElementById('quotes-content');
-  c.innerHTML = '<div class="empty">Cargando...</div>';
+  c.innerHTML = '<div class="empty">Loading...</div>';
   var hours = document.getElementById('q-range').value;
   try {
     var r = await fetch('/api/quotes?hours='+hours+'&limit=500');
     var data = await r.json();
-    if (!data || !data.length) { c.innerHTML = '<div class="empty">Sin cotizaciones en este rango</div>'; return; }
+    if (!data || !data.length) { c.innerHTML = '<div class="empty">No quotes in this range</div>'; return; }
     var html = '<div class="scroll"><table><thead><tr>'+
-      '<th>Fecha</th><th>Proveedor</th><th>Producto</th><th>Modelo</th><th>Cap</th>'+
-      '<th>Precio</th><th>Qty</th><th>Cond</th><th>Incoterm</th><th>Mensaje</th><th></th>'+
+      '<th>Date</th><th>Supplier</th><th>Product</th><th>Model</th><th>Cap</th>'+
+      '<th>Price</th><th>Qty</th><th>Cond</th><th>Incoterm</th><th>Message</th><th></th>'+
       '</tr></thead><tbody>';
     for (var i=0; i<data.length; i++) {
       var q = data[i];
@@ -231,7 +226,7 @@ async function loadQuotes(){
         '<td>'+esc(q.condition)+'</td>'+
         '<td>'+esc(q.incoterm)+'</td>'+
         '<td class="raw">'+esc((q.raw_text||'').substring(0,200))+'</td>'+
-        '<td><button class="btn btn-danger" onclick="delQuote('+q.id+')">Borrar</button></td>'+
+        '<td><button class="btn btn-danger" onclick="delQuote('+q.id+')">Delete</button></td>'+
       '</tr>';
     }
     html += '</tbody></table></div>';
@@ -240,7 +235,7 @@ async function loadQuotes(){
 }
 
 async function delQuote(id){
-  if (!confirm('Borrar cotizacion #'+id+'? Esta accion no se puede deshacer.')) return;
+  if (!confirm('Delete quote #'+id+'? This cannot be undone.')) return;
   try {
     var r = await fetch('/api/quotes/'+id+'/delete', {method:'POST'});
     var data = await r.json();
@@ -255,15 +250,16 @@ async function delQuote(id){
   } catch(e) { alert('Error: '+e.message); }
 }
 
-// ===== Pedir Cotizacion =====
+// ===== Request Quote (multi-item) =====
 var __suppliers = [];
+var __itemCounter = 0;
 
 async function loadSuppliersForRequest(){
   var sel = document.getElementById('rq-supplier');
   try {
     var r = await fetch('/api/suppliers');
     __suppliers = await r.json();
-    var html = '<option value="">-- Elegir proveedor --</option>';
+    var html = '<option value="">-- Select supplier --</option>';
     for (var i=0; i<__suppliers.length; i++) {
       var s = __suppliers[i];
       var label = s.name || s.alias || ('Slot '+s.slot);
@@ -272,58 +268,126 @@ async function loadSuppliersForRequest(){
     }
     sel.innerHTML = html;
   } catch(e) {
-    sel.innerHTML = '<option value="">Error cargando proveedores</option>';
+    sel.innerHTML = '<option value="">Error loading suppliers</option>';
   }
+}
+
+function addItem(){
+  __itemCounter++;
+  var id = 'item-' + __itemCounter;
+  var list = document.getElementById('rq-items');
+  var div = document.createElement('div');
+  div.className = 'item-card';
+  div.id = id;
+  var canRemove = list.children.length > 0;
+  div.innerHTML = 
+    '<div class="item-card-head">' +
+      '<span class="item-card-title">Item ' + (list.children.length + 1) + '</span>' +
+      (canRemove ? '<button class="btn-mini" onclick="removeItem(\''+id+'\')">Remove</button>' : '') +
+    '</div>' +
+    '<div class="item-grid">' +
+      '<div><label>Product *</label><input class="inp item-product" placeholder="iPhone 15 Pro Max" /></div>' +
+      '<div><label>Model / Capacity</label><input class="inp item-model" placeholder="256GB Natural Titanium" /></div>' +
+      '<div><label>Quantity</label><input class="inp item-qty" type="number" placeholder="50" /></div>' +
+      '<div><label>Target Price (USD)</label><input class="inp item-target" type="number" placeholder="1100" /></div>' +
+      '<div class="full"><label>Condition / Incoterm</label><input class="inp item-cond" placeholder="Sealed FOB HK" /></div>' +
+    '</div>';
+  list.appendChild(div);
+  // hook listeners
+  var inputs = div.querySelectorAll('input');
+  for (var i=0; i<inputs.length; i++) inputs[i].addEventListener('input', updatePreview);
+  updatePreview();
+  renumberItems();
+}
+
+function removeItem(id){
+  var el = document.getElementById(id);
+  if (el) el.remove();
+  renumberItems();
+  updatePreview();
+}
+
+function renumberItems(){
+  var list = document.getElementById('rq-items');
+  var cards = list.querySelectorAll('.item-card');
+  for (var i=0; i<cards.length; i++) {
+    var title = cards[i].querySelector('.item-card-title');
+    if (title) title.textContent = 'Item ' + (i+1);
+    var btn = cards[i].querySelector('.btn-mini');
+    // first item: no remove button
+    if (i === 0 && btn) btn.style.display = 'none';
+    else if (btn) btn.style.display = '';
+  }
+}
+
+function collectItems(){
+  var cards = document.querySelectorAll('#rq-items .item-card');
+  var items = [];
+  for (var i=0; i<cards.length; i++) {
+    var p = cards[i].querySelector('.item-product').value.trim();
+    var m = cards[i].querySelector('.item-model').value.trim();
+    var q = cards[i].querySelector('.item-qty').value.trim();
+    var t = cards[i].querySelector('.item-target').value.trim();
+    var c = cards[i].querySelector('.item-cond').value.trim();
+    if (!p && !m && !q && !t && !c) continue; // skip empty rows
+    items.push({product:p, model:m, qty:q, target:t, cond:c});
+  }
+  return items;
 }
 
 function buildMessage(){
   var custom = document.getElementById('rq-message').value.trim();
   if (custom) return custom;
   
-  var product = document.getElementById('rq-product').value.trim();
-  var model = document.getElementById('rq-model').value.trim();
-  var qty = document.getElementById('rq-qty').value.trim();
-  var target = document.getElementById('rq-target').value.trim();
-  var cond = document.getElementById('rq-cond').value.trim();
+  var items = collectItems();
+  var validItems = items.filter(function(it){ return it.product; });
+  if (validItems.length === 0) return '';
   
-  if (!product) return '';
-  
-  var lines = ['Hola! Necesito cotizacion:'];
-  var detail = product;
-  if (model) detail += ' ' + model;
-  if (qty) detail += ' x ' + qty + ' u';
-  lines.push('- ' + detail);
-  if (cond) lines.push('- ' + cond);
-  if (target) lines.push('- Target: USD ' + target);
-  lines.push('Gracias!');
+  var lines = ['Hi! I need a quote for the following:'];
+  lines.push('');
+  for (var i=0; i<validItems.length; i++) {
+    var it = validItems[i];
+    var parts = [it.product];
+    if (it.model) parts.push(it.model);
+    var line = '- ' + parts.join(' ');
+    var extras = [];
+    if (it.qty) extras.push(it.qty + ' units');
+    if (it.target) extras.push('Target USD ' + it.target);
+    if (it.cond) extras.push(it.cond);
+    if (extras.length) line += ' | ' + extras.join(' | ');
+    lines.push(line);
+  }
+  lines.push('');
+  lines.push('Please send price, availability and incoterm. Thanks!');
   return lines.join('\n');
 }
 
 function updatePreview(){
   var msg = buildMessage();
-  document.getElementById('rq-preview').textContent = msg || 'Completa el formulario...';
+  document.getElementById('rq-preview').textContent = msg || 'Fill the form...';
 }
 
 async function sendRequest(){
   var supplierId = document.getElementById('rq-supplier').value;
-  var product = document.getElementById('rq-product').value.trim();
-  var target = document.getElementById('rq-target').value.trim();
   var msg = buildMessage();
+  var items = collectItems();
   
-  if (!supplierId) { alert('Elegi un proveedor'); return; }
-  if (!product) { alert('Falta el producto'); return; }
-  if (!msg) { alert('El mensaje esta vacio'); return; }
+  if (!supplierId) { alert('Select a supplier'); return; }
+  if (!msg) { alert('Message is empty - add at least one item or write a custom message'); return; }
   
   var supplier = __suppliers.find(function(s){ return String(s.id) === String(supplierId); });
   var supName = supplier ? (supplier.name || supplier.alias) : supplierId;
   
-  if (!confirm('Enviar cotizacion a "' + supName + '" via WhatsApp?\n\nPreview:\n' + msg)) return;
+  if (!confirm('Send this quote request to "' + supName + '" via WhatsApp?\n\n' + msg)) return;
   
   var btn = document.getElementById('rq-send');
   btn.disabled = true;
-  btn.textContent = 'Enviando...';
+  btn.textContent = 'Sending...';
   var resultDiv = document.getElementById('rq-result');
   resultDiv.innerHTML = '';
+  
+  // Use first item's product/target as headline (for backward compat with backend)
+  var headline = items.length > 0 ? items[0] : {product: 'Multiple items', target: ''};
   
   try {
     var r = await fetch('/api/request-quote', {
@@ -331,8 +395,8 @@ async function sendRequest(){
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
         supplier_id: parseInt(supplierId),
-        product: product,
-        target_price: target ? parseFloat(target) : null,
+        product: headline.product || 'Multiple items',
+        target_price: headline.target ? parseFloat(headline.target) : null,
         message: msg
       })
     });
@@ -341,13 +405,10 @@ async function sendRequest(){
       resultDiv.innerHTML = '<div class="error">Error: ' + (data.error || ('HTTP '+r.status)) + '</div>';
     } else {
       var sent = data.sent || 1;
-      resultDiv.innerHTML = '<div class="success">Enviado a ' + esc(supName) + ' (' + sent + ' grupo' + (sent>1?'s':'') + '). ID: ' + (data.request_id || '-') + '</div>';
-      // Limpiar form
-      document.getElementById('rq-product').value = '';
-      document.getElementById('rq-model').value = '';
-      document.getElementById('rq-qty').value = '';
-      document.getElementById('rq-target').value = '';
-      document.getElementById('rq-cond').value = '';
+      resultDiv.innerHTML = '<div class="success">Sent to ' + esc(supName) + ' (' + sent + ' group' + (sent>1?'s':'') + '). ID: ' + (data.request_id || '-') + '</div>';
+      // Reset form: clear all items and add a fresh one
+      document.getElementById('rq-items').innerHTML = '';
+      addItem();
       document.getElementById('rq-message').value = '';
       updatePreview();
     }
@@ -356,7 +417,7 @@ async function sendRequest(){
   }
   
   btn.disabled = false;
-  btn.textContent = 'Enviar Cotizacion';
+  btn.textContent = 'Send Quote Request';
 }
 
 function setTab(name){
@@ -371,6 +432,7 @@ function setTab(name){
   if (name === 'best') loadBest();
   if (name === 'request') {
     if (__suppliers.length === 0) loadSuppliersForRequest();
+    if (document.getElementById('rq-items').children.length === 0) addItem();
     updatePreview();
   }
 }
@@ -390,19 +452,10 @@ function refresh(){
   updateTs();
 }
 
-// Listeners para preview en vivo
-['rq-product','rq-model','rq-qty','rq-target','rq-cond','rq-message'].forEach(function(id){
-  document.addEventListener('DOMContentLoaded', function(){
-    var el = document.getElementById(id);
-    if (el) el.addEventListener('input', updatePreview);
-  });
-});
-// Backup: agregar listeners despues de un delay
+// Listener para custom message
 setTimeout(function(){
-  ['rq-product','rq-model','rq-qty','rq-target','rq-cond','rq-message'].forEach(function(id){
-    var el = document.getElementById(id);
-    if (el && !el.__hooked) { el.addEventListener('input', updatePreview); el.__hooked = true; }
-  });
+  var msgEl = document.getElementById('rq-message');
+  if (msgEl) msgEl.addEventListener('input', updatePreview);
 }, 100);
 
 refresh();
