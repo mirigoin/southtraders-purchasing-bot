@@ -2084,6 +2084,22 @@ app.post('/api/admin/import-supplier-history', async (req, res) => {
   }
 });
 
+
+// ===== Test alert endpoint =====
+app.post('/api/admin/test-alert', async (req, res) => {
+  try {
+    const destination = (req.body && req.body.destination) || '120363408804657018@g.us';
+    const message = (req.body && req.body.message) || ('Test alerta Marco - canal funcionando OK\n' + new Date().toISOString());
+    if (!baileysClient) {
+      return res.status(500).json({ error: 'baileysClient not initialized' });
+    }
+    await baileysClient.sendMessage(destination, { text: message });
+    res.json({ ok: true, destination: destination, message: message });
+  } catch (e) {
+    res.status(500).json({ error: String(e && e.message || e) });
+  }
+});
+
   app.listen(PORT, () => console.log(`Marco purchasing bot on port ${PORT}`));
 
   // Try to start Baileys (won't crash if not installed)
