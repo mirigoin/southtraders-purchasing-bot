@@ -12,7 +12,7 @@ header h1{font-size:18px;font-weight:700;color:#fff}
 .dot{width:8px;height:8px;border-radius:50%;background:#22c55e;animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 .ts{font-size:12px;color:#718096;margin-left:auto}
-.wrap{padding:20px 24px;max-width:1300px;margin:0 auto}
+.wrap{padding:20px 24px;max-width:1400px;margin:0 auto}
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
 .stat{background:#1a202c;border-radius:10px;padding:16px;border:1px solid #2d3748}
 .stat .n{font-size:28px;font-weight:700;color:#63b3ed}
@@ -24,7 +24,7 @@ header h1{font-size:18px;font-weight:700;color:#fff}
 .section{background:#1a202c;border-radius:10px;border:1px solid #2d3748;margin-bottom:20px;overflow:hidden}
 .section-head{padding:14px 18px;border-bottom:1px solid #2d3748;display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap}
 .section-head h2{font-size:14px;font-weight:600;color:#e2e8f0}
-.controls{display:flex;gap:8px;align-items:center}
+.controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .btn{background:#2563eb;color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:13px;cursor:pointer;font-weight:500}
 .btn:hover{background:#1d4ed8}
 .btn:disabled{background:#475569;cursor:not-allowed}
@@ -66,6 +66,14 @@ tr:last-child td{border-bottom:none}
 .preview-label{font-size:11px;color:#718096;margin:0 20px 6px;text-transform:uppercase;letter-spacing:.05em}
 .form-actions{padding:0 20px 20px;display:flex;gap:10px;justify-content:flex-end}
 .divider{height:1px;background:#2d3748;margin:14px 0}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;text-transform:uppercase}
+.badge-ok{background:#14532d;color:#86efac}
+.badge-warn{background:#78350f;color:#fcd34d}
+.badge-danger{background:#7f1d1d;color:#fca5a5}
+.badge-info{background:#1e3a8a;color:#93c5fd}
+.minimo-input{width:70px;background:#0f1117;color:#e2e8f0;border:1px solid #2d3748;padding:4px 6px;border-radius:4px;font-size:13px;text-align:center}
+.minimo-input:focus{outline:none;border-color:#63b3ed}
+.skus-detail{font-size:10px;color:#64748b;margin-top:4px;font-family:monospace}
 </style>
 </head>
 <body>
@@ -86,13 +94,11 @@ tr:last-child td{border-bottom:none}
 <button class="tab active" data-tab="best" onclick="setTab('best')">Best Prices</button>
 <button class="tab" data-tab="quotes" onclick="setTab('quotes')">Cotizaciones</button>
 <button class="tab" data-tab="request" onclick="setTab('request')">Pedir Cotizacion</button>
+<button class="tab" data-tab="compras" onclick="setTab('compras')">Compras</button>
 </div>
 
 <div id="tab-best" class="section">
-<div class="section-head">
-<h2>Best Prices (last 7 days)</h2>
-<button class="btn" onclick="loadBest()">Refresh</button>
-</div>
+<div class="section-head"><h2>Best Prices (last 7 days)</h2><button class="btn" onclick="loadBest()">Refresh</button></div>
 <div id="best-content"><div class="empty">Loading...</div></div>
 </div>
 
@@ -112,33 +118,40 @@ tr:last-child td{border-bottom:none}
 </div>
 
 <div id="tab-request" class="section" style="display:none">
-<div class="section-head">
-<h2>Request Quote</h2>
-</div>
+<div class="section-head"><h2>Request Quote</h2></div>
 <div class="form">
-<div class="form-row">
-<label>Supplier *</label>
-<select class="select" id="rq-supplier"><option value="">Loading suppliers...</option></select>
-</div>
+<div class="form-row"><label>Supplier *</label><select class="select" id="rq-supplier"><option value="">Loading suppliers...</option></select></div>
 <div class="divider"></div>
 <label style="font-size:12px;color:#94a3b8;font-weight:500;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;display:block">Items</label>
 <div class="items-list" id="rq-items"></div>
 <button class="add-item-btn" onclick="addItem()">+ Add another item</button>
 <div class="divider"></div>
-<div class="form-row">
-<label>Custom message (optional - overrides auto-generated message)</label>
-<textarea class="txt" id="rq-message" placeholder="Leave empty to auto-generate from items above"></textarea>
-</div>
+<div class="form-row"><label>Custom message (optional - overrides auto-generated message)</label><textarea class="txt" id="rq-message" placeholder="Leave empty to auto-generate from items above"></textarea></div>
 </div>
 <div class="preview-label">Preview - message that will be sent</div>
 <div class="preview" id="rq-preview">Fill the form...</div>
-<div class="form-actions">
-<button class="btn btn-primary" id="rq-send" onclick="sendRequest()">Send Quote Request</button>
-</div>
+<div class="form-actions"><button class="btn btn-primary" id="rq-send" onclick="sendRequest()">Send Quote Request</button></div>
 <div id="rq-result"></div>
 </div>
 
+<div id="tab-compras" class="section" style="display:none">
+<div class="section-head">
+<h2>Compras (stock vs minimo)</h2>
+<div class="controls">
+<select class="select" id="c-filter" onchange="renderCompras()" style="width:auto">
+<option value="all">Todos</option>
+<option value="bajo">Solo bajo minimo</option>
+<option value="sin_stock">Sin stock</option>
+<option value="con_min">Con minimo definido</option>
+</select>
+<button class="btn" onclick="loadCompras()">Refresh</button>
 </div>
+</div>
+<div id="compras-content"><div class="empty">Loading...</div></div>
+</div>
+
+</div>
+
 <script>
 function fmtDate(d){
   if(!d) return '-';
@@ -185,16 +198,7 @@ async function loadBest(){
     var html = '<div class="scroll"><table><thead><tr><th>Product</th><th>Model</th><th>Capacity</th><th>Price</th><th>Supplier</th><th>Qty</th><th>Incoterm</th><th>Date</th></tr></thead><tbody>';
     for (var i=0; i<data.length; i++) {
       var q = data[i];
-      html += '<tr>'+
-        '<td>'+esc(q.product)+'</td>'+
-        '<td>'+esc(q.model)+'</td>'+
-        '<td>'+esc(q.capacity)+'</td>'+
-        '<td><b>'+(q.currency||'USD')+' '+esc(q.price)+'</b></td>'+
-        '<td>'+esc(q.supplier_name||q.supplier)+'</td>'+
-        '<td>'+esc(q.qty||q.quantity)+'</td>'+
-        '<td>'+esc(q.incoterm)+'</td>'+
-        '<td class="muted">'+fmtDate(q.ts||q.created_at)+'</td>'+
-      '</tr>';
+      html += '<tr><td>'+esc(q.product)+'</td><td>'+esc(q.model)+'</td><td>'+esc(q.capacity)+'</td><td><b>'+(q.currency||'USD')+' '+esc(q.price)+'</b></td><td>'+esc(q.supplier_name||q.supplier)+'</td><td>'+esc(q.qty||q.quantity)+'</td><td>'+esc(q.incoterm)+'</td><td class="muted">'+fmtDate(q.ts||q.created_at)+'</td></tr>';
     }
     html += '</tbody></table></div>';
     c.innerHTML = html;
@@ -208,26 +212,11 @@ async function loadQuotes(){
   try {
     var r = await fetch('/api/quotes?hours='+hours+'&limit=500');
     var data = await r.json();
-    if (!data || !data.length) { c.innerHTML = '<div class="empty">No quotes in this range</div>'; return; }
-    var html = '<div class="scroll"><table><thead><tr>'+
-      '<th>Date</th><th>Supplier</th><th>Product</th><th>Model</th><th>Cap</th>'+
-      '<th>Price</th><th>Qty</th><th>Cond</th><th>Incoterm</th><th>Message</th><th></th>'+
-      '</tr></thead><tbody>';
+    if (!data || !data.length) { c.innerHTML = '<div class="empty">No quotes</div>'; return; }
+    var html = '<div class="scroll"><table><thead><tr><th>Date</th><th>Supplier</th><th>Product</th><th>Model</th><th>Cap</th><th>Price</th><th>Qty</th><th>Cond</th><th>Incoterm</th><th>Message</th><th></th></tr></thead><tbody>';
     for (var i=0; i<data.length; i++) {
       var q = data[i];
-      html += '<tr id="row-'+q.id+'">'+
-        '<td class="muted">'+fmtDate(q.ts)+'</td>'+
-        '<td>'+esc(q.supplier_name)+'</td>'+
-        '<td>'+esc(q.product)+'</td>'+
-        '<td>'+esc(q.model)+'</td>'+
-        '<td>'+esc(q.capacity)+'</td>'+
-        '<td><b>'+(q.currency||'USD')+' '+esc(q.price)+'</b></td>'+
-        '<td>'+esc(q.qty)+'</td>'+
-        '<td>'+esc(q.condition)+'</td>'+
-        '<td>'+esc(q.incoterm)+'</td>'+
-        '<td class="raw">'+esc((q.raw_text||'').substring(0,200))+'</td>'+
-        '<td><button class="btn btn-danger" onclick="delQuote('+q.id+')">Delete</button></td>'+
-      '</tr>';
+      html += '<tr id="row-'+q.id+'"><td class="muted">'+fmtDate(q.ts)+'</td><td>'+esc(q.supplier_name)+'</td><td>'+esc(q.product)+'</td><td>'+esc(q.model)+'</td><td>'+esc(q.capacity)+'</td><td><b>'+(q.currency||'USD')+' '+esc(q.price)+'</b></td><td>'+esc(q.qty)+'</td><td>'+esc(q.condition)+'</td><td>'+esc(q.incoterm)+'</td><td class="raw">'+esc((q.raw_text||'').substring(0,200))+'</td><td><button class="btn btn-danger" onclick="delQuote('+q.id+')">Delete</button></td></tr>';
     }
     html += '</tbody></table></div>';
     c.innerHTML = html;
@@ -235,22 +224,18 @@ async function loadQuotes(){
 }
 
 async function delQuote(id){
-  if (!confirm('Delete quote #'+id+'? This cannot be undone.')) return;
+  if (!confirm('Delete quote #'+id+'?')) return;
   try {
     var r = await fetch('/api/quotes/'+id+'/delete', {method:'POST'});
     var data = await r.json();
     if (data.error) { alert('Error: '+data.error); return; }
     var row = document.getElementById('row-'+id);
-    if (row) {
-      row.style.transition = 'opacity .3s';
-      row.style.opacity = '0';
-      setTimeout(function(){ row.remove(); }, 300);
-    }
+    if (row) { row.style.transition='opacity .3s'; row.style.opacity='0'; setTimeout(function(){row.remove();},300); }
     loadStats();
   } catch(e) { alert('Error: '+e.message); }
 }
 
-// ===== Request Quote (multi-item) =====
+// ===== Request Quote =====
 var __suppliers = [];
 var __itemCounter = 0;
 
@@ -267,9 +252,7 @@ async function loadSuppliersForRequest(){
       html += '<option value="'+s.id+'">'+esc(label)+'</option>';
     }
     sel.innerHTML = html;
-  } catch(e) {
-    sel.innerHTML = '<option value="">Error loading suppliers</option>';
-  }
+  } catch(e) { sel.innerHTML = '<option value="">Error loading suppliers</option>'; }
 }
 
 function addItem(){
@@ -280,20 +263,8 @@ function addItem(){
   div.className = 'item-card';
   div.id = id;
   var canRemove = list.children.length > 0;
-  div.innerHTML = 
-    '<div class="item-card-head">' +
-      '<span class="item-card-title">Item ' + (list.children.length + 1) + '</span>' +
-      (canRemove ? '<button class="btn-mini" onclick="removeItem(\''+id+'\')">Remove</button>' : '') +
-    '</div>' +
-    '<div class="item-grid">' +
-      '<div><label>Product *</label><input class="inp item-product" placeholder="iPhone 15 Pro Max" /></div>' +
-      '<div><label>Model / Capacity</label><input class="inp item-model" placeholder="256GB Natural Titanium" /></div>' +
-      '<div><label>Quantity</label><input class="inp item-qty" type="number" placeholder="50" /></div>' +
-      '<div><label>Target Price (USD)</label><input class="inp item-target" type="number" placeholder="1100" /></div>' +
-      '<div class="full"><label>Condition / Incoterm</label><input class="inp item-cond" placeholder="Sealed FOB HK" /></div>' +
-    '</div>';
+  div.innerHTML = '<div class="item-card-head"><span class="item-card-title">Item ' + (list.children.length + 1) + '</span>' + (canRemove ? '<button class="btn-mini" onclick="removeItem(\''+id+'\')">Remove</button>' : '') + '</div><div class="item-grid"><div><label>Product *</label><input class="inp item-product" placeholder="iPhone 15 Pro Max" /></div><div><label>Model / Capacity</label><input class="inp item-model" placeholder="256GB Natural Titanium" /></div><div><label>Quantity</label><input class="inp item-qty" type="number" placeholder="50" /></div><div><label>Target Price (USD)</label><input class="inp item-target" type="number" placeholder="1100" /></div><div class="full"><label>Condition / Incoterm</label><input class="inp item-cond" placeholder="Sealed FOB HK" /></div></div>';
   list.appendChild(div);
-  // hook listeners
   var inputs = div.querySelectorAll('input');
   for (var i=0; i<inputs.length; i++) inputs[i].addEventListener('input', updatePreview);
   updatePreview();
@@ -314,7 +285,6 @@ function renumberItems(){
     var title = cards[i].querySelector('.item-card-title');
     if (title) title.textContent = 'Item ' + (i+1);
     var btn = cards[i].querySelector('.btn-mini');
-    // first item: no remove button
     if (i === 0 && btn) btn.style.display = 'none';
     else if (btn) btn.style.display = '';
   }
@@ -329,7 +299,7 @@ function collectItems(){
     var q = cards[i].querySelector('.item-qty').value.trim();
     var t = cards[i].querySelector('.item-target').value.trim();
     var c = cards[i].querySelector('.item-cond').value.trim();
-    if (!p && !m && !q && !t && !c) continue; // skip empty rows
+    if (!p && !m && !q && !t && !c) continue;
     items.push({product:p, model:m, qty:q, target:t, cond:c});
   }
   return items;
@@ -338,13 +308,10 @@ function collectItems(){
 function buildMessage(){
   var custom = document.getElementById('rq-message').value.trim();
   if (custom) return custom;
-  
   var items = collectItems();
   var validItems = items.filter(function(it){ return it.product; });
   if (validItems.length === 0) return '';
-  
-  var lines = ['Hi! I need a quote for the following:'];
-  lines.push('');
+  var lines = ['Hi! I need a quote for the following:', ''];
   for (var i=0; i<validItems.length; i++) {
     var it = validItems[i];
     var parts = [it.product];
@@ -371,63 +338,281 @@ async function sendRequest(){
   var supplierId = document.getElementById('rq-supplier').value;
   var msg = buildMessage();
   var items = collectItems();
-  
   if (!supplierId) { alert('Select a supplier'); return; }
-  if (!msg) { alert('Message is empty - add at least one item or write a custom message'); return; }
-  
+  if (!msg) { alert('Message is empty'); return; }
   var supplier = __suppliers.find(function(s){ return String(s.id) === String(supplierId); });
   var supName = supplier ? (supplier.name || supplier.alias) : supplierId;
-  
-  if (!confirm('Send this quote request to "' + supName + '" via WhatsApp?\n\n' + msg)) return;
-  
+  if (!confirm('Send to "' + supName + '" via WhatsApp?\n\n' + msg)) return;
   var btn = document.getElementById('rq-send');
   btn.disabled = true;
   btn.textContent = 'Sending...';
   var resultDiv = document.getElementById('rq-result');
   resultDiv.innerHTML = '';
-  
-  // Use first item's product/target as headline (for backward compat with backend)
   var headline = items.length > 0 ? items[0] : {product: 'Multiple items', target: ''};
-  
   try {
     var r = await fetch('/api/request-quote', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        supplier_id: parseInt(supplierId),
-        product: headline.product || 'Multiple items',
-        target_price: headline.target ? parseFloat(headline.target) : null,
-        message: msg
-      })
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({supplier_id:parseInt(supplierId), product:headline.product||'Multiple items', target_price:headline.target?parseFloat(headline.target):null, message:msg})
     });
     var data = await r.json();
     if (data.error || !r.ok) {
-      resultDiv.innerHTML = '<div class="error">Error: ' + (data.error || ('HTTP '+r.status)) + '</div>';
+      resultDiv.innerHTML = '<div class="error">Error: '+(data.error||('HTTP '+r.status))+'</div>';
     } else {
       var sent = data.sent || 1;
-      resultDiv.innerHTML = '<div class="success">Sent to ' + esc(supName) + ' (' + sent + ' group' + (sent>1?'s':'') + '). ID: ' + (data.request_id || '-') + '</div>';
-      // Reset form: clear all items and add a fresh one
+      resultDiv.innerHTML = '<div class="success">Sent to '+esc(supName)+' ('+sent+' group). ID: '+(data.request_id||'-')+'</div>';
       document.getElementById('rq-items').innerHTML = '';
       addItem();
       document.getElementById('rq-message').value = '';
       updatePreview();
     }
-  } catch(e) {
-    resultDiv.innerHTML = '<div class="error">Error: ' + e.message + '</div>';
-  }
-  
+  } catch(e) { resultDiv.innerHTML = '<div class="error">Error: '+e.message+'</div>'; }
   btn.disabled = false;
   btn.textContent = 'Send Quote Request';
 }
 
+// ===== Compras =====
+var __pangea = [];
+var __minimums = [];
+var __quotes = [];
+var __grouped = [];
+
+function parseDescription(desc){
+  // Extrae producto, capacidad y color de la description de Pangea
+  // Ej: "APPLE IPHONE 16 128GB BLACK IND - SIM CARD" -> {product:"APPLE IPHONE 16", capacity:"128GB", color:"BLACK"}
+  var d = desc.toUpperCase();
+  // Capacidad
+  var capMatch = d.match(/(\d+\s?(?:GB|TB))/);
+  var cap = capMatch ? capMatch[1].replace(/\s/g,'') : '';
+  // Quitar capacidad para procesar el resto
+  var rest = cap ? d.replace(capMatch[1], '|CAP|') : d;
+  // Producto = todo antes de la capacidad
+  var product = '';
+  var color = '';
+  if (cap) {
+    var parts = rest.split('|CAP|');
+    product = parts[0].trim();
+    var afterCap = (parts[1] || '').trim();
+    // Color = primera palabra despues de la capacidad (limpiando)
+    var colorMatch = afterCap.match(/^([A-Z]+)/);
+    color = colorMatch ? colorMatch[1] : '';
+  } else {
+    product = d;
+  }
+  return {product: product, capacity: cap, color: color};
+}
+
+async function loadCompras(){
+  var c = document.getElementById('compras-content');
+  c.innerHTML = '<div class="empty">Loading stock from Pangea + minimums + quotes...</div>';
+  try {
+    var [r1, r2, r3] = await Promise.all([
+      fetch('/api/pangea-stock').then(r => r.json()),
+      fetch('/api/purchase-minimums').then(r => r.json()),
+      fetch('/api/best-prices?days=14').then(r => r.json())
+    ]);
+    if (!r1.ok || !r1.items) { c.innerHTML = '<div class="error">Error loading Pangea stock: '+(r1.error||'unknown')+'</div>'; return; }
+    __pangea = r1.items;
+    __minimums = Array.isArray(r2) ? r2 : [];
+    __quotes = Array.isArray(r3) ? r3 : [];
+    
+    // Agrupar Pangea por (product+capacity+color)
+    var groups = {};
+    for (var i=0; i<__pangea.length; i++) {
+      var p = __pangea[i];
+      var parsed = parseDescription(p.description);
+      var key = parsed.product + '|' + parsed.capacity + '|' + parsed.color;
+      if (!groups[key]) {
+        groups[key] = {
+          product: parsed.product,
+          capacity: parsed.capacity,
+          color: parsed.color,
+          stock: 0,
+          transit: 0,
+          skus: [],
+          descriptions: []
+        };
+      }
+      groups[key].stock += p.stock;
+      groups[key].transit += p.transit;
+      groups[key].skus.push(p.sku);
+      groups[key].descriptions.push(p.description);
+    }
+    
+    // Para cada grupo, sumar minimos de los SKUs que matchean
+    var grouped = [];
+    Object.keys(groups).forEach(function(k){
+      var g = groups[k];
+      // Buscar minimos donde codigo esta en g.skus
+      var groupMins = __minimums.filter(function(m){ return g.skus.indexOf(m.codigo) >= 0; });
+      g.minimoTotal = groupMins.reduce(function(s,m){ return s + (parseInt(m.minimo)||0); }, 0);
+      g.minimoIds = groupMins.map(function(m){ return m.id; });
+      g.minimoCount = groupMins.length;
+      
+      // Buscar cotizaciones que matcheen (heuristica por nombre)
+      g.bestQuote = findBestQuote(g);
+      
+      // Status
+      var totalDisp = g.stock + g.transit;
+      if (g.minimoTotal === 0) g.status = 'no_min';
+      else if (totalDisp < g.minimoTotal) g.status = 'danger';
+      else if (g.stock < g.minimoTotal) g.status = 'warn'; // transit cubre pero stock no
+      else g.status = 'ok';
+      
+      grouped.push(g);
+    });
+    
+    // Ordenar: bajo minimo primero, despues por nombre
+    grouped.sort(function(a,b){
+      var pri = {danger:0, warn:1, no_min:2, ok:3};
+      if (pri[a.status] !== pri[b.status]) return pri[a.status] - pri[b.status];
+      return (a.product+a.capacity+a.color).localeCompare(b.product+b.capacity+b.color);
+    });
+    
+    __grouped = grouped;
+    renderCompras();
+  } catch(e) {
+    c.innerHTML = '<div class="error">Error: '+e.message+'</div>';
+  }
+}
+
+function findBestQuote(group){
+  // Buscar entre __quotes la mejor cotizacion que matchee este grupo
+  // Heuristica: matchear por capacity y color (case-insensitive) y product approximado
+  var matches = [];
+  for (var i=0; i<__quotes.length; i++) {
+    var q = __quotes[i];
+    if (!q.price) continue;
+    var qProduct = (q.product||'').toUpperCase();
+    var qCap = (q.capacity||'').toUpperCase().replace(/\s/g,'');
+    var qColor = (q.color||'').toUpperCase();
+    
+    // Capacidad debe matchear
+    if (group.capacity && qCap && qCap !== group.capacity) continue;
+    // Color: si ambos definidos, debe matchear (al menos parcialmente)
+    if (group.color && qColor && qColor.indexOf(group.color) < 0 && group.color.indexOf(qColor) < 0) continue;
+    // Producto: chequear si el producto del quote esta contenido en el product del grupo (o viceversa)
+    if (qProduct && group.product) {
+      // Quitar palabras genericas
+      var gp = group.product.replace(/APPLE|SAMSUNG/g,'').trim();
+      if (gp && qProduct.indexOf(gp.split(' ').slice(0,2).join(' ')) < 0 && gp.indexOf(qProduct.split(' ').slice(0,2).join(' ')) < 0) continue;
+    }
+    matches.push(q);
+  }
+  if (matches.length === 0) return null;
+  // Mejor = precio mas bajo
+  matches.sort(function(a,b){ return parseFloat(a.price) - parseFloat(b.price); });
+  return matches[0];
+}
+
+function renderCompras(){
+  var c = document.getElementById('compras-content');
+  var filter = document.getElementById('c-filter').value;
+  var rows = __grouped.slice();
+  
+  if (filter === 'bajo') rows = rows.filter(function(g){ return g.status === 'danger' || g.status === 'warn'; });
+  else if (filter === 'sin_stock') rows = rows.filter(function(g){ return g.stock === 0; });
+  else if (filter === 'con_min') rows = rows.filter(function(g){ return g.minimoTotal > 0; });
+  
+  if (rows.length === 0) { c.innerHTML = '<div class="empty">No products match this filter</div>'; return; }
+  
+  var html = '<div class="scroll"><table><thead><tr>'+
+    '<th>Producto</th><th>Capacidad</th><th>Color</th><th>Stock</th><th>Transit</th>'+
+    '<th>Disponible</th><th>Minimo</th><th>Faltante</th><th>Mejor precio</th><th>Status</th>'+
+    '</tr></thead><tbody>';
+  
+  for (var i=0; i<rows.length; i++) {
+    var g = rows[i];
+    var disp = g.stock + g.transit;
+    var faltante = g.minimoTotal > 0 ? Math.max(0, g.minimoTotal - disp) : 0;
+    var statusBadge = '';
+    if (g.status === 'ok') statusBadge = '<span class="badge badge-ok">OK</span>';
+    else if (g.status === 'warn') statusBadge = '<span class="badge badge-warn">Stock bajo</span>';
+    else if (g.status === 'danger') statusBadge = '<span class="badge badge-danger">Reponer</span>';
+    else statusBadge = '<span class="badge badge-info">Sin minimo</span>';
+    
+    var bestPriceHtml = '-';
+    if (g.bestQuote) {
+      bestPriceHtml = '<b>USD '+esc(g.bestQuote.price)+'</b><br><span class="muted" style="font-size:11px">'+esc(g.bestQuote.supplier_name||'-')+'</span>';
+    }
+    
+    var minDataAttr = g.minimoIds.length > 0 ? ('data-minid="'+g.minimoIds[0]+'" data-codigo="'+esc(g.skus[0]||'')+'"') : ('data-minid="" data-codigo="'+esc(g.skus[0]||'')+'"');
+    
+    html += '<tr>'+
+      '<td>'+esc(g.product)+'<div class="skus-detail">'+g.skus.length+' SKU(s): '+esc(g.skus.slice(0,3).join(', '))+(g.skus.length>3?'...':'')+'</div></td>'+
+      '<td>'+esc(g.capacity||'-')+'</td>'+
+      '<td>'+esc(g.color||'-')+'</td>'+
+      '<td><b>'+g.stock+'</b></td>'+
+      '<td class="muted">'+g.transit+'</td>'+
+      '<td><b>'+disp+'</b></td>'+
+      '<td><input type="number" class="minimo-input" value="'+g.minimoTotal+'" '+minDataAttr+' onblur="saveMinimo(this, '+i+')" /></td>'+
+      '<td>'+(faltante > 0 ? '<b style="color:#fca5a5">'+faltante+'</b>' : '-')+'</td>'+
+      '<td>'+bestPriceHtml+'</td>'+
+      '<td>'+statusBadge+'</td>'+
+    '</tr>';
+  }
+  html += '</tbody></table></div>';
+  c.innerHTML = html;
+}
+
+async function saveMinimo(input, rowIdx){
+  var newVal = parseInt(input.value) || 0;
+  var minId = input.dataset.minid;
+  var codigo = input.dataset.codigo;
+  var group = __grouped[rowIdx];
+  if (!group) return;
+  
+  var oldTotal = group.minimoTotal;
+  if (newVal === oldTotal) return;
+  
+  // Por simplicidad: guardar el nuevo valor en el primer SKU del grupo
+  // (los otros minimos del grupo se mantienen como estan)
+  // El total agregado mostrado se recalcula al refrescar
+  
+  if (!confirm('Cambiar minimo de "'+group.product+' '+group.capacity+' '+group.color+'" a '+newVal+'?')) {
+    input.value = oldTotal;
+    return;
+  }
+  
+  try {
+    if (minId && newVal > 0) {
+      // Actualizar el primer minimo existente: la suma de TODOS los minimos del grupo
+      // Si solo hay 1 minimo, lo actualizo directo
+      // Si hay varios, actualizo el primero con la diferencia
+      var firstMin = __minimums.find(function(m){ return String(m.id) === String(minId); });
+      var diff = newVal - oldTotal;
+      var newFirstMinValue = (parseInt(firstMin.minimo)||0) + diff;
+      if (newFirstMinValue < 0) newFirstMinValue = 0;
+      
+      var r = await fetch('/api/purchase-minimums', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({codigo: firstMin.codigo, descripcion: firstMin.descripcion, minimo: newFirstMinValue})
+      });
+      var d = await r.json();
+      if (d.error) { alert('Error: '+d.error); input.value = oldTotal; return; }
+    } else if (newVal > 0) {
+      // No hay minimos para este grupo, crear uno nuevo con el primer SKU
+      var r = await fetch('/api/purchase-minimums', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({codigo: codigo, descripcion: group.descriptions[0], minimo: newVal})
+      });
+      var d = await r.json();
+      if (d.error) { alert('Error: '+d.error); input.value = oldTotal; return; }
+    }
+    // Refrescar
+    await loadCompras();
+  } catch(e) {
+    alert('Error: '+e.message);
+    input.value = oldTotal;
+  }
+}
+
 function setTab(name){
   var tabs = document.querySelectorAll('.tab');
-  for (var i=0; i<tabs.length; i++) {
-    tabs[i].classList.toggle('active', tabs[i].dataset.tab === name);
-  }
+  for (var i=0; i<tabs.length; i++) tabs[i].classList.toggle('active', tabs[i].dataset.tab === name);
   document.getElementById('tab-best').style.display = (name === 'best') ? 'block' : 'none';
   document.getElementById('tab-quotes').style.display = (name === 'quotes') ? 'block' : 'none';
   document.getElementById('tab-request').style.display = (name === 'request') ? 'block' : 'none';
+  document.getElementById('tab-compras').style.display = (name === 'compras') ? 'block' : 'none';
   if (name === 'quotes') loadQuotes();
   if (name === 'best') loadBest();
   if (name === 'request') {
@@ -435,13 +620,12 @@ function setTab(name){
     if (document.getElementById('rq-items').children.length === 0) addItem();
     updatePreview();
   }
+  if (name === 'compras') loadCompras();
 }
 
 function updateTs(){
   var d = new Date();
-  var h = String(d.getHours()).padStart(2,'0');
-  var m = String(d.getMinutes()).padStart(2,'0');
-  document.getElementById('ts').textContent = 'Updated '+h+':'+m;
+  document.getElementById('ts').textContent = 'Updated '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
 }
 
 function refresh(){
@@ -452,7 +636,6 @@ function refresh(){
   updateTs();
 }
 
-// Listener para custom message
 setTimeout(function(){
   var msgEl = document.getElementById('rq-message');
   if (msgEl) msgEl.addEventListener('input', updatePreview);
