@@ -1914,6 +1914,42 @@ app.get('/api/compras', async (req, res) => {
 // ============ START ============
 async function start() {
   await initDB();
+
+// ===== Pangea stock scraper =====
+app.get('/api/pangea-stock', async (req, res) => {
+  try {
+    const r = await axios.get('https://south-traders.pangea.ar/n6/stock_disp', { timeout: 10000 });
+    const html = r.data;
+    const tbodyMatch = html.match(/<tbody[^>]*>([\s\S]*?)<\/tbody>/);
+    if (!tbodyMatch) return res.status(500).json({ error: 'no tbody found' });
+    const tbody = tbodyMatch[1];
+    const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/g;
+    const cellRegex = /<td[^>]*>([\s\S]*?)<\/td>/g;
+    const items = [];
+    let m;
+    while ((m = rowRegex.exec(tbody)) !== null) {
+      const cells = [];
+      let cm;
+      cellRegex.lastIndex = 0;
+      while ((cm = cellRegex.exec(m[1])) !== null) {
+        const text = cm[1].replace(/<[^>]+>/g,'').replace(/&nbsp;/g,' ').trim();
+        cells.push(text);
+      }
+      if (cells.length >= 4) {
+        items.push({
+          sku: cells[0],
+          description: cells[1],
+          stock: parseInt(cells[2]) || 0,
+          transit: parseInt(cells[3]) || 0
+        });
+      }
+    }
+    res.json({ ok: true, count: items.length, items: items });
+  } catch (e) {
+    res.status(500).json({ error: String(e && e.message || e) });
+  }
+});
+
   app.listen(PORT, () => console.log(`Marco purchasing bot on port ${PORT}`));
 
   // Try to start Baileys (won't crash if not installed)
