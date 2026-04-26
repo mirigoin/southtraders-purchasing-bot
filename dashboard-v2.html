@@ -114,7 +114,24 @@ tr:last-child td{border-bottom:none}
   th{padding:6px 8px}
   td{padding:6px 8px;font-size:11px}
 }
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:1000;padding:20px}
+.modal-overlay.active{display:flex}
+.modal{background:#1a202c;border-radius:12px;border:1px solid #2d3748;max-width:900px;width:100%;max-height:90vh;overflow:auto}
+.modal-head{padding:16px 20px;border-bottom:1px solid #2d3748;display:flex;justify-content:space-between;align-items:center}
+.modal-head h3{font-size:14px;font-weight:600;color:#e2e8f0}
+.modal-close{background:transparent;border:1px solid #475569;color:#cbd5e0;width:30px;height:30px;border-radius:6px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center}
+.modal-close:hover{background:#334155}
+.modal-body{padding:20px}
+.chart-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.chart-stat{background:#0f1117;border:1px solid #2d3748;border-radius:6px;padding:10px}
+.chart-stat .l{font-size:10px;color:#718096;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.chart-stat .v{font-size:16px;font-weight:600;color:#e2e8f0}
+.chart-btn{background:transparent;border:none;color:#94a3b8;cursor:pointer;padding:0 4px;font-size:14px;margin-left:6px}
+.chart-btn:hover{color:#63b3ed}
+@media (max-width:768px){.chart-stats{grid-template-columns:repeat(2,1fr)}.modal{max-height:95vh}}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 </head>
 <body>
 <header>
@@ -332,7 +349,7 @@ function renderBest(){
           diffTd = '<td style="color:'+color+'"><b>'+sign+diff.toFixed(0)+'</b> ('+sign+pct+'%)</td>';
         }
       }
-      html += '<tr'+clickAttr+'><td>'+esc(q.product)+'</td><td>'+esc(q.model)+'</td><td>'+esc(q.capacity)+'</td><td><b>'+(q.currency||'USD')+' '+esc(q.price)+'</b></td>'+costoTd+diffTd+'<td>'+esc(q.supplier_name||q.supplier)+'</td><td>'+esc(q.qty||q.quantity)+'</td><td>'+esc(q.incoterm)+'</td><td class="muted">'+fmtDate(q.ts||q.created_at)+'</td></tr>';
+      html += '<tr'+clickAttr+'><td>'+esc(q.product)+' <button class="chart-btn" onclick="event.stopPropagation();openChart(\''+esc(q.product||'').replace(/\'/g,"\\'")+'\',\''+esc(q.model||'').replace(/\'/g,"\\'")+'\',\''+esc(q.capacity||'').replace(/\'/g,"\\'")+'\')" title="Ver historico">Ver</button></td><td>'+esc(q.model)+'</td><td>'+esc(q.capacity)+'</td><td><b>'+(q.currency||'USD')+' '+esc(q.price)+'</b></td>'+costoTd+diffTd+'<td>'+esc(q.supplier_name||q.supplier)+'</td><td>'+esc(q.qty||q.quantity)+'</td><td>'+esc(q.incoterm)+'</td><td class="muted">'+fmtDate(q.ts||q.created_at)+'</td></tr>';
     }
     html += '</tbody></table></div>';
     c.innerHTML = html;
@@ -1127,6 +1144,130 @@ async function deleteAlertById(id){
   } catch(e) { alert("Error: " + e.message); }
 }
 
+// ===== Chart modal =====
+var __chartInstance = null;
+var __chartColors = ["#63b3ed","#86efac","#fcd34d","#fca5a5","#c4b5fd","#fdba74","#5eead4","#f0abfc","#fdb74e","#34d399"];
+
+async function openChart(product, model, capacity){
+  var modal = document.getElementById("chart-modal");
+  modal.classList.add("active");
+  var titleParts = [product];
+  if (model && model !== "-") titleParts.push(model);
+  if (capacity && capacity !== "-") titleParts.push(capacity);
+  document.getElementById("chart-title").textContent = "Historico: " + titleParts.join(" ");
+  document.getElementById("chart-min").textContent = "...";
+  document.getElementById("chart-max").textContent = "...";
+  document.getElementById("chart-avg").textContent = "...";
+  document.getElementById("chart-count").textContent = "...";
+  document.getElementById("chart-legend").innerHTML = "Cargando...";
+  try {
+    var r = await fetch("/api/quotes?hours=2160&limit=2000");
+    var all = await r.json();
+    if (!Array.isArray(all)) { document.getElementById("chart-legend").innerHTML = "<span class=\"error\">Error cargando quotes</span>"; return; }
+    var pl = (product||"").toLowerCase();
+    var ml = (model||"").toLowerCase();
+    var cl = (capacity||"").toLowerCase().replace(/\s/g,"");
+    var matched = all.filter(function(q){
+      var qP = (q.product||"").toLowerCase();
+      var qM = (q.model||"").toLowerCase();
+      var qC = (q.capacity||"").toLowerCase().replace(/\s/g,"");
+      if (qP !== pl) return false;
+      if (model && model !== "-" && qM !== ml) return false;
+      if (capacity && capacity !== "-" && qC !== cl) return false;
+      return q.price != null;
+    });
+    renderChart(matched);
+  } catch(e) {
+    document.getElementById("chart-legend").innerHTML = "<span class=\"error\">Error: " + e.message + "</span>";
+  }
+}
+
+function renderChart(quotes){
+  if (!quotes.length) {
+    document.getElementById("chart-min").textContent = "-";
+    document.getElementById("chart-max").textContent = "-";
+    document.getElementById("chart-avg").textContent = "-";
+    document.getElementById("chart-count").textContent = "0";
+    document.getElementById("chart-legend").innerHTML = "<i>No hay cotizaciones para este producto</i>";
+    if (__chartInstance) { __chartInstance.destroy(); __chartInstance = null; }
+    return;
+  }
+  // Stats
+  var prices = quotes.map(function(q){ return parseFloat(q.price); }).filter(function(p){ return !isNaN(p); });
+  var min = Math.min.apply(null, prices);
+  var max = Math.max.apply(null, prices);
+  var avg = prices.reduce(function(a,b){return a+b;}, 0) / prices.length;
+  document.getElementById("chart-min").textContent = "USD " + min;
+  document.getElementById("chart-max").textContent = "USD " + max;
+  document.getElementById("chart-avg").textContent = "USD " + avg.toFixed(0);
+  document.getElementById("chart-count").textContent = prices.length;
+
+  // Agrupar por proveedor
+  var bySupplier = {};
+  quotes.forEach(function(q){
+    var s = q.supplier_name || "?";
+    if (!bySupplier[s]) bySupplier[s] = [];
+    bySupplier[s].push({ts: new Date(q.ts), price: parseFloat(q.price), id: q.id});
+  });
+  Object.keys(bySupplier).forEach(function(s){
+    bySupplier[s].sort(function(a,b){ return a.ts - b.ts; });
+  });
+
+  // Construir datasets
+  var datasets = [];
+  var legendHtml = "";
+  var idx = 0;
+  Object.keys(bySupplier).sort().forEach(function(s){
+    var pts = bySupplier[s];
+    var color = __chartColors[idx % __chartColors.length];
+    datasets.push({
+      label: s,
+      data: pts.map(function(p){ return {x: p.ts, y: p.price}; }),
+      borderColor: color,
+      backgroundColor: color + "33",
+      tension: 0.2,
+      pointRadius: 4,
+      pointHoverRadius: 7
+    });
+    var min = Math.min.apply(null, pts.map(function(p){return p.price;}));
+    var max = Math.max.apply(null, pts.map(function(p){return p.price;}));
+    legendHtml += "<span style=\"display:inline-block;margin-right:14px;margin-bottom:4px\"><span style=\"display:inline-block;width:10px;height:10px;background:" + color + ";border-radius:2px;margin-right:5px;vertical-align:middle\"></span><b>" + esc(s) + "</b> (" + pts.length + " cotiz, USD " + min + (max !== min ? "-" + max : "") + ")</span>";
+    idx++;
+  });
+  document.getElementById("chart-legend").innerHTML = legendHtml;
+
+  // Render chart
+  if (__chartInstance) __chartInstance.destroy();
+  var canvas = document.getElementById("chart-canvas");
+  __chartInstance = new Chart(canvas, {
+    type: "line",
+    data: { datasets: datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { intersect: false, mode: "index" },
+      scales: {
+        x: { type: "time", time: { unit: "day", displayFormats: { day: "dd/MM" } }, ticks: { color: "#94a3b8" }, grid: { color: "#2d3748" } },
+        y: { ticks: { color: "#94a3b8", callback: function(v){ return "USD " + v; } }, grid: { color: "#2d3748" } }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: function(ctx){ return ctx.dataset.label + ": USD " + ctx.parsed.y; } } }
+      }
+    }
+  });
+}
+
+function closeChart(){
+  document.getElementById("chart-modal").classList.remove("active");
+  if (__chartInstance) { __chartInstance.destroy(); __chartInstance = null; }
+}
+
+// Cerrar modal con ESC
+document.addEventListener("keydown", function(e){
+  if (e.key === "Escape") closeChart();
+});
+
 function setTab(name){
   var tabs = document.querySelectorAll('.tab');
   for (var i=0; i<tabs.length; i++) tabs[i].classList.toggle('active', tabs[i].dataset.tab === name);
@@ -1169,5 +1310,20 @@ setTimeout(function(){
 refresh();
 setInterval(refresh, 60000);
 </script>
+<div class="modal-overlay" id="chart-modal" onclick="if(event.target===this)closeChart()">
+<div class="modal">
+<div class="modal-head"><h3 id="chart-title">Histrico de precios</h3><button class="modal-close" onclick="closeChart()">x</button></div>
+<div class="modal-body">
+<div class="chart-stats">
+<div class="chart-stat"><div class="l">Min</div><div class="v" id="chart-min">-</div></div>
+<div class="chart-stat"><div class="l">Max</div><div class="v" id="chart-max">-</div></div>
+<div class="chart-stat"><div class="l">Avg</div><div class="v" id="chart-avg">-</div></div>
+<div class="chart-stat"><div class="l">Cotizaciones</div><div class="v" id="chart-count">-</div></div>
+</div>
+<canvas id="chart-canvas" style="max-height:400px"></canvas>
+<div id="chart-legend" style="margin-top:12px;font-size:11px;color:#94a3b8"></div>
+</div>
+</div>
+</div>
 </body>
 </html>
