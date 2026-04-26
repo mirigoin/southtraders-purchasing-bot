@@ -513,11 +513,10 @@ async function loadCompras(){
       // Buscar cotizaciones que matcheen (heuristica por nombre)
       g.bestQuote = findBestQuote(g);
       
-      // Status
+      // Status: solo importa disponible (stock+transit) vs minimo
       var totalDisp = g.stock + g.transit;
       if (g.minimoTotal === 0) g.status = 'no_min';
       else if (totalDisp < g.minimoTotal) g.status = 'danger';
-      else if (g.stock < g.minimoTotal) g.status = 'warn'; // transit cubre pero stock no
       else g.status = 'ok';
       
       grouped.push(g);
@@ -586,7 +585,7 @@ function renderCompras(){
   
   if (modelFilter) rows = rows.filter(function(g){ return g.product === modelFilter; });
   
-  if (filter === 'bajo') rows = rows.filter(function(g){ return g.status === 'danger' || g.status === 'warn'; });
+  if (filter === 'bajo') rows = rows.filter(function(g){ return g.status === 'danger'; });
   else if (filter === 'sin_stock') rows = rows.filter(function(g){ return g.stock === 0; });
   else if (filter === 'con_min') rows = rows.filter(function(g){ return g.minimoTotal > 0; });
   
@@ -603,7 +602,6 @@ function renderCompras(){
     var faltante = g.minimoTotal > 0 ? Math.max(0, g.minimoTotal - disp) : 0;
     var statusBadge = '';
     if (g.status === 'ok') statusBadge = '<span class="badge badge-ok">OK</span>';
-    else if (g.status === 'warn') statusBadge = '<span class="badge badge-warn">Stock bajo</span>';
     else if (g.status === 'danger') statusBadge = '<span class="badge badge-danger">Reponer</span>';
     else statusBadge = '<span class="badge badge-info">Sin minimo</span>';
     
