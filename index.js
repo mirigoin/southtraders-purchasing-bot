@@ -2226,6 +2226,30 @@ async function checkPriceAlerts() {
 // Polling cada 5 minutos
 setInterval(checkPriceAlerts, 5 * 60 * 1000);
 
+
+// ===== Admin: cleanup quotes by supplier_name =====
+app.get('/api/admin/quotes-stats', async (req, res) => {
+  try {
+    const r = await pool.query('SELECT supplier_name, COUNT(*) as count FROM quotes GROUP BY supplier_name ORDER BY count DESC');
+    res.json(r.rows);
+  } catch (e) {
+    res.status(500).json({ error: String(e && e.message || e) });
+  }
+});
+
+app.post('/api/admin/delete-quotes', async (req, res) => {
+  try {
+    const { supplier_name, confirm } = req.body || {};
+    if (!supplier_name) return res.status(400).json({ error: 'supplier_name required' });
+    if (confirm !== 'YES_DELETE') return res.status(400).json({ error: 'confirm must be YES_DELETE' });
+    const preview = await pool.query('SELECT COUNT(*) as count FROM quotes WHERE supplier_name = $1', [supplier_name]);
+    const r = await pool.query('DELETE FROM quotes WHERE supplier_name = $1 RETURNING id', [supplier_name]);
+    res.json({ ok: true, deleted: r.rowCount, supplier: supplier_name });
+  } catch (e) {
+    res.status(500).json({ error: String(e && e.message || e) });
+  }
+});
+
   app.listen(PORT, () => console.log(`Marco purchasing bot on port ${PORT}`));
 
   // Try to start Baileys (won't crash if not installed)
