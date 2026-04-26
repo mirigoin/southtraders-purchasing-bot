@@ -139,8 +139,9 @@ tr:last-child td{border-bottom:none}
 <div class="section-head">
 <h2>Compras (stock vs minimo)</h2>
 <div class="controls">
+<select class="select" id="c-model-filter" onchange="renderCompras()" style="width:auto"><option value="">Todos los productos</option></select>
 <select class="select" id="c-filter" onchange="renderCompras()" style="width:auto">
-<option value="all">Todos</option>
+<option value="all">Todos los estados</option>
 <option value="bajo">Solo bajo minimo</option>
 <option value="sin_stock">Sin stock</option>
 <option value="con_min">Con minimo definido</option>
@@ -530,6 +531,18 @@ async function loadCompras(){
     });
     
     __grouped = grouped;
+    // Popular dropdown de productos unicos
+    var modelSel = document.getElementById('c-model-filter');
+    if (modelSel) {
+      var prevValue = modelSel.value;
+      var products = {};
+      for (var k=0; k<grouped.length; k++) { if (grouped[k].product) products[grouped[k].product] = true; }
+      var sortedP = Object.keys(products).sort();
+      var html = '<option value="">Todos los productos</option>';
+      for (var k=0; k<sortedP.length; k++) html += '<option value="'+esc(sortedP[k])+'">'+esc(sortedP[k])+'</option>';
+      modelSel.innerHTML = html;
+      if (prevValue) modelSel.value = prevValue;
+    }
     renderCompras();
   } catch(e) {
     c.innerHTML = '<div class="error">Error: '+e.message+'</div>';
@@ -568,7 +581,10 @@ function findBestQuote(group){
 function renderCompras(){
   var c = document.getElementById('compras-content');
   var filter = document.getElementById('c-filter').value;
+  var modelFilter = document.getElementById('c-model-filter') ? document.getElementById('c-model-filter').value : '';
   var rows = __grouped.slice();
+  
+  if (modelFilter) rows = rows.filter(function(g){ return g.product === modelFilter; });
   
   if (filter === 'bajo') rows = rows.filter(function(g){ return g.status === 'danger' || g.status === 'warn'; });
   else if (filter === 'sin_stock') rows = rows.filter(function(g){ return g.stock === 0; });
