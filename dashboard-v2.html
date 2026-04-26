@@ -196,9 +196,24 @@ async function loadBest(){
   var c = document.getElementById('best-content');
   c.innerHTML = '<div class="empty">Loading...</div>';
   try {
-    var r = await fetch('/api/best-prices?days=7');
+    var [r, rq] = await Promise.all([
+      fetch('/api/best-prices?days=7'),
+      fetch('/api/quotes?hours=720&limit=2000')
+    ]);
     var data = await r.json();
+    var allQuotes = await rq.json();
     if (!data || !data.length) { c.innerHTML = '<div class="empty">No data</div>'; return; }
+    // Map id -> ultimo_costo
+    var costMap = {};
+    if (Array.isArray(allQuotes)) {
+      for (var k=0; k<allQuotes.length; k++) {
+        if (allQuotes[k].ultimo_costo != null) costMap[allQuotes[k].id] = allQuotes[k].ultimo_costo;
+      }
+    }
+    // Inyectar ultimo_costo en cada best price
+    for (var k=0; k<data.length; k++) {
+      data[k].ultimo_costo = costMap[data[k].id] != null ? costMap[data[k].id] : null;
+    }
     __bestData = data;
     // Popular dropdown con productos unicos
     var select = document.getElementById('bp-model-filter');
@@ -235,11 +250,25 @@ function renderBest(){
   });
   if (!data.length) { c.innerHTML = '<div class="empty">No data for this filter</div>'; return; }
   try {
-    var html = '<div class="scroll"><table><thead><tr><th>Product</th><th>Model</th><th>Capacity</th><th>Price</th><th>Supplier</th><th>Qty</th><th>Incoterm</th><th>Date</th></tr></thead><tbody>';
+    var html = '<div class="scroll"><table><thead><tr><th>Product</th><th>Model</th><th>Capacity</th><th>Price</th><th>Ult. Costo</th><th>Diff</th><th>Supplier</th><th>Qty</th><th>Incoterm</th><th>Date</th></tr></thead><tbody>';
     for (var i=0; i<data.length; i++) {
       var q = data[i];
       var clickAttr = ' style="cursor:pointer" onclick="filterQuotesBy(\''+esc(q.product||'').replace(/\'/g,"\\'")+'\',\''+esc(q.model||'').replace(/\'/g,"\\'")+'\',\''+esc(q.capacity||'').replace(/\'/g,"\\'")+'\')" title="Click para ver cotizaciones"';
-      html += '<tr'+clickAttr+'><td>'+esc(q.product)+'</td><td>'+esc(q.model)+'</td><td>'+esc(q.capacity)+'</td><td><b>'+(q.currency||'USD')+' '+esc(q.price)+'</b></td><td>'+esc(q.supplier_name||q.supplier)+'</td><td>'+esc(q.qty||q.quantity)+'</td><td>'+esc(q.incoterm)+'</td><td class="muted">'+fmtDate(q.ts||q.created_at)+'</td></tr>';
+      var costoTd = '<td class="muted">-</td>';
+      var diffTd = '<td>-</td>';
+      if (q.ultimo_costo != null) {
+        costoTd = '<td>USD '+esc(q.ultimo_costo)+'</td>';
+        var pNum = parseFloat(q.price);
+        var cNum = parseFloat(q.ultimo_costo);
+        if (!isNaN(pNum) && !isNaN(cNum) && cNum > 0) {
+          var diff = pNum - cNum;
+          var color = diff < 0 ? '#86efac' : (diff > 0 ? '#fca5a5' : '#94a3b8');
+          var sign = diff > 0 ? '+' : '';
+          var pct = ((diff / cNum) * 100).toFixed(1);
+          diffTd = '<td style="color:'+color+'"><b>'+sign+diff.toFixed(0)+'</b> ('+sign+pct+'%)</td>';
+        }
+      }
+      html += '<tr'+clickAttr+'><td>'+esc(q.product)+'</td><td>'+esc(q.model)+'</td><td>'+esc(q.capacity)+'</td><td><b>'+(q.currency||'USD')+' '+esc(q.price)+'</b></td>'+costoTd+diffTd+'<td>'+esc(q.supplier_name||q.supplier)+'</td><td>'+esc(q.qty||q.quantity)+'</td><td>'+esc(q.incoterm)+'</td><td class="muted">'+fmtDate(q.ts||q.created_at)+'</td></tr>';
     }
     html += '</tbody></table></div>';
     c.innerHTML = html;
