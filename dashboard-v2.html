@@ -74,6 +74,46 @@ tr:last-child td{border-bottom:none}
 .minimo-input{width:70px;background:#0f1117;color:#e2e8f0;border:1px solid #2d3748;padding:4px 6px;border-radius:4px;font-size:13px;text-align:center}
 .minimo-input:focus{outline:none;border-color:#63b3ed}
 .skus-detail{font-size:10px;color:#64748b;margin-top:4px;font-family:monospace}
+
+/* ===== Mobile responsive ===== */
+@media (max-width: 768px) {
+  header{padding:10px 14px;gap:8px}
+  header h1{font-size:15px}
+  .ts{font-size:11px}
+  .wrap{padding:12px 14px}
+  .stats{grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px}
+  .stat{padding:10px}
+  .stat .n{font-size:22px}
+  .stat .l{font-size:11px}
+  .tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:12px}
+  .tabs::-webkit-scrollbar{height:0}
+  .tab{padding:10px 14px;font-size:12px;flex-shrink:0;white-space:nowrap}
+  .section-head{flex-direction:column;align-items:flex-start;gap:10px;padding:12px 14px}
+  .section-head h2{font-size:13px}
+  .controls{width:100%}
+  .controls .btn,.controls .select,.controls .inp{flex:1;min-width:0}
+  th{padding:8px 10px;font-size:10px}
+  td{padding:8px 10px;font-size:12px}
+  .btn{padding:10px 16px;font-size:13px;min-height:40px}
+  .btn-danger{padding:8px 12px;font-size:12px;min-height:36px}
+  .btn-mini{padding:6px 10px;font-size:11px;min-height:32px}
+  .inp,.select,.txt{padding:10px 12px;font-size:14px;min-height:40px}
+  .form{padding:14px}
+  .item-grid{grid-template-columns:1fr}
+  .preview{margin:0 14px 14px;padding:10px;font-size:11px}
+  .preview-label{margin:0 14px 4px}
+  .form-actions{padding:0 14px 14px}
+  .raw{max-width:200px;font-size:10px}
+  .badge{font-size:10px;padding:2px 6px}
+  .minimo-input{width:60px;padding:6px;font-size:12px;min-height:32px}
+}
+@media (max-width: 480px) {
+  .stats{grid-template-columns:1fr 1fr}
+  .stat .n{font-size:20px}
+  header h1{font-size:13px}
+  th{padding:6px 8px}
+  td{padding:6px 8px;font-size:11px}
+}
 </style>
 </head>
 <body>
