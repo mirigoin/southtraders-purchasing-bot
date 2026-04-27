@@ -430,7 +430,7 @@ async function extractQuote(msgText, supplierName) {
       'https://api.anthropic.com/v1/messages',
       {
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 1024,
+        max_tokens: 4096,
         system: `Eres un asistente que extrae cotizaciones de productos Apple y Samsung de mensajes de proveedores mayoristas. Devuelve SOLO un JSON valido sin markdown ni backticks.
 
 Formato requerido:
