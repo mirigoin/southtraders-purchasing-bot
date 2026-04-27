@@ -186,6 +186,18 @@ try {
   await pool.query(`ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'open'`);
   await pool.query(`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS group_id TEXT`);
   await pool.query(`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS is_own BOOLEAN DEFAULT FALSE`);
+
+  await pool.query(`CREATE TABLE IF NOT EXISTS minimums_v2 (
+    id SERIAL PRIMARY KEY,
+    product TEXT NOT NULL,
+    capacity TEXT,
+    color TEXT,
+    minimo INTEGER NOT NULL DEFAULT 0,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE (product, capacity, color)
+  )`);
   await pool.query(`ALTER TABLE group_messages ADD COLUMN IF NOT EXISTS wa_message_id TEXT`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_group_messages_wa_id ON group_messages(wa_message_id)`);
 
@@ -2288,6 +2300,71 @@ app.post('/api/admin/delete-quotes', async (req, res) => {
     const preview = await pool.query('SELECT COUNT(*) as count FROM quotes WHERE supplier_name = $1', [supplier_name]);
     const r = await pool.query('DELETE FROM quotes WHERE supplier_name = $1 RETURNING id', [supplier_name]);
     res.json({ ok: true, deleted: r.rowCount, supplier: supplier_name });
+  } catch (e) {
+    res.status(500).json({ error: String(e && e.message || e) });
+  }
+});
+
+
+// ===== Minimums V2 (product+capacity+color) =====
+app.get('/api/minimums-v2', async (req, res) => {
+  try {
+    const r = await pool.query('SELECT * FROM minimums_v2 ORDER BY product, capacity, color');
+    res.json(r.rows);
+  } catch (e) {
+    res.status(500).json({ error: String(e && e.message || e) });
+  }
+});
+
+app.post('/api/minimums-v2', async (req, res) => {
+  try {
+    const { id, product, capacity, color, minimo, notes } = req.body || {};
+    if (id) {
+      const r = await pool.query('UPDATE minimums_v2 SET minimo = COALESCE($1, minimo), notes = COALESCE($2, notes), updated_at = NOW() WHERE id = $3 RETURNING *', [minimo, notes, id]);
+      if (r.rowCount === 0) return res.status(404).json({ error: 'not found' });
+      return res.json({ ok: true, row: r.rows[0] });
+    }
+    if (!product) return res.status(400).json({ error: 'product required' });
+    const r = await pool.query(
+      'INSERT INTO minimums_v2 (product, capacity, color, minimo, notes) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (product, capacity, color) DO UPDATE SET minimo = EXCLUDED.minimo, notes = EXCLUDED.notes, updated_at = NOW() RETURNING *',
+      [product, capacity || '', color || '', minimo || 0, notes || null]
+    );
+    res.json({ ok: true, row: r.rows[0] });
+  } catch (e) {
+    res.status(500).json({ error: String(e && e.message || e) });
+  }
+});
+
+app.delete('/api/minimums-v2/:id', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: 'invalid id' });
+    const r = await pool.query('DELETE FROM minimums_v2 WHERE id = $1 RETURNING id', [id]);
+    if (r.rowCount === 0) return res.status(404).json({ error: 'not found' });
+    res.json({ ok: true, deleted: id });
+  } catch (e) {
+    res.status(500).json({ error: String(e && e.message || e) });
+  }
+});
+
+// Bulk import (recibe array de {product, capacity, color, minimo}, upsert)
+app.post('/api/admin/import-minimums-v2', async (req, res) => {
+  try {
+    const { items, replace } = req.body || {};
+    if (!Array.isArray(items)) return res.status(400).json({ error: 'items array required' });
+    if (replace) {
+      await pool.query('DELETE FROM minimums_v2');
+    }
+    let inserted = 0, updated = 0;
+    for (const it of items) {
+      if (!it.product) continue;
+      const r = await pool.query(
+        'INSERT INTO minimums_v2 (product, capacity, color, minimo) VALUES ($1, $2, $3, $4) ON CONFLICT (product, capacity, color) DO UPDATE SET minimo = EXCLUDED.minimo, updated_at = NOW() RETURNING (xmax = 0) AS inserted',
+        [it.product, it.capacity || '', it.color || '', it.minimo || 0]
+      );
+      if (r.rows[0].inserted) inserted++; else updated++;
+    }
+    res.json({ ok: true, inserted: inserted, updated: updated, total: items.length });
   } catch (e) {
     res.status(500).json({ error: String(e && e.message || e) });
   }
