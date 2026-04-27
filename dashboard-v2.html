@@ -682,6 +682,36 @@ async function loadCompras(){
       modelSel.innerHTML = html;
       if (prevValue) modelSel.value = prevValue;
     }
+
+    try {
+      var minRes = await fetch("/api/minimums-v2");
+      var minData = await minRes.json();
+      if (Array.isArray(minData) && minData.length > 0) {
+        var existingKeys = {};
+        __grouped.forEach(function(g){
+          var k = (g.product||"").toUpperCase() + "|" + (g.capacity||"").toUpperCase() + "|" + (g.color||"").toUpperCase();
+          existingKeys[k] = true;
+        });
+        minData.forEach(function(m){
+          var k = (m.product||"").toUpperCase() + "|" + (m.capacity||"").toUpperCase() + "|" + (m.color||"").toUpperCase();
+          if (!existingKeys[k]) {
+            __grouped.push({
+              product: m.product,
+              capacity: m.capacity || "",
+              color: m.color || "",
+              spec: "",
+              stock: 0,
+              transit: 0,
+              disponible: 0,
+              minimo: m.minimo || 0,
+              skus: [],
+              isVirtual: true
+            });
+            existingKeys[k] = true;
+          }
+        });
+      }
+    } catch(e) { console.error("outer join err:", e); }
     renderCompras();
   } catch(e) {
     c.innerHTML = '<div class="error">Error: '+e.message+'</div>';
