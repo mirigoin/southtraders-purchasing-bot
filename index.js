@@ -732,7 +732,8 @@ async function initBaileys() {
                         // Si OWNER manda mensaje: requerir @nombre para procesar
                         const ownerPhoneClean = (OWNER_PHONE||"").replace(/\D/g, "");
                         const senderPhoneClean = (senderPhone||"").replace(/\D/g, "").split("@")[0];
-                        const isFromOwner = senderPhoneClean === ownerPhoneClean || senderPhoneClean.startsWith(ownerPhoneClean) || ownerPhoneClean.startsWith(senderPhoneClean);
+                        const OWNER_LIDS = ["16291297509436"];
+            const isFromOwner = senderPhoneClean === ownerPhoneClean || senderPhoneClean.startsWith(ownerPhoneClean) || ownerPhoneClean.startsWith(senderPhoneClean) || OWNER_LIDS.some(function(l){ return senderPhoneClean === l; });
                         // Buscar @<nombre> en cualquier parte del texto (al inicio o despues de un reenvio)
                         const mentionMatch = text.match(/@([A-Za-z0-9_\-\.]+)/);
                         let reportedByOwner = false;
