@@ -2427,7 +2427,7 @@ app.post('/api/admin/reprocess-messages', async (req, res) => {
         const supName = m.sender_name || m.group_name || 'unknown';
         const result = await extractQuote(text, supName);
         if (result && result.quotes && result.quotes.length > 0) {
-          await saveQuotes(result.quotes, { group_id: m.group_id, group_name: m.group_name, sender_name: m.sender_name, raw_text: text, source: 'group' });
+          await saveQuotes(result.quotes, null, supName, text, 'group');
           await pool.query('UPDATE group_messages SET has_quote = true, processed = true WHERE id = $1', [m.id]);
           results.push({ id: m.id, ok: true, quotes: result.quotes.length });
         } else {
