@@ -563,6 +563,31 @@ REGLAS CRITICAS:
    - "iPhone 17 Pro Max 256GB Silver 1325" -> 1325 es precio
    - "Stock 100" o "Cantidad 50" -> NO es precio, es cantidad (palabra clave precede)
 
+17. COHERENCIA DE PRECIO (CRITICO - evita confundir cantidades con precios):
+   Si el numero NO tiene "$" ni "USD" delante, debe estar en el RANGO razonable del producto.
+   Si esta MUY FUERA del rango, ES UNA CANTIDAD, no un precio.
+   
+   RANGOS DE PRECIO (USD) ORIENTATIVOS:
+   - iPhone 14 / 15 / 16 / 17 / SE / E / Air / Pro / Pro Max: $400 - $2500
+   - iPad / iPad Air / iPad Pro / iPad mini: $250 - $1500
+   - MacBook Air / Pro / Neo (cualquier RAM/SSD): $700 - $3500
+   - Apple Watch (cualquier serie/Ultra): $200 - $900
+   - AirPods / AirPods Pro / AirPods Max: $80 - $700
+   - Samsung Galaxy A series: $80 - $400
+   - Samsung Galaxy S / Note / Z Fold / Z Flip: $300 - $2000
+   
+   EJEMPLOS DEL BUG QUE ESTO DEBE EVITAR:
+   - "MacBook Neo 8GB 256GB Blush (MHFH4LL/A) - 131" -> 131 NO es precio (MacBook minimo $700). Es CANTIDAD.
+     -> Si NO podes determinar precio confiable, NO emitas ese quote (skip).
+     -> Alternativa: emitir con price=null y qty=131 (mejor para listados de stock).
+   - "iPhone 17 Pro Max 256GB Silver - 30" -> 30 NO es precio (iPhone minimo $400). Es CANTIDAD.
+   - "iPhone 16 256 Pink Active 650" -> 650 SI esta en rango ($400-2500). Es PRECIO.
+   - "iPhone 16 256 Pink Active $30" -> 30 con $ explicito. Aunque este fuera de rango, el "$" lo confirma como precio (pero es sospechoso, marcar como warning).
+   
+   REGLA DE ORO: cuando el numero NO tenga "$" Y este fuera de rango razonable -> tratar como cantidad/stock, NO como precio.
+   Es preferible PERDER un quote dudoso que crear quotes con precios inventados.
+   Cuando el contexto sugiere LISTADO DE STOCK (palabras: stock, inventory, available, ready, qty, en mano, hay, tengo), tratar todos los numeros como cantidades por defecto.
+
 
 
 Si NADA encaja, devuelve {"quotes":[]}.`,
