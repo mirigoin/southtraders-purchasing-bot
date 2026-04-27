@@ -719,7 +719,16 @@ async function initBaileys() {
             const supplier = await pool.query('SELECT * FROM suppliers WHERE whatsapp_group_id = $1 AND active = TRUE', [groupId]);
             let supSlot = null, supName = senderName || groupName;
             if (supplier.rows.length > 0) { supSlot = supplier.rows[0].slot; supName = supplier.rows[0].name || supplier.rows[0].alias || senderName || groupName; }
-            // Detectar mention @nombre_proveedor para reportes del owner
+            // Numeros del equipo South Traders -- ignorar para cotizaciones
+                        const IGNORED_NUMBERS = ["13057648476", "5491161418968"];
+                        const senderPhoneClean0 = (senderPhone||"").replace(/\D/g, "").split("@")[0];
+                        const isTeamMember = IGNORED_NUMBERS.some(function(n){ return senderPhoneClean0 === n || senderPhoneClean0.endsWith(n); });
+                        if (isTeamMember) {
+                          console.log("[TEAM] Skipping quote extraction for team member " + senderPhoneClean0 + " (" + (senderName||"?") + ")");
+                          continue;
+                        }
+                        
+                        // Detectar mention @nombre_proveedor para reportes del owner
                         // Si OWNER manda mensaje: requerir @nombre para procesar
                         const ownerPhoneClean = (OWNER_PHONE||"").replace(/\D/g, "");
                         const senderPhoneClean = (senderPhone||"").replace(/\D/g, "").split("@")[0];
