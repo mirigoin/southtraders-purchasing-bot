@@ -2309,16 +2309,6 @@ app.post('/api/admin/delete-quotes', async (req, res) => {
 });
 
 
-// ===== Minimums V2 (product+capacity+color) =====
-app.get('/api/minimums-v2', async (req, res) => {
-  try {
-    const r = await pool.query('SELECT * FROM minimums_v2 ORDER BY product, capacity, color');
-    res.json(r.rows);
-  } catch (e) {
-    res.status(500).json({ error: String(e && e.message || e) });
-  }
-});
-
 app.post('/api/minimums-v2', async (req, res) => {
   try {
     const { id, product, capacity, color, minimo, notes } = req.body || {};
