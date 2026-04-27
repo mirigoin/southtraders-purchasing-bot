@@ -2424,7 +2424,12 @@ app.post('/api/admin/reprocess-messages', async (req, res) => {
       try {
         const text = m.message_text || '';
         if (!text || text.length < 3) continue;
-        const supName = m.sender_name || m.group_name || 'unknown';
+        let supName = m.sender_name || m.group_name || 'unknown';
+        // Si el mensaje tiene @<nombre>, usar ese nombre como supplier (mismo override que el handler)
+        const mentionMatch = text.match(/@([A-Za-z0-9_\-\.]+)/);
+        if (mentionMatch) {
+          supName = mentionMatch[1].toUpperCase();
+        }
         const result = await extractQuote(text, supName);
         if (result && result.quotes && result.quotes.length > 0) {
           await saveQuotes(result.quotes, null, supName, text, 'group');
