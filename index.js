@@ -719,8 +719,33 @@ async function initBaileys() {
             const supplier = await pool.query('SELECT * FROM suppliers WHERE whatsapp_group_id = $1 AND active = TRUE', [groupId]);
             let supSlot = null, supName = senderName || groupName;
             if (supplier.rows.length > 0) { supSlot = supplier.rows[0].slot; supName = supplier.rows[0].name || supplier.rows[0].alias || senderName || groupName; }
-            // Extraer quote siempre (registrado o no)
-            const result = await extractQuote(text, supName);
+            // Detectar mention @nombre_proveedor para reportes del owner
+                        // Si OWNER manda mensaje: requerir @nombre para procesar
+                        const ownerPhoneClean = (OWNER_PHONE||"").replace(/\D/g, "");
+                        const senderPhoneClean = (senderPhone||"").replace(/\D/g, "").split("@")[0];
+                        const isFromOwner = senderPhoneClean === ownerPhoneClean || senderPhoneClean.startsWith(ownerPhoneClean) || ownerPhoneClean.startsWith(senderPhoneClean);
+                        // Buscar @<nombre> en cualquier parte del texto (al inicio o despues de un reenvio)
+                        const mentionMatch = text.match(/@([A-Za-z0-9_\-\.]+)/);
+                        let reportedByOwner = false;
+                        if (isFromOwner) {
+                          if (!mentionMatch) {
+                            // Owner sin @ -> ignorar (puede estar ofreciendo precio a un cliente)
+                            continue;
+                          }
+                          // Owner con @ -> override supName con el nombre del proveedor
+                          const mentionedName = mentionMatch[1];
+                          supName = mentionedName.toUpperCase();
+                          reportedByOwner = true;
+                          // Buscar si ese supplier existe en DB
+                          const supByName = await pool.query("SELECT * FROM suppliers WHERE UPPER(name) = $1 OR UPPER(alias) = $1 LIMIT 1", [supName]);
+                          if (supByName.rows.length > 0) {
+                            supSlot = supByName.rows[0].slot;
+                            supName = supByName.rows[0].name || supByName.rows[0].alias || supName;
+                          }
+                          console.log("[OWNER REPORT] @" + mentionedName + " -> supplier=" + supName);
+                        }
+                        // Extraer quote
+                        const result = await extractQuote(text, supName);
             if (result.quotes && result.quotes.length > 0) {
               await pool.query(`UPDATE group_messages SET has_quote = TRUE, processed = TRUE WHERE wa_message_id = $1`, [msg.key.id]);
               await saveQuotes(result.quotes, supSlot, supName, text, 'group');
