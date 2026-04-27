@@ -1405,46 +1405,6 @@ app.post('/api/send', async (req, res) => {
 });
 
 // ============ REPROCESS (backfill) ============
-app.post('/api/admin/reprocess-messages', async (req, res) => {
-  var hours = (req.body && req.body.hours) || 72;
-  var limit = (req.body && req.body.limit) || 200;
-  try {
-    var sql1 = "SELECT id, group_id, group_name, sender_phone, sender_name, message_text, wa_message_id FROM group_messages WHERE has_quote = FALSE AND ts > NOW() - (INTERVAL '1 hour' * $1) ORDER BY ts DESC LIMIT $2";
-    var msgs = await pool.query(sql1, [hours, limit]);
-    var processed = 0, extracted = 0, errors = 0;
-    for (const row of msgs.rows) {
-      try {
-        var supSlot = null, supName = row.group_name || ('DM:' + row.sender_phone);
-        var source = row.group_id ? 'group' : 'dm';
-        if (row.group_id) {
-          var sup = await pool.query('SELECT * FROM suppliers WHERE whatsapp_group_id = $1 LIMIT 1', [row.group_id]);
-          if (sup.rows.length > 0) { supSlot = sup.rows[0].slot; supName = sup.rows[0].name || sup.rows[0].alias || supName; }
-        } else if (row.sender_phone) {
-          var supQ = "SELECT * FROM suppliers WHERE contact_phone IS NOT NULL AND (regexp_replace(contact_phone, '[^0-9]', '', 'g') = $1 OR regexp_replace(contact_phone, '[^0-9]', '', 'g') LIKE '%' || $1 OR $1 LIKE '%' || regexp_replace(contact_phone, '[^0-9]', '', 'g')) LIMIT 1";
-          var sup2 = await pool.query(supQ, [row.sender_phone]);
-          if (sup2.rows.length > 0) { supSlot = sup2.rows[0].slot; supName = sup2.rows[0].name || sup2.rows[0].alias || supName; }
-        }
-        var result = await extractQuote(row.message_text, supName);
-        processed++;
-        if (result.quotes && result.quotes.length > 0) {
-          extracted += result.quotes.length;
-          await pool.query('UPDATE group_messages SET has_quote = TRUE, processed = TRUE WHERE id = $1', [row.id]);
-          await saveQuotes(result.quotes, supSlot, supName, row.message_text, source);
-          if (row.group_id) {
-            try { await pool.query('UPDATE quotes SET group_id = $1 WHERE raw_text = $2 AND group_id IS NULL', [row.group_id, row.message_text]); } catch(e) {}
-          }
-        } else {
-          await pool.query('UPDATE group_messages SET processed = TRUE WHERE id = $1', [row.id]);
-        }
-      } catch(e) { errors++; console.error('reprocess error msg ' + row.id + ':', e.message); }
-    }
-    res.json({ ok: true, scanned: msgs.rows.length, processed, quotes_extracted: extracted, errors });
-  } catch(e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// ============ REPROCESS (backfill) ============
 
 // ============ MISSING QUOTES TRACKING (#12) ============
 // Para cada producto de la planilla COMPRAS 2026, devuelve cuando se cotizo por ultima vez
@@ -1800,45 +1760,6 @@ app.post('/api/admin/seed-from-prod', async (req, res) => {
   } catch(e) {
     try { await prodPool.end(); } catch(_){}
     res.status(500).json({ error: e.message, stack: e.stack });
-  }
-});
-
-app.post('/api/admin/reprocess-messages', async (req, res) => {
-  var hours = (req.body && req.body.hours) || 72;
-  var limit = (req.body && req.body.limit) || 200;
-  try {
-    var sql1 = "SELECT id, group_id, group_name, sender_phone, sender_name, message_text, wa_message_id FROM group_messages WHERE has_quote = FALSE AND ts > NOW() - (INTERVAL '1 hour' * $1) ORDER BY ts DESC LIMIT $2";
-    var msgs = await pool.query(sql1, [hours, limit]);
-    var processed = 0, extracted = 0, errors = 0;
-    for (const row of msgs.rows) {
-      try {
-        var supSlot = null, supName = row.group_name || ('DM:' + row.sender_phone);
-        var source = row.group_id ? 'group' : 'dm';
-        if (row.group_id) {
-          var sup = await pool.query('SELECT * FROM suppliers WHERE whatsapp_group_id = $1 LIMIT 1', [row.group_id]);
-          if (sup.rows.length > 0) { supSlot = sup.rows[0].slot; supName = sup.rows[0].name || sup.rows[0].alias || supName; }
-        } else if (row.sender_phone) {
-          var supQ = "SELECT * FROM suppliers WHERE contact_phone IS NOT NULL AND (regexp_replace(contact_phone, '[^0-9]', '', 'g') = $1 OR regexp_replace(contact_phone, '[^0-9]', '', 'g') LIKE '%' || $1 OR $1 LIKE '%' || regexp_replace(contact_phone, '[^0-9]', '', 'g')) LIMIT 1";
-          var sup2 = await pool.query(supQ, [row.sender_phone]);
-          if (sup2.rows.length > 0) { supSlot = sup2.rows[0].slot; supName = sup2.rows[0].name || sup2.rows[0].alias || supName; }
-        }
-        var result = await extractQuote(row.message_text, supName);
-        processed++;
-        if (result.quotes && result.quotes.length > 0) {
-          extracted += result.quotes.length;
-          await pool.query('UPDATE group_messages SET has_quote = TRUE, processed = TRUE WHERE id = $1', [row.id]);
-          await saveQuotes(result.quotes, supSlot, supName, row.message_text, source);
-          if (row.group_id) {
-            try { await pool.query('UPDATE quotes SET group_id = $1 WHERE raw_text = $2 AND group_id IS NULL', [row.group_id, row.message_text]); } catch(e) {}
-          }
-        } else {
-          await pool.query('UPDATE group_messages SET processed = TRUE WHERE id = $1', [row.id]);
-        }
-      } catch(e) { errors++; console.error('reprocess error msg ' + row.id + ':', e.message); }
-    }
-    res.json({ ok: true, scanned: msgs.rows.length, processed: processed, quotes_extracted: extracted, errors: errors });
-  } catch(e) {
-    res.status(500).json({ error: e.message });
   }
 });
 
