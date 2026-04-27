@@ -2387,7 +2387,7 @@ app.post('/api/admin/import-minimums', async (req, res) => {
       if (!r.product || r.minimo == null) continue;
       await pool.query(
         'INSERT INTO purchase_minimums (codigo, descripcion, minimo, product, capacity, color) VALUES ($1, $2, $3, $4, $5, $6)',
-        [r.codigo || null, r.descripcion || (r.product + ' ' + (r.capacity||'') + ' ' + (r.color||'')).trim(), r.minimo, r.product, r.capacity || null, r.color || null]
+        [r.codigo || ('AUTO_' + (r.product + '_' + (r.capacity||'') + '_' + (r.color||'')).replace(/[^A-Z0-9]/gi, '_').toUpperCase()), r.descripcion || (r.product + ' ' + (r.capacity||'') + ' ' + (r.color||'')).trim(), r.minimo, r.product, r.capacity || null, r.color || null]
       );
       inserted++;
     }
