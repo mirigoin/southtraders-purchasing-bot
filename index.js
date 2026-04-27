@@ -2424,6 +2424,45 @@ app.get('/api/minimums-v2', async (req, res) => {
   }
 });
 
+
+// ===== Admin: reprocess group_messages with has_quote=false =====
+app.post('/api/admin/reprocess-messages', async (req, res) => {
+  try {
+    const { hours, ids } = req.body || {};
+    let messages;
+    if (Array.isArray(ids) && ids.length > 0) {
+      const r = await pool.query('SELECT * FROM group_messages WHERE id = ANY($1::int[])', [ids]);
+      messages = r.rows;
+    } else {
+      const h = hours || 24;
+      const r = await pool.query("SELECT * FROM group_messages WHERE has_quote = false AND processed = false AND ts > NOW() - INTERVAL '" + h + " hours' ORDER BY ts DESC LIMIT 50");
+      messages = r.rows;
+    }
+    const results = [];
+    for (const m of messages) {
+      try {
+        const text = m.message_text || '';
+        if (!text || text.length < 3) continue;
+        const supName = m.sender_name || m.group_name || 'unknown';
+        const result = await extractQuote(text, supName);
+        if (result && result.quotes && result.quotes.length > 0) {
+          await saveQuotes(result.quotes, { group_id: m.group_id, group_name: m.group_name, sender_name: m.sender_name, raw_text: text, source: 'group' });
+          await pool.query('UPDATE group_messages SET has_quote = true, processed = true WHERE id = $1', [m.id]);
+          results.push({ id: m.id, ok: true, quotes: result.quotes.length });
+        } else {
+          await pool.query('UPDATE group_messages SET processed = true WHERE id = $1', [m.id]);
+          results.push({ id: m.id, ok: false, reason: 'no quotes extracted' });
+        }
+      } catch (err) {
+        results.push({ id: m.id, ok: false, error: String(err && err.message || err) });
+      }
+    }
+    res.json({ ok: true, processed: results.length, results });
+  } catch (e) {
+    res.status(500).json({ error: String(e && e.message || e) });
+  }
+});
+
   app.listen(PORT, () => console.log(`Marco purchasing bot on port ${PORT}`));
 
   // Try to start Baileys (won't crash if not installed)
