@@ -2463,6 +2463,19 @@ app.post('/api/admin/reprocess-messages', async (req, res) => {
   }
 });
 
+
+// ===== Admin: test extract directo =====
+app.post('/api/admin/test-extract', async (req, res) => {
+  try {
+    const { text, supplier_name } = req.body || {};
+    if (!text) return res.status(400).json({ error: 'text required' });
+    const result = await extractQuote(text, supplier_name || 'TEST');
+    res.json({ ok: true, input: text, result: result });
+  } catch (e) {
+    res.status(500).json({ error: String(e && e.message || e), stack: e && e.stack ? e.stack.substring(0, 500) : '' });
+  }
+});
+
   app.listen(PORT, () => console.log(`Marco purchasing bot on port ${PORT}`));
 
   // Try to start Baileys (won't crash if not installed)
