@@ -536,6 +536,33 @@ REGLAS CRITICAS:
    - JAMAS interpretar "NEO" como Samsung Galaxy.
    - Si aparece "Neo 256 $607.75" sin nada mas: MacBook Neo 256GB $607.75.
    - Si aparece "NEO 256/512 $X/Y": 2 quotes MacBook Neo.
+14. FORMATO ULTRA-COMPRIMIDO (sin "$" ni "USD") - CRITICO PARA ISHAAN, NEHA, MANISH:
+   Algunos proveedores escriben cotizaciones SIN simbolo de dolar. Ejemplos REALES que DEBES procesar:
+   - "16 256 Pink Active 650" -> iPhone 16 256GB Pink, condition=active, precio=650
+   - "17 256 Active 680" -> iPhone 17 256GB, condition=active, precio=680
+   - "16 256 active 680\n17 256 active 700" -> 2 quotes (iPhone 16 y 17, ambos 256GB, active)
+   - "15 128 Black 513 Active" -> iPhone 15 128GB Black, condition=active, precio=513
+   PATRON: <numero> <capacidad_GB> [color?] [active|non active|esim|sim] <numero_precio>
+   - El primer numero pequeno (14-19) = generacion iPhone
+   - El numero medio (64/128/256/512/1) = capacidad en GB/TB
+   - El numero grande (>= 200, sin dolar) = precio en USD
+   - "Active" / "non active" / "esim" / "sim" = condition (mapearlos)
+   - El color puede aparecer entre capacity y precio
+   IMPORTANTE: aunque el mensaje no tenga "$" ni "iPhone", DEBES extraer el quote si tiene este patron.
+
+15. CONDITIONS / SUBESTADOS - mapeo:
+   - "active" / "ACTIVE" -> condition: "active"
+   - "non active" / "NON ACTIVE" / "no activado" -> condition: "non active"
+   - "esim" / "ESIM" -> condition: "esim"
+   - "sim" / "SIM" / "sim card" -> condition: "sim"
+   - Si no hay condition explicita -> condition: "new" (default)
+
+16. NUMEROS SUELTOS COMO PRECIO (sin "$"):
+   - Cualquier numero entre 100 y 9999 sin "$" precedente puede ser precio si esta al final del item
+   - "16 256 Pink 650" -> 650 es precio (numero al final, > capacidad)
+   - "iPhone 17 Pro Max 256GB Silver 1325" -> 1325 es precio
+   - "Stock 100" o "Cantidad 50" -> NO es precio, es cantidad (palabra clave precede)
+
 
 
 Si NADA encaja, devuelve {"quotes":[]}.`,
