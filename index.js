@@ -186,6 +186,9 @@ try {
   await pool.query(`ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'open'`);
   await pool.query(`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS group_id TEXT`);
   await pool.query(`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS is_own BOOLEAN DEFAULT FALSE`);
+  await pool.query(`ALTER TABLE purchase_minimums ADD COLUMN IF NOT EXISTS product TEXT`);
+  await pool.query(`ALTER TABLE purchase_minimums ADD COLUMN IF NOT EXISTS capacity TEXT`);
+  await pool.query(`ALTER TABLE purchase_minimums ADD COLUMN IF NOT EXISTS color TEXT`);
 
   await pool.query(`CREATE TABLE IF NOT EXISTS minimums_v2 (
     id SERIAL PRIMARY KEY,
@@ -2365,6 +2368,40 @@ app.post('/api/admin/import-minimums-v2', async (req, res) => {
       if (r.rows[0].inserted) inserted++; else updated++;
     }
     res.json({ ok: true, inserted: inserted, updated: updated, total: items.length });
+  } catch (e) {
+    res.status(500).json({ error: String(e && e.message || e) });
+  }
+});
+
+
+// ===== Admin: importar minimos en bulk (con product+capacity+color) =====
+app.post('/api/admin/import-minimums', async (req, res) => {
+  try {
+    const { rows, replace } = req.body || {};
+    if (!Array.isArray(rows)) return res.status(400).json({ error: 'rows array required' });
+    if (replace === true) {
+      await pool.query("DELETE FROM purchase_minimums WHERE product IS NOT NULL");
+    }
+    let inserted = 0;
+    for (const r of rows) {
+      if (!r.product || r.minimo == null) continue;
+      await pool.query(
+        'INSERT INTO purchase_minimums (codigo, descripcion, minimo, product, capacity, color) VALUES ($1, $2, $3, $4, $5, $6)',
+        [r.codigo || null, r.descripcion || (r.product + ' ' + (r.capacity||'') + ' ' + (r.color||'')).trim(), r.minimo, r.product, r.capacity || null, r.color || null]
+      );
+      inserted++;
+    }
+    res.json({ ok: true, inserted, replaced: replace === true });
+  } catch (e) {
+    res.status(500).json({ error: String(e && e.message || e) });
+  }
+});
+
+// ===== Get minimos con product/capacity/color (formato nuevo) =====
+app.get('/api/minimums-v2', async (req, res) => {
+  try {
+    const r = await pool.query('SELECT * FROM purchase_minimums WHERE product IS NOT NULL ORDER BY product, capacity, color');
+    res.json(r.rows);
   } catch (e) {
     res.status(500).json({ error: String(e && e.message || e) });
   }
