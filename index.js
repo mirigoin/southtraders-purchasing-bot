@@ -604,7 +604,7 @@ Si NADA encaja, devuelve {"quotes":[]}.`,
     const raw = resp.data.content[0].text.trim().replace(/^```[\w]*\n?/,"").replace(/\n?```$/,"").trim();
     return JSON.parse(raw);
   } catch (e) {
-    console.error('Claude extract error:', e.message);
+    console.error('Claude extract error:', e.message, 'STATUS:', e.response && e.response.status, 'DATA:', JSON.stringify(e.response && e.response.data));
     return { quotes: [] };
   }
 }
