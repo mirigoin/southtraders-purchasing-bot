@@ -705,6 +705,9 @@ async function loadCompras(){
               disponible: 0,
               minimo: m.minimo || 0,
               skus: [],
+              minimoIds: [m.id || ""],
+              minimoCount: 1,
+              minimoTotal: parseInt(m.minimo) || 0,
               isVirtual: true
             });
             existingKeys[k] = true;
